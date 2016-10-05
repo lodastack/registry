@@ -2,6 +2,7 @@ package store
 
 import (
 	"io/ioutil"
+	"net"
 	"os"
 	"sort"
 	"testing"
@@ -9,15 +10,13 @@ import (
 )
 
 const (
-	node0  = "localhost:8300"
-	node1  = "localhost:8301"
 	bucket = "test-bucket"
 	key    = "test-key"
 	value  = "mdzz123"
 )
 
 func Test_IsLeader(t *testing.T) {
-	s := mustNewStore(node0)
+	s := mustNewStore()
 	defer os.RemoveAll(s.Path())
 
 	if err := s.Open(true); err != nil {
@@ -32,7 +31,7 @@ func Test_IsLeader(t *testing.T) {
 }
 
 func Test_OpenCloseStore(t *testing.T) {
-	s := mustNewStore(node0)
+	s := mustNewStore()
 	defer os.RemoveAll(s.Path())
 
 	if err := s.Open(true); err != nil {
@@ -45,7 +44,7 @@ func Test_OpenCloseStore(t *testing.T) {
 }
 
 func Test_SingleNode_CreateRemoveBucket(t *testing.T) {
-	s := mustNewStore(node0)
+	s := mustNewStore()
 	defer os.RemoveAll(s.Path())
 
 	if err := s.Open(true); err != nil {
@@ -64,7 +63,7 @@ func Test_SingleNode_CreateRemoveBucket(t *testing.T) {
 }
 
 func Test_SingleNode_SetGetKey(t *testing.T) {
-	s := mustNewStore(node0)
+	s := mustNewStore()
 	defer os.RemoveAll(s.Path())
 
 	if err := s.Open(true); err != nil {
@@ -93,7 +92,7 @@ func Test_SingleNode_SetGetKey(t *testing.T) {
 }
 
 func Test_MultiNode_SetGetKey(t *testing.T) {
-	s0 := mustNewStore(node0)
+	s0 := mustNewStore()
 	defer os.RemoveAll(s0.Path())
 	if err := s0.Open(true); err != nil {
 		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
@@ -101,7 +100,7 @@ func Test_MultiNode_SetGetKey(t *testing.T) {
 	defer s0.Close(true)
 	s0.WaitForLeader(10 * time.Second)
 
-	s1 := mustNewStore(node1)
+	s1 := mustNewStore()
 	defer os.RemoveAll(s1.Path())
 	if err := s1.Open(false); err != nil {
 		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
@@ -135,7 +134,7 @@ func Test_MultiNode_SetGetKey(t *testing.T) {
 }
 
 func Test_MultiNode_JoinRemove(t *testing.T) {
-	s0 := mustNewStore(node0)
+	s0 := mustNewStore()
 	defer os.RemoveAll(s0.Path())
 	if err := s0.Open(true); err != nil {
 		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
@@ -143,7 +142,7 @@ func Test_MultiNode_JoinRemove(t *testing.T) {
 	defer s0.Close(true)
 	s0.WaitForLeader(10 * time.Second)
 
-	s1 := mustNewStore(node1)
+	s1 := mustNewStore()
 	defer os.RemoveAll(s1.Path())
 	if err := s1.Open(false); err != nil {
 		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
@@ -189,10 +188,10 @@ func Test_MultiNode_JoinRemove(t *testing.T) {
 	}
 }
 
-func mustNewStore(addr string) *Store {
+func mustNewStore() *Store {
 	path := mustTempDir()
 
-	s := New(path, addr)
+	s := New(path, mustMockTransport())
 	if s == nil {
 		panic("failed to create new store")
 	}
@@ -207,3 +206,25 @@ func mustTempDir() string {
 	}
 	return path
 }
+
+type mockTransport struct {
+	ln net.Listener
+}
+
+func mustMockTransport() Transport {
+	ln, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		panic("failed to create new transport" + err.Error())
+	}
+	return &mockTransport{ln}
+}
+
+func (m *mockTransport) Dial(addr string, timeout time.Duration) (net.Conn, error) {
+	return net.DialTimeout("tcp", addr, timeout)
+}
+
+func (m *mockTransport) Accept() (net.Conn, error) { return m.ln.Accept() }
+
+func (m *mockTransport) Close() error { return m.ln.Close() }
+
+func (m *mockTransport) Addr() net.Addr { return m.ln.Addr() }
