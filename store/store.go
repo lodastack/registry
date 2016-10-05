@@ -21,18 +21,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lodastack/registry/model"
+
 	"github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/raft-boltdb"
 )
 
 var bucketNotFound = errors.New("bucket not found")
-var ErrNotLeader = errors.New("not leader")
+var ErrNotLeader = raft.ErrNotLeader
 
 const (
 	retainSnapshotCount = 2
 	raftTimeout         = 10 * time.Second
 	leaderWaitDelay     = 100 * time.Millisecond
+	heartbeatTimeout    = 3 * time.Second
 
 	boltFile = "registry.db"
 
@@ -47,6 +50,7 @@ const (
 	batch                           // Commands which modify the database.
 	createBucket                    // Commands which create the bucket.
 	removeBucket                    // Commands which remove the bucket.
+	peer
 )
 
 // ClusterState defines the possible Raft states the current node can be in
@@ -62,15 +66,36 @@ const (
 )
 
 type command struct {
-	Typ   commandType `json:"op,omitempty"`
-	Name  []byte      `json:"name,omitempty"`  // bucket name for bucket management
-	Batch []Row       `json:"batch,omitempty"` // for batch update
+	Typ commandType     `json:"typ,omitempty"`
+	Sub json.RawMessage `json:"sub,omitempty"`
 }
 
-type Row struct {
-	Key    []byte `json:"key,omitempty"`
-	Value  []byte `json:"value,omitempty"`
-	Bucket []byte `json:"bucket,omitempty"`
+func newCommand(t commandType, d interface{}) (*command, error) {
+	b, err := json.Marshal(d)
+	if err != nil {
+		return nil, err
+	}
+	return &command{
+		Typ: t,
+		Sub: b,
+	}, nil
+
+}
+
+type databaseSub struct {
+	Name  []byte      `json:"name,omitempty"`  // bucket name for bucket management
+	Batch []model.Row `json:"batch,omitempty"` // for batch update
+}
+
+// peersSub is a command which sets the API address for a Raft address.
+type peersSub map[string]string
+
+// Transport is the interface the network service must provide.
+type Transport interface {
+	net.Listener
+
+	// Dial is used to create a new outgoing connection
+	Dial(address string, timeout time.Duration) (net.Conn, error)
 }
 
 // Store is a bolt key-value store, where all changes are made via Raft consensus.
@@ -86,7 +111,10 @@ type Store struct {
 
 	raft          *raft.Raft // The consensus mechanism
 	peerStore     raft.PeerStore
-	raftTransport *raft.NetworkTransport
+	raftTransport Transport
+
+	metaMu sync.RWMutex
+	meta   *clusterMeta
 
 	// TODO: need config from user?
 	SnapshotThreshold uint64
@@ -96,13 +124,16 @@ type Store struct {
 }
 
 // New returns a new Store.
-func New(path string, listen string) *Store {
+func New(path string, tn Transport) *Store {
 	return &Store{
-		raftDir:  path,
-		raftBind: listen,
-		dbPath:   filepath.Join(path, boltFile),
-		cache:    NewCache(cacheMaxMemorySize, nil),
-		logger:   log.New(os.Stderr, "[store] ", log.LstdFlags),
+		raftDir:          path,
+		raftBind:         tn.Addr().String(),
+		raftTransport:    tn,
+		HeartbeatTimeout: heartbeatTimeout,
+		meta:             newClusterMeta(),
+		dbPath:           filepath.Join(path, boltFile),
+		cache:            NewCache(cacheMaxMemorySize, nil),
+		logger:           log.New(os.Stderr, "[store] ", log.LstdFlags),
 	}
 }
 
@@ -151,17 +182,10 @@ func (s *Store) Open(enableSingle bool) error {
 	}
 
 	// Setup Raft communication.
-	addr, err := net.ResolveTCPAddr("tcp", s.raftBind)
-	if err != nil {
-		return err
-	}
-	s.raftTransport, err = raft.NewTCPTransport(s.raftBind, addr, 3, 10*time.Second, os.Stderr)
-	if err != nil {
-		return err
-	}
+	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, os.Stderr)
 
 	// Create peer storage.
-	s.peerStore = raft.NewJSONPeers(s.raftDir, s.raftTransport)
+	s.peerStore = raft.NewJSONPeers(s.raftDir, transport)
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
 	snapshots, err := raft.NewFileSnapshotStore(s.raftDir, retainSnapshotCount, os.Stderr)
@@ -176,7 +200,7 @@ func (s *Store) Open(enableSingle bool) error {
 	}
 
 	// Instantiate the Raft systems.
-	ra, err := raft.NewRaft(config, (*fsm)(s), logStore, logStore, snapshots, s.peerStore, s.raftTransport)
+	ra, err := raft.NewRaft(config, (*fsm)(s), logStore, logStore, snapshots, s.peerStore, transport)
 	if err != nil {
 		return fmt.Errorf("new raft: %s", err)
 	}
@@ -221,7 +245,25 @@ func (s *Store) Nodes() ([]string, error) {
 
 // Addr returns the address of the store.
 func (s *Store) Addr() string {
-	return s.raftTransport.LocalAddr()
+	return s.raftTransport.Addr().String()
+}
+
+// Peer returns the API address for the given addr. If there is no peer
+// for the address, it returns the empty string.
+func (s *Store) Peer(addr string) string {
+	return s.meta.AddrForPeer(addr)
+}
+
+// APIPeers return the map of Raft addresses to API addresses.
+func (s *Store) APIPeers() (map[string]string, error) {
+	s.metaMu.RLock()
+	defer s.metaMu.RUnlock()
+
+	peers := make(map[string]string, len(s.meta.APIPeers))
+	for k, v := range s.meta.APIPeers {
+		peers[k] = v
+	}
+	return peers, nil
 }
 
 // State returns the current node's Raft state
@@ -290,17 +332,22 @@ func (s *Store) Update(bucket []byte, key []byte, value []byte) error {
 		return ErrNotLeader
 	}
 
-	rows := []Row{
+	rows := []model.Row{
 		{
 			Bucket: bucket,
 			Key:    key,
 			Value:  value,
 		}}
 
-	c := &command{
-		Typ:   update,
+	d := &databaseSub{
 		Batch: rows,
 	}
+
+	c, err := newCommand(update, d)
+	if err != nil {
+		return err
+	}
+
 	b, err := json.Marshal(c)
 	if err != nil {
 		return err
@@ -318,7 +365,7 @@ func (s *Store) Update(bucket []byte, key []byte, value []byte) error {
 }
 
 // Batch update the values for the given keys.
-func (s *Store) Batch(rows []Row) error {
+func (s *Store) Batch(rows []model.Row) error {
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
@@ -327,10 +374,15 @@ func (s *Store) Batch(rows []Row) error {
 		return fmt.Errorf("no data in batch")
 	}
 
-	c := &command{
-		Typ:   batch,
+	d := &databaseSub{
 		Batch: rows,
 	}
+
+	c, err := newCommand(batch, d)
+	if err != nil {
+		return err
+	}
+
 	b, err := json.Marshal(c)
 	if err != nil {
 		return err
@@ -353,10 +405,15 @@ func (s *Store) CreateBucket(name []byte) error {
 		return ErrNotLeader
 	}
 
-	c := &command{
-		Typ:  createBucket,
+	d := &databaseSub{
 		Name: name,
 	}
+
+	c, err := newCommand(createBucket, d)
+	if err != nil {
+		return err
+	}
+
 	b, err := json.Marshal(c)
 	if err != nil {
 		return err
@@ -379,10 +436,15 @@ func (s *Store) RemoveBucket(name []byte) error {
 		return ErrNotLeader
 	}
 
-	c := &command{
-		Typ:  removeBucket,
+	d := &databaseSub{
 		Name: name,
 	}
+
+	c, err := newCommand(removeBucket, d)
+	if err != nil {
+		return err
+	}
+
 	b, err := json.Marshal(c)
 	if err != nil {
 		return err
@@ -443,6 +505,9 @@ func (s *Store) Backup() ([]byte, error) {
 // Join joins a node, located at addr, to this store. The node must be ready to
 // respond to Raft communications at that address.
 func (s *Store) Join(addr string) error {
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
 	s.logger.Printf("received join request for remote node as %s", addr)
 
 	f := s.raft.AddPeer(addr)
@@ -455,6 +520,9 @@ func (s *Store) Join(addr string) error {
 
 // Remove removes a node from the store, specified by addr.
 func (s *Store) Remove(addr string) error {
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
 	s.logger.Printf("received request to remove node %s", addr)
 
 	f := s.raft.RemovePeer(addr)
@@ -463,6 +531,25 @@ func (s *Store) Remove(addr string) error {
 	}
 	s.logger.Printf("node %s removed successfully", addr)
 	return nil
+}
+
+// UpdateAPIPeers updates the cluster-wide peer information.
+func (s *Store) UpdateAPIPeers(peers map[string]string) error {
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
+
+	c, err := newCommand(peer, peers)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	f := s.raft.Apply(b, raftTimeout)
+	return f.Error()
 }
 
 type fsm Store
@@ -480,17 +567,30 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 
 	switch c.Typ {
 	case update:
-		err := f.applyUpdate(c.Batch)
+		err := f.applyUpdate(c.Sub)
 		return &fsmGenericResponse{error: err}
 	case batch:
-		err := f.applyBatch(c.Batch)
+		err := f.applyBatch(c.Sub)
 		return &fsmGenericResponse{error: err}
 	case createBucket:
-		err := f.applyCreateBucket(c.Name)
+		err := f.applyCreateBucket(c.Sub)
 		return &fsmGenericResponse{error: err}
 	case removeBucket:
-		err := f.applyRemoveBucket(c.Name)
+		err := f.applyRemoveBucket(c.Sub)
 		return &fsmGenericResponse{error: err}
+	case peer:
+		var d peersSub
+		if err := json.Unmarshal(c.Sub, &d); err != nil {
+			return &fsmGenericResponse{error: err}
+		}
+		func() {
+			f.metaMu.Lock()
+			defer f.metaMu.Unlock()
+			for k, v := range d {
+				f.meta.APIPeers[k] = v
+			}
+		}()
+		return &fsmGenericResponse{}
 	default:
 		panic(fmt.Sprintf("unrecognized command op: %s", c.Typ))
 	}
@@ -568,7 +668,13 @@ func (f *fsm) Restore(rc io.ReadCloser) error {
 	return nil
 }
 
-func (f *fsm) applyUpdate(rows []Row) error {
+func (f *fsm) applyUpdate(sub json.RawMessage) error {
+	var d databaseSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+	rows := d.Batch
+
 	if len(rows) != 1 {
 		return fmt.Errorf("update just accept 1 row data: %d", len(rows))
 	}
@@ -589,7 +695,13 @@ func (f *fsm) applyUpdate(rows []Row) error {
 	})
 }
 
-func (f *fsm) applyBatch(rows []Row) error {
+func (f *fsm) applyBatch(sub json.RawMessage) error {
+	var d databaseSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+	rows := d.Batch
+
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -609,7 +721,13 @@ func (f *fsm) applyBatch(rows []Row) error {
 	})
 }
 
-func (f *fsm) applyCreateBucket(name []byte) error {
+func (f *fsm) applyCreateBucket(sub json.RawMessage) error {
+	var d databaseSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+	name := d.Name
+
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -625,7 +743,13 @@ func (f *fsm) applyCreateBucket(name []byte) error {
 	})
 }
 
-func (f *fsm) applyRemoveBucket(name []byte) error {
+func (f *fsm) applyRemoveBucket(sub json.RawMessage) error {
+	var d databaseSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+	name := d.Name
+
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
