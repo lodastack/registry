@@ -2,9 +2,10 @@ package store
 
 import (
 	"container/list"
-	"log"
-	"os"
 	"sync"
+
+	"github.com/lodastack/log"
+	"github.com/lodastack/registry/model"
 )
 
 // EvictCallback is used to get a callback when a cache entry is evicted
@@ -47,7 +48,7 @@ func NewCache(maxSize uint64, onEvict EvictCallback) *Cache {
 		items:     make(map[string]map[string]*list.Element),
 		evictList: list.New(),
 		onEvict:   onEvict,
-		logger:    log.New(os.Stderr, "[cache] ", log.LstdFlags),
+		logger:    log.NewLogger("INFO", "cache", model.LogBackend),
 	}
 	return c
 }
@@ -118,6 +119,7 @@ func (c *Cache) Get(bucket, key []byte) (value []byte, ok bool) {
 	if b, ok := c.items[string(bucket)]; ok {
 		if ent, ok := b[string(key)]; ok {
 			c.evictList.MoveToFront(ent)
+			c.logger.Debugf("Hit cache, key: %s", string(key))
 			return ent.Value.(*entry).value, true
 		}
 	}

@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
-	"os"
 	"sync"
 	"time"
+
+	"github.com/lodastack/log"
+	"github.com/lodastack/registry/model"
 )
 
 const (
@@ -62,7 +63,7 @@ type Mux struct {
 	Timeout time.Duration
 
 	// Out-of-band error logger
-	Logger *log.Logger
+	logger *log.Logger
 }
 
 // NewMux returns a new instance of Mux for ln. If adv is nil,
@@ -78,13 +79,13 @@ func NewMux(ln net.Listener, adv net.Addr) *Mux {
 		addr:    addr,
 		m:       make(map[byte]*listener),
 		Timeout: DefaultTimeout,
-		Logger:  log.New(os.Stderr, "[tcp] ", log.LstdFlags),
+		logger:  log.NewLogger("INFO", "tcp", model.LogBackend),
 	}
 }
 
 // Serve handles connections from ln and multiplexes then across registered listener.
 func (mux *Mux) Serve() error {
-	mux.Logger.Printf("mux serving on %s, advertising %s", mux.ln.Addr().String(), mux.addr)
+	mux.logger.Printf("mux serving on %s, advertising %s", mux.ln.Addr().String(), mux.addr)
 
 	for {
 		// Wait for the next connection.
@@ -116,7 +117,7 @@ func (mux *Mux) handleConn(conn net.Conn) {
 	// Set a read deadline so connections with no data don't timeout.
 	if err := conn.SetReadDeadline(time.Now().Add(mux.Timeout)); err != nil {
 		conn.Close()
-		mux.Logger.Printf("tcp.Mux: cannot set read deadline: %s", err)
+		mux.logger.Printf("tcp.Mux: cannot set read deadline: %s", err)
 		return
 	}
 
@@ -124,14 +125,14 @@ func (mux *Mux) handleConn(conn net.Conn) {
 	var typ [1]byte
 	if _, err := io.ReadFull(conn, typ[:]); err != nil {
 		conn.Close()
-		mux.Logger.Printf("tcp.Mux: cannot read header byte: %s", err)
+		mux.logger.Printf("tcp.Mux: cannot read header byte: %s", err)
 		return
 	}
 
 	// Reset read deadline and let the listener handle that.
 	if err := conn.SetReadDeadline(time.Time{}); err != nil {
 		conn.Close()
-		mux.Logger.Printf("tcp.Mux: cannot reset set read deadline: %s", err)
+		mux.logger.Printf("tcp.Mux: cannot reset set read deadline: %s", err)
 		return
 	}
 
@@ -139,7 +140,7 @@ func (mux *Mux) handleConn(conn net.Conn) {
 	handler := mux.m[typ[0]]
 	if handler == nil {
 		conn.Close()
-		mux.Logger.Printf("tcp.Mux: handler not registered: %d", typ[0])
+		mux.logger.Printf("tcp.Mux: handler not registered: %d", typ[0])
 		return
 	}
 

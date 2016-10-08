@@ -1,12 +1,11 @@
 package cluster
 
 import (
-	"log"
 	"net"
-	"os"
 	"sync"
 	"time"
 
+	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
 )
 
@@ -70,7 +69,7 @@ func NewService(tn Transport, store Store) *Service {
 		tn:     tn,
 		store:  store,
 		addr:   tn.Addr(),
-		logger: log.New(os.Stderr, "[cluster] ", log.LstdFlags),
+		logger: log.NewLogger("INFO", "cluster", model.LogBackend),
 	}
 }
 
