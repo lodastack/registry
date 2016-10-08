@@ -5,16 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 
+	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
-
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/cors"
 )
 
 // Cluster is the interface op must implement.
@@ -45,8 +41,6 @@ type Cluster interface {
 type Service struct {
 	addr string
 	ln   net.Listener
-	// TODO: need fix, don't use classic martini, now just test
-	m *martini.ClassicMartini
 
 	cluster Cluster
 
@@ -58,46 +52,61 @@ func New(addr string, cluster Cluster) *Service {
 	return &Service{
 		addr:    addr,
 		cluster: cluster,
-		logger:  log.New(os.Stderr, "[http] ", log.LstdFlags),
+		logger:  log.NewLogger("INFO", "http", model.LogBackend),
 	}
 }
 
 // Start the server
 func (s *Service) Start() error {
-	s.m = martini.Classic()
+	server := http.Server{
+		Handler: s,
+	}
 
-	s.m.Use(cors.Allow(&cors.Options{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"PUT", "PATCH", "POST", "DELETE", "GET"},
-		AllowHeaders:     []string{"accept, content-type"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
+	ln, err := net.Listen("tcp", s.addr)
+	if err != nil {
+		return err
+	}
 
-	s.m.Post("/join", s.handleJoin)
+	s.ln = ln
 
-	// get a key
-	s.m.Get("/key", s.handlerKeyGet)
-	// create key
-	s.m.Post("/key", s.handlerKeySet)
-	// batch update keys
-	s.m.Post("/batch", s.handlerUpdate)
-	// create a bucket
-	s.m.Post("/bucket", s.handlerCreateBucket)
-	// remove a bucket
-	s.m.Delete("/bucket", s.handlerRemoveBucket)
-
-	// backup database
-	s.m.Get("/backup", s.handlerBackup)
-
-	go s.m.RunOnAddr(s.addr)
+	go func() {
+		err := server.Serve(s.ln)
+		if err != nil {
+			s.logger.Errorf("Serve error: ", err.Error())
+		}
+	}()
+	s.logger.Println("service listening on: ", s.addr)
 
 	return nil
 }
 
+// ServeHTTP allows Service to serve HTTP requests.
+func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	switch {
+	case strings.HasPrefix(r.URL.Path, "/key") && r.Method == http.MethodPost:
+		s.handlerKeySet(w, r)
+	case strings.HasPrefix(r.URL.Path, "/key") && r.Method == http.MethodGet:
+		s.handlerKeyGet(w, r)
+	case strings.HasPrefix(r.URL.Path, "/batch") && r.Method == http.MethodPost:
+		s.handlerBatch(w, r)
+	case strings.HasPrefix(r.URL.Path, "/bucket") && r.Method == http.MethodPost:
+		s.handlerCreateBucket(w, r)
+	case strings.HasPrefix(r.URL.Path, "/bucket") && r.Method == http.MethodDelete:
+		s.handlerRemoveBucket(w, r)
+	case strings.HasPrefix(r.URL.Path, "/join") && r.Method == http.MethodPost:
+		s.handleJoin(w, r)
+	case strings.HasPrefix(r.URL.Path, "/backup") && r.Method == http.MethodGet:
+		s.handlerBackup(w, r)
+	default:
+		w.WriteHeader(http.StatusNotFound)
+	}
+}
+
 // Close closes the service.
 func (s *Service) Close() error {
-	//s.ln.Close()
+	s.ln.Close()
 	return nil
 }
 
@@ -178,7 +187,7 @@ func (s *Service) handlerKeyGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Service) handlerUpdate(w http.ResponseWriter, r *http.Request) {
+func (s *Service) handlerBatch(w http.ResponseWriter, r *http.Request) {
 	var rows []model.Row
 	rows = append(rows, model.Row{[]byte("k1"), []byte("v1"), []byte("bucket-test")})
 	rows = append(rows, model.Row{[]byte("k2"), []byte("v2"), []byte("bucket-test-no")})

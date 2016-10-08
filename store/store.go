@@ -8,19 +8,20 @@ package store
 
 import (
 	"bytes"
-	"encoding/binary"
+	//"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	stdlog "log"
 	"net"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
 
 	"github.com/boltdb/bolt"
@@ -116,7 +117,7 @@ type Store struct {
 	metaMu sync.RWMutex
 	meta   *clusterMeta
 
-	// TODO: need config from user?
+	// TODO: maybe need to config
 	SnapshotThreshold uint64
 	HeartbeatTimeout  time.Duration
 
@@ -133,7 +134,7 @@ func New(path string, tn Transport) *Store {
 		meta:             newClusterMeta(),
 		dbPath:           filepath.Join(path, boltFile),
 		cache:            NewCache(cacheMaxMemorySize, nil),
-		logger:           log.New(os.Stderr, "[store] ", log.LstdFlags),
+		logger:           log.NewLogger("INFO", "store", model.LogBackend),
 	}
 }
 
@@ -166,6 +167,7 @@ func (s *Store) Open(enableSingle bool) error {
 
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
+	config.Logger = stdlog.New(ioutil.Discard, "raft", stdlog.Lshortfile)
 
 	// Check for any existing peers.
 	peers, err := readPeersJSON(filepath.Join(s.raftDir, "peers.json"))
@@ -182,13 +184,13 @@ func (s *Store) Open(enableSingle bool) error {
 	}
 
 	// Setup Raft communication.
-	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, os.Stderr)
+	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, ioutil.Discard)
 
 	// Create peer storage.
 	s.peerStore = raft.NewJSONPeers(s.raftDir, transport)
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
-	snapshots, err := raft.NewFileSnapshotStore(s.raftDir, retainSnapshotCount, os.Stderr)
+	snapshots, err := raft.NewFileSnapshotStore(s.raftDir, retainSnapshotCount, ioutil.Discard)
 	if err != nil {
 		return fmt.Errorf("file snapshot store: %s", err)
 	}
@@ -205,6 +207,7 @@ func (s *Store) Open(enableSingle bool) error {
 		return fmt.Errorf("new raft: %s", err)
 	}
 	s.raft = ra
+	s.logger.Printf("open store finished")
 	return nil
 }
 
@@ -219,6 +222,7 @@ func (s *Store) Close(wait bool) error {
 			return e.Error()
 		}
 	}
+	s.logger.Printf("store closed")
 	return nil
 }
 
@@ -305,6 +309,7 @@ func (s *Store) WaitForLeader(timeout time.Duration) (string, error) {
 
 // View returns the value for the given key.
 func (s *Store) View(bucket, key []byte) ([]byte, error) {
+	s.logger.Printf("store view request, bucket:%s, key:%s", string(bucket), string(key))
 	var value []byte
 	if v, exist := s.cache.Get(bucket, key); exist {
 		return v, nil
@@ -328,6 +333,7 @@ func (s *Store) View(bucket, key []byte) ([]byte, error) {
 
 // Update the value for the given key.
 func (s *Store) Update(bucket []byte, key []byte, value []byte) error {
+	s.logger.Printf("store update request, bucket:%s, key:%s, value:%s", string(bucket), string(key), string(value))
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
@@ -401,6 +407,7 @@ func (s *Store) Batch(rows []model.Row) error {
 
 // CreateBucket create a bucket.
 func (s *Store) CreateBucket(name []byte) error {
+	s.logger.Printf("store create bucket, bucket:%s", string(name))
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
@@ -432,6 +439,7 @@ func (s *Store) CreateBucket(name []byte) error {
 
 // RemoveBucket remove a bucket.
 func (s *Store) RemoveBucket(name []byte) error {
+	s.logger.Printf("store remove bucket, bucket:%s", string(name))
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
@@ -562,7 +570,8 @@ type fsmGenericResponse struct {
 func (f *fsm) Apply(l *raft.Log) interface{} {
 	var c command
 	if err := json.Unmarshal(l.Data, &c); err != nil {
-		panic(fmt.Sprintf("failed to unmarshal command: %s", err.Error()))
+		f.logger.Printf("failed to unmarshal command: %s", err.Error())
+		return &fsmGenericResponse{error: err}
 	}
 
 	switch c.Typ {
@@ -592,7 +601,9 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		}()
 		return &fsmGenericResponse{}
 	default:
-		panic(fmt.Sprintf("unrecognized command op: %s", c.Typ))
+		err := fmt.Errorf("unrecognized command op: %s", c.Typ)
+		f.logger.Printf(err.Error())
+		return &fsmGenericResponse{error: err}
 	}
 }
 
@@ -639,13 +650,8 @@ func (f *fsm) Restore(rc io.ReadCloser) error {
 		return err
 	}
 
-	// Get size of database.
-	var sz int
-	sz = binary.Size(rc)
-
-	// Now read in the database file data and restore.
-	database := make([]byte, sz)
-	if _, err := io.ReadFull(rc, database); err != nil {
+	var database []byte
+	if err := json.NewDecoder(rc).Decode(&database); err != nil {
 		return err
 	}
 
@@ -771,6 +777,7 @@ type fsmSnapshot struct {
 func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 	err := func() error {
 		// Encode data.
+		// TODO: use binary to encode.
 		b, err := json.Marshal(f.database)
 		if err != nil {
 			return err
