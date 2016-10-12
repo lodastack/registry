@@ -1,0 +1,4 @@
+test:
+    override:
+        - bash circle-test.sh:
+            parallel: true
