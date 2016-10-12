@@ -7,6 +7,8 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/lodastack/log"
 )
 
 const (
@@ -195,6 +197,8 @@ func mustNewStore() *Store {
 	if s == nil {
 		panic("failed to create new store")
 	}
+	s.logger = log.GetLogger()
+	s.cache.logger = s.logger
 	return s
 }
 

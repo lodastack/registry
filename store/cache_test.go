@@ -2,6 +2,8 @@ package store
 
 import (
 	"testing"
+
+	"github.com/lodastack/log"
 )
 
 var bucket1 = []byte("test-bucket")
@@ -18,6 +20,7 @@ var value3 = []byte("test-value789")
 
 func TestCache(t *testing.T) {
 	c := NewCache(10, nil)
+	c.logger = log.GetLogger()
 	// if err != nil {
 	// 	t.Fatalf("new cache err: %v", err)
 	// }
@@ -29,6 +32,7 @@ func TestCache(t *testing.T) {
 
 func Test_Add_Get(t *testing.T) {
 	c := NewCache(1024, nil)
+	c.logger = log.GetLogger()
 	// if err != nil {
 	// 	t.Fatalf("new cache err: %v", err)
 	// }
@@ -49,6 +53,7 @@ func Test_Add_Get(t *testing.T) {
 
 func Test_LRU_FullMem(t *testing.T) {
 	c := NewCache(40, nil)
+	c.logger = log.GetLogger()
 	// if err != nil {
 	// 	t.Fatalf("new cache err: %v", err)
 	// }
@@ -75,6 +80,7 @@ func Test_LRU_FullMem(t *testing.T) {
 
 func Test_LRU(t *testing.T) {
 	c := NewCache(70, nil)
+	c.logger = log.GetLogger()
 	// if err != nil {
 	// 	t.Fatalf("new cache err: %v", err)
 	// }
@@ -109,6 +115,7 @@ func Test_LRU(t *testing.T) {
 
 func Test_RemoveBucket(t *testing.T) {
 	c := NewCache(1024, nil)
+	c.logger = log.GetLogger()
 	// if err != nil {
 	// 	t.Fatalf("new cache err: %v", err)
 	// }
@@ -137,6 +144,7 @@ func Test_RemoveBucket(t *testing.T) {
 
 func Test_Remove(t *testing.T) {
 	c := NewCache(1024, nil)
+	c.logger = log.GetLogger()
 	// if err != nil {
 	// 	t.Fatalf("new cache err: %v", err)
 	// }
@@ -171,6 +179,7 @@ func Test_Remove(t *testing.T) {
 
 func Test_Purge(t *testing.T) {
 	c := NewCache(40, nil)
+	c.logger = log.GetLogger()
 	// if err != nil {
 	// 	t.Fatalf("new cache err: %v", err)
 	// }

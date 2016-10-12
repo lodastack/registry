@@ -3,14 +3,14 @@ package tcp
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
-	"log"
 	"net"
 	"strings"
 	"sync"
 	"testing"
 	"testing/quick"
 	"time"
+
+	"github.com/lodastack/log"
 )
 
 // Ensure the muxer can split a listener's connections across multiple listeners.
@@ -33,9 +33,8 @@ func TestMux(t *testing.T) {
 		// Setup muxer & listeners.
 		mux := NewMux(tcpListener, nil)
 		mux.Timeout = 200 * time.Millisecond
-		if !testing.Verbose() {
-			mux.Logger = log.New(ioutil.Discard, "", 0)
-		}
+		mux.logger = log.GetLogger()
+
 		for i := uint8(0); i < n; i++ {
 			ln := mux.Listen(byte(i))
 
@@ -130,7 +129,7 @@ func TestMux_Advertise(t *testing.T) {
 	mux := NewMux(tcpListener, addr)
 	mux.Timeout = 200 * time.Millisecond
 	if !testing.Verbose() {
-		mux.Logger = log.New(ioutil.Discard, "", 0)
+		mux.logger = log.GetLogger()
 	}
 
 	layer := mux.Listen(1)

@@ -1,4 +1,4 @@
-# service registry
+# Service Registry [![CircleCI](https://circleci.com/gh/lodastack/registry.svg?style=svg&circle-token=d86b3917d23b1883d3b0682c877a3114eff49fc0)](https://circleci.com/gh/lodastack/registry)
 
 ## Build
 
