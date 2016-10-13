@@ -69,7 +69,7 @@ func NewService(tn Transport, store Store) *Service {
 		tn:     tn,
 		store:  store,
 		addr:   tn.Addr(),
-		logger: log.NewLogger("INFO", "cluster", model.LogBackend),
+		logger: log.New("INFO", "cluster", model.LogBackend),
 	}
 }
 

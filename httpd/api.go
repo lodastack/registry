@@ -52,7 +52,7 @@ func New(addr string, cluster Cluster) *Service {
 	return &Service{
 		addr:    addr,
 		cluster: cluster,
-		logger:  log.NewLogger("INFO", "http", model.LogBackend),
+		logger:  log.New("INFO", "http", model.LogBackend),
 	}
 }
 

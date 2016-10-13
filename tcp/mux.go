@@ -79,7 +79,7 @@ func NewMux(ln net.Listener, adv net.Addr) *Mux {
 		addr:    addr,
 		m:       make(map[byte]*listener),
 		Timeout: DefaultTimeout,
-		logger:  log.NewLogger("INFO", "tcp", model.LogBackend),
+		logger:  log.New("INFO", "tcp", model.LogBackend),
 	}
 }
 

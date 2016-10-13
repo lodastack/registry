@@ -62,7 +62,7 @@ type Main struct {
 // NewMain return a new instance of Main.
 func NewMain() *Main {
 	return &Main{
-		logger: log.NewLogger(config.C.LogConf.Level, "main", model.LogBackend),
+		logger: log.New(config.C.LogConf.Level, "main", model.LogBackend),
 	}
 }
 

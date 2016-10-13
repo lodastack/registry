@@ -134,7 +134,7 @@ func New(path string, tn Transport) *Store {
 		meta:             newClusterMeta(),
 		dbPath:           filepath.Join(path, boltFile),
 		cache:            NewCache(cacheMaxMemorySize, nil),
-		logger:           log.NewLogger("INFO", "store", model.LogBackend),
+		logger:           log.New("INFO", "store", model.LogBackend),
 	}
 }
 
