@@ -1,4 +1,11 @@
+machine:
+    environment:
+        # GOROOT is not set by default
+        GOROOT: ""
+        PATH: "/usr/local/go/bin:/usr/local/go_workspace/bin:~/.go_workspace/bin:${PATH}"
+        GOPATH: "${HOME}/.go_workspace:/usr/local/go_workspace:${HOME}/.go_project"
+
 test:
     override:
-        - bash circle-test.sh:
+        - mkdir -p ${HOME}/.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME;cp -r ${HOME}/$CIRCLE_PROJECT_REPONAME ${HOME}/.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME;bash circle-test.sh:
             parallel: true

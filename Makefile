@@ -8,8 +8,6 @@ dep:fmt
 	go get github.com/lodastack/log
 	go get github.com/hashicorp/raft
 	go get github.com/BurntSushi/toml
-	go get github.com/go-martini/martini
-	go get github.com/martini-contrib/cors
 	go get github.com/hashicorp/raft-boltdb
 
 build: fmt 
