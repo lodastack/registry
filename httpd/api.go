@@ -128,15 +128,36 @@ func (s *Service) initHandler() {
 	s.router.POST("/peer", s.handlerJoin)
 	s.router.DELETE("/peer", s.handlerRemove)
 
+	s.router.GET("/search", s.handlerSearch)
+
 	s.router.GET("/backup", s.handlerBackup)
 }
 
 func (s *Service) handlerKeySet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	key := r.FormValue("key")
-	value := r.FormValue("value")
-	bucket := r.FormValue("bucket")
+	queryString := r.URL.Query()
+	key := queryString.Get("key")
+	value := queryString.Get("value")
+	bucket := queryString.Get("bucket")
 
-	err := s.cluster.Update([]byte(bucket), []byte(key), []byte(value))
+	buf := bytes.NewBufferString("")
+	if _, err := buf.ReadFrom(r.Body); err != nil {
+		fmt.Fprintf(w, "%s", "read body fail, please check and try again")
+		return
+	}
+
+	var err error
+	resesStruct, err := model.NewResources(buf.Bytes())
+	if err != nil {
+		log.Debug("loda byte to resources fail, set value in url")
+		err = s.cluster.Update([]byte(bucket), []byte(key), []byte(value))
+	} else {
+		resByte, err := resesStruct.Marshal()
+		if err != nil {
+			err = fmt.Errorf("marshal body to resources fail, please check and try again")
+		}
+		err = s.cluster.Update([]byte(bucket), []byte(key), resByte)
+	}
+
 	if err != nil {
 		fmt.Fprintf(w, "%s", err)
 	} else {
@@ -152,9 +173,24 @@ func (s *Service) handlerKeyGet(w http.ResponseWriter, r *http.Request, _ httpro
 	var err error
 	if res, err = s.cluster.View([]byte(bucket), []byte(key)); err != nil {
 		fmt.Fprintf(w, "%s", err)
-	} else {
-		fmt.Fprintf(w, "%s", string(res))
+		return
 	}
+
+	ressStruct := model.Resources{}
+	if err = ressStruct.Unmarshal(res); err == nil {
+		res, _ = json.Marshal(ressStruct)
+	}
+	fmt.Fprintf(w, "%s", string(res))
+}
+
+// search bucket by nodes/key(resource)/resource_property
+func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// ns := r.FormValue("ns")
+	// key := r.FormValue("key")
+
+	var result map[string]map[string]string = make(map[string]map[string]string, 0)
+	out, _ := json.Marshal(result)
+	fmt.Fprintf(w, "%s", string(out))
 }
 
 func (s *Service) handlerBatch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

@@ -117,6 +117,11 @@ func (s *Service) View(bucket, key []byte) ([]byte, error) {
 	return s.store.View(bucket, key)
 }
 
+// TODO: Get buckets list by search ns.
+func searchBucket(node []byte) []string {
+	return []string{string(node)}
+}
+
 // Update will update the value of the given key in bucket via the cluster.
 func (s *Service) Update(bucket []byte, key []byte, value []byte) error {
 	// Try the local store. It might be the leader.

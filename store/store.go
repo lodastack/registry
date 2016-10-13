@@ -18,6 +18,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -368,6 +369,30 @@ func (s *Store) Update(bucket []byte, key []byte, value []byte) error {
 	}
 	r := f.Response().(*fsmGenericResponse)
 	return r.error
+}
+
+// View bucket by keyPerfix.
+func (s *Store) Views(bucket, keyPrefix []byte) (map[string][]byte, error) {
+	var result map[string][]byte = make(map[string][]byte, 0)
+	tx, err := s.db.Begin(true)
+	if err != nil {
+		s.logger.Error("begin db fail: ", err.Error())
+		return result, err
+	}
+	defer tx.Rollback()
+
+	b := tx.Bucket(bucket)
+	if b == nil {
+		s.logger.Error("failed to copen bucket: ", string(bucket))
+		return result, errors.New("open bucket fail, may because invalue bucket")
+	}
+	c := b.Cursor()
+	for k, v := c.Seek(keyPrefix); len(k) != 0 && strings.HasPrefix(string(k), string(keyPrefix)); k, v = c.Next() {
+		if len(v) != 0 {
+			result[string(k)] = v
+		}
+	}
+	return result, nil
 }
 
 // Batch update the values for the given keys.
