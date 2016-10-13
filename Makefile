@@ -10,6 +10,7 @@ dep:fmt
 	go get github.com/BurntSushi/toml
 	go get github.com/hashicorp/raft-boltdb
 	go get github.com/julienschmidt/httprouter
+	go get github.com/satori/go.uuid
 
 build: fmt 
 	cd cmd/registry && go build -v
