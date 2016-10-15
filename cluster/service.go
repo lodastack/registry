@@ -17,7 +17,7 @@ const (
 type Transport interface {
 	net.Listener
 
-	// Dial is used to create a new outgoing connection
+	// Dial is used to create a new outgoing connection.
 	Dial(address string, timeout time.Duration) (net.Conn, error)
 }
 
@@ -52,7 +52,7 @@ type Store interface {
 }
 
 // Service allows access to the cluster and associated meta data,
-// via consensus.
+// via distributed consensus.
 type Service struct {
 	tn    Transport
 	store Store
@@ -63,7 +63,7 @@ type Service struct {
 	logger *log.Logger
 }
 
-// NewService returns a new instance of the cluster service
+// NewService returns a new instance of the cluster service.
 func NewService(tn Transport, store Store) *Service {
 	return &Service{
 		tn:     tn,
