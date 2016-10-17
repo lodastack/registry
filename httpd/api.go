@@ -18,6 +18,9 @@ type Cluster interface {
 	// Join joins the node, reachable at addr, to the cluster.
 	Join(addr string) error
 
+	// Remove removes a node from the store, specified by addr.
+	Remove(addr string) error
+
 	// Create a bucket, via distributed consensus.
 	CreateBucket(name []byte) error
 
@@ -95,8 +98,10 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handlerCreateBucket(w, r)
 	case strings.HasPrefix(r.URL.Path, "/bucket") && r.Method == http.MethodDelete:
 		s.handlerRemoveBucket(w, r)
-	case strings.HasPrefix(r.URL.Path, "/join") && r.Method == http.MethodPost:
+	case strings.HasPrefix(r.URL.Path, "/peer") && r.Method == http.MethodPost:
 		s.handleJoin(w, r)
+	case strings.HasPrefix(r.URL.Path, "/peer") && r.Method == http.MethodDelete:
+		s.handleRemove(w, r)
 	case strings.HasPrefix(r.URL.Path, "/backup") && r.Method == http.MethodGet:
 		s.handlerBackup(w, r)
 	default:
@@ -143,6 +148,37 @@ func (s *Service) handleJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.cluster.Join(remoteAddr); err != nil {
+		b := bytes.NewBufferString(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(b.Bytes())
+		return
+	}
+}
+
+func (s *Service) handleRemove(w http.ResponseWriter, r *http.Request) {
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	m := map[string]string{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if len(m) != 1 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	remoteAddr, ok := m["addr"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := s.cluster.Remove(remoteAddr); err != nil {
 		b := bytes.NewBufferString(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(b.Bytes())

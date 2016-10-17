@@ -8,10 +8,10 @@ import (
 	"github.com/lodastack/registry/model"
 )
 
-// EvictCallback is used to get a callback when a cache entry is evicted
+// EvictCallback is used to get a callback when a cache entry is evicted.
 type EvictCallback func(bucket []byte, key []byte, value []byte)
 
-// Cache implements a non-thread safe fixed size LRU cache
+// Cache implements a non-thread safe fixed size LRU cache.
 type Cache struct {
 	mu        sync.RWMutex
 	count     int
@@ -25,7 +25,7 @@ type Cache struct {
 	logger *log.Logger
 }
 
-// entry is used to hold a value in the evictList
+// entry is used to hold a value in the evictList.
 type entry struct {
 	bucket []byte
 	key    []byte
@@ -36,7 +36,7 @@ func (e *entry) Size() int {
 	return len(e.bucket) + len(e.key) + len(e.value)
 }
 
-// New constructs an LRU cache of the given size
+// New constructs an LRU cache of the given size.
 func NewCache(maxSize uint64, onEvict EvictCallback) *Cache {
 	// user config need check maxSize
 	// if maxSize <= 0 {
@@ -53,7 +53,7 @@ func NewCache(maxSize uint64, onEvict EvictCallback) *Cache {
 	return c
 }
 
-// Purge is used to completely clear the cache
+// Purge is used to completely clear the cache.
 func (c *Cache) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -198,7 +198,7 @@ func (c *Cache) RemoveOldest() ([]byte, []byte, []byte, bool) {
 	return nil, nil, nil, false
 }
 
-// GetOldest returns the oldest entry
+// GetOldest returns the oldest entry.
 func (c *Cache) GetOldest() ([]byte, []byte, []byte, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -238,7 +238,7 @@ func (c *Cache) removeOldest() {
 	}
 }
 
-// removeElement is used to remove a given list element from the cache
+// removeElement is used to remove a given list element from the cache.
 func (c *Cache) removeElement(e *list.Element) {
 	c.evictList.Remove(e)
 	kv := e.Value.(*entry)

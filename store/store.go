@@ -226,7 +226,7 @@ func (s *Store) Close(wait bool) error {
 	return nil
 }
 
-// IsLeader is used to determine if the current node is cluster leader
+// IsLeader is used to determine if the current node is cluster leader.
 func (s *Store) IsLeader() bool {
 	return s.raft.State() == raft.Leader
 }
@@ -270,7 +270,7 @@ func (s *Store) APIPeers() (map[string]string, error) {
 	return peers, nil
 }
 
-// State returns the current node's Raft state
+// State returns the current node's Raft state.
 func (s *Store) State() ClusterState {
 	state := s.raft.State()
 	switch state {
