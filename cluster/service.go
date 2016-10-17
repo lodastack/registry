@@ -29,6 +29,9 @@ type Store interface {
 	// Join joins the node, reachable at addr, to the cluster.
 	Join(addr string) error
 
+	// Remove removes a node from the store, specified by addr.
+	Remove(addr string) error
+
 	// UpdateAPIPeers updates the API peers on the store.
 	UpdateAPIPeers(peers map[string]string) error
 

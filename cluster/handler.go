@@ -20,6 +20,7 @@ var (
 	TypUpdate  = []byte("update")
 	TypBatch   = []byte("batch")
 	TypJoin    = []byte("join")
+	TypRemove  = []byte("remove")
 )
 
 type response struct {
@@ -58,6 +59,23 @@ func (s *Service) Join(addr string) error {
 	}
 
 	msg["type"] = TypJoin
+	return s.WriteLeader(msg)
+
+}
+
+// Remove removes a node from the store, specified by addr.
+func (s *Service) Remove(addr string) error {
+	// Try the local store. It might be the leader.
+	err := s.store.Remove(addr)
+	if err == nil || err != ErrNotLeader {
+		return err
+	}
+
+	msg := map[string][]byte{
+		"addr": []byte(addr),
+	}
+
+	msg["type"] = TypRemove
 	return s.WriteLeader(msg)
 
 }
@@ -210,6 +228,8 @@ func (s *Service) handleConn(conn net.Conn) {
 		s.handleBatch(msg, conn)
 	case string(TypJoin):
 		s.handleJoin(msg, conn)
+	case string(TypRemove):
+		s.handleRemove(msg, conn)
 	default:
 		// log string(t)
 		conn.Close()
@@ -266,6 +286,23 @@ func (s *Service) handleJoin(msg map[string][]byte, conn net.Conn) {
 	}
 	s.writeResponse(response{}, conn)
 	return
+}
+
+func (s *Service) handleRemove(msg map[string][]byte, conn net.Conn) {
+	addr, ok := msg["addr"]
+	if !ok {
+		resp := response{1, "need para"}
+		s.writeResponse(resp, conn)
+		return
+	}
+
+	// Remove from the cluster.
+	if err := s.store.Remove(string(addr)); err != nil {
+		resp := response{1, err.Error()}
+		s.writeResponse(resp, conn)
+		return
+	}
+	s.writeResponse(response{}, conn)
 }
 
 func (s *Service) handleCreateBucket(msg map[string][]byte, conn net.Conn) {
