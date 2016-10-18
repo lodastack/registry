@@ -11,6 +11,8 @@ import (
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 // Cluster is the interface op must implement.
@@ -45,6 +47,8 @@ type Service struct {
 	addr string
 	ln   net.Listener
 
+	router *httprouter.Router
+
 	cluster Cluster
 
 	logger *log.Logger
@@ -55,14 +59,17 @@ func New(addr string, cluster Cluster) *Service {
 	return &Service{
 		addr:    addr,
 		cluster: cluster,
+		router:  httprouter.New(),
 		logger:  log.New("INFO", "http", model.LogBackend),
 	}
 }
 
 // Start the server
 func (s *Service) Start() error {
+	s.initHandler()
+
 	server := http.Server{
-		Handler: s,
+		Handler: s.router,
 	}
 
 	ln, err := net.Listen("tcp", s.addr)
@@ -83,32 +90,6 @@ func (s *Service) Start() error {
 	return nil
 }
 
-// ServeHTTP allows Service to serve HTTP requests.
-func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	switch {
-	case strings.HasPrefix(r.URL.Path, "/key") && r.Method == http.MethodPost:
-		s.handlerKeySet(w, r)
-	case strings.HasPrefix(r.URL.Path, "/key") && r.Method == http.MethodGet:
-		s.handlerKeyGet(w, r)
-	case strings.HasPrefix(r.URL.Path, "/batch") && r.Method == http.MethodPost:
-		s.handlerBatch(w, r)
-	case strings.HasPrefix(r.URL.Path, "/bucket") && r.Method == http.MethodPost:
-		s.handlerCreateBucket(w, r)
-	case strings.HasPrefix(r.URL.Path, "/bucket") && r.Method == http.MethodDelete:
-		s.handlerRemoveBucket(w, r)
-	case strings.HasPrefix(r.URL.Path, "/peer") && r.Method == http.MethodPost:
-		s.handleJoin(w, r)
-	case strings.HasPrefix(r.URL.Path, "/peer") && r.Method == http.MethodDelete:
-		s.handleRemove(w, r)
-	case strings.HasPrefix(r.URL.Path, "/backup") && r.Method == http.MethodGet:
-		s.handlerBackup(w, r)
-	default:
-		w.WriteHeader(http.StatusNotFound)
-	}
-}
-
 // Close closes the service.
 func (s *Service) Close() error {
 	s.ln.Close()
@@ -124,7 +105,94 @@ func NormalizeAddr(addr string) string {
 	return addr
 }
 
-func (s *Service) handleJoin(w http.ResponseWriter, r *http.Request) {
+// FormRedirect returns the value for the "Location" header for a 301 response.
+func (s *Service) FormRedirect(r *http.Request, host string) string {
+	protocol := "http"
+	// if s.credentialStore != nil {
+	// 	protocol = "https"
+	// }
+	return fmt.Sprintf("%s://%s%s", protocol, host, r.URL.Path)
+}
+
+// all handlers just for test
+
+func (s *Service) initHandler() {
+	s.router.POST("/key", s.handlerKeySet)
+	s.router.GET("/key", s.handlerKeyGet)
+
+	s.router.POST("/batch", s.handlerBatch)
+
+	s.router.POST("/bucket", s.handlerCreateBucket)
+	s.router.DELETE("/bucket", s.handlerRemoveBucket)
+
+	s.router.POST("/peer", s.handlerJoin)
+	s.router.DELETE("/peer", s.handlerRemove)
+
+	s.router.GET("/backup", s.handlerBackup)
+}
+
+func (s *Service) handlerKeySet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	key := r.FormValue("key")
+	value := r.FormValue("value")
+	bucket := r.FormValue("bucket")
+
+	err := s.cluster.Update([]byte(bucket), []byte(key), []byte(value))
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+	} else {
+		fmt.Fprintf(w, "%s", "success")
+	}
+}
+
+func (s *Service) handlerKeyGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	key := r.FormValue("key")
+	bucket := r.FormValue("bucket")
+
+	var res []byte
+	var err error
+	if res, err = s.cluster.View([]byte(bucket), []byte(key)); err != nil {
+		fmt.Fprintf(w, "%s", err)
+	} else {
+		fmt.Fprintf(w, "%s", string(res))
+	}
+}
+
+func (s *Service) handlerBatch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var rows []model.Row
+	rows = append(rows, model.Row{[]byte("k1"), []byte("v1"), []byte("bucket-test")})
+	rows = append(rows, model.Row{[]byte("k2"), []byte("v2"), []byte("bucket-test-no")})
+	if err := s.cluster.Batch(rows); err != nil {
+		b := bytes.NewBufferString(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(b.Bytes())
+		return
+	}
+	fmt.Fprintf(w, "%s", "success")
+}
+
+func (s *Service) handlerCreateBucket(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	name := r.FormValue("name")
+
+	err := s.cluster.CreateBucket([]byte(name))
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+	} else {
+		fmt.Fprintf(w, "%s", "success")
+	}
+}
+
+func (s *Service) handlerRemoveBucket(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	name := r.FormValue("name")
+
+	err := s.cluster.RemoveBucket([]byte(name))
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+	} else {
+		fmt.Fprintf(w, "%s", "success")
+	}
+}
+
+func (s *Service) handlerJoin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -155,7 +223,7 @@ func (s *Service) handleJoin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Service) handleRemove(w http.ResponseWriter, r *http.Request) {
+func (s *Service) handlerRemove(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -186,79 +254,7 @@ func (s *Service) handleRemove(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// FormRedirect returns the value for the "Location" header for a 301 response.
-func (s *Service) FormRedirect(r *http.Request, host string) string {
-	protocol := "http"
-	// if s.credentialStore != nil {
-	// 	protocol = "https"
-	// }
-	return fmt.Sprintf("%s://%s%s", protocol, host, r.URL.Path)
-}
-
-// all handlers just for test
-
-func (s *Service) handlerKeySet(w http.ResponseWriter, r *http.Request) {
-	key := r.FormValue("key")
-	value := r.FormValue("value")
-	bucket := r.FormValue("bucket")
-
-	err := s.cluster.Update([]byte(bucket), []byte(key), []byte(value))
-	if err != nil {
-		fmt.Fprintf(w, "%s", err)
-	} else {
-		fmt.Fprintf(w, "%s", "success")
-	}
-}
-
-func (s *Service) handlerKeyGet(w http.ResponseWriter, r *http.Request) {
-	key := r.FormValue("key")
-	bucket := r.FormValue("bucket")
-
-	var res []byte
-	var err error
-	if res, err = s.cluster.View([]byte(bucket), []byte(key)); err != nil {
-		fmt.Fprintf(w, "%s", err)
-	} else {
-		fmt.Fprintf(w, "%s", string(res))
-	}
-}
-
-func (s *Service) handlerBatch(w http.ResponseWriter, r *http.Request) {
-	var rows []model.Row
-	rows = append(rows, model.Row{[]byte("k1"), []byte("v1"), []byte("bucket-test")})
-	rows = append(rows, model.Row{[]byte("k2"), []byte("v2"), []byte("bucket-test-no")})
-	if err := s.cluster.Batch(rows); err != nil {
-		b := bytes.NewBufferString(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(b.Bytes())
-		return
-	}
-	fmt.Fprintf(w, "%s", "success")
-}
-
-func (s *Service) handlerCreateBucket(w http.ResponseWriter, r *http.Request) {
-	name := r.FormValue("name")
-
-	err := s.cluster.CreateBucket([]byte(name))
-	if err != nil {
-		fmt.Fprintf(w, "%s", err)
-	} else {
-		fmt.Fprintf(w, "%s", "success")
-	}
-}
-
-func (s *Service) handlerRemoveBucket(w http.ResponseWriter, r *http.Request) {
-	name := r.FormValue("name")
-
-	err := s.cluster.RemoveBucket([]byte(name))
-	if err != nil {
-		fmt.Fprintf(w, "%s", err)
-	} else {
-		fmt.Fprintf(w, "%s", "success")
-	}
-}
-
-func (s *Service) handlerBackup(w http.ResponseWriter, r *http.Request) {
+func (s *Service) handlerBackup(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var err error
 	var data []byte
 	if data, err = s.cluster.Backup(); err != nil {
