@@ -164,11 +164,10 @@ func (m *Main) Start() error {
 		m.logger.Errorf("close HTTP failed: %s", err)
 	}
 
-	// // close cluster service
-	// TODO: if no request, will hang here，need fix
-	// if err := cs.Close(); err != nil {
-	// 	m.logger.Errorf("close cluster service failed: %s", err)
-	// }
+	// close cluster service
+	if err := cs.Close(); err != nil {
+		m.logger.Errorf("close cluster service failed: %s", err)
+	}
 
 	// close store service
 	if err := s.Close(true); err != nil {

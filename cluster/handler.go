@@ -199,6 +199,8 @@ func (s *Service) WriteLeader(msg interface{}) error {
 }
 
 func (s *Service) handleConn(conn net.Conn) {
+	defer s.wg.Done()
+	defer conn.Close()
 	s.logger.Printf("received connection from %s", conn.RemoteAddr().String())
 
 	// Only handles peers updates for now.
@@ -211,7 +213,6 @@ func (s *Service) handleConn(conn net.Conn) {
 
 	t, ok := msg["type"]
 	if !ok {
-		conn.Close()
 		return
 	}
 
@@ -231,8 +232,7 @@ func (s *Service) handleConn(conn net.Conn) {
 	case string(TypRemove):
 		s.handleRemove(msg, conn)
 	default:
-		// log string(t)
-		conn.Close()
+		s.logger.Errorf("unknown message type: %s", string(t))
 		return
 	}
 }
@@ -241,12 +241,12 @@ func (s *Service) writeResponse(resp interface{}, conn net.Conn) {
 	defer conn.Close()
 	b, err := json.Marshal(resp)
 	if err != nil {
-		// meed log here
-		return // Only way left to signal.
+		s.logger.Errorf("marshal resp error: %s", err.Error())
+		return
 	} else {
 		if _, err := conn.Write(b); err != nil {
-			// meed log here
-			return // Only way left to signal.
+			s.logger.Errorf("write resp error: %s", err.Error())
+			return
 		}
 	}
 }
