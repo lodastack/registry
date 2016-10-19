@@ -9,6 +9,7 @@ dep:fmt
 	go get github.com/hashicorp/raft
 	go get github.com/BurntSushi/toml
 	go get github.com/hashicorp/raft-boltdb
+	go get github.com/julienschmidt/httprouter
 
 build: fmt 
 	cd cmd/registry && go build -v
