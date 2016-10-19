@@ -61,7 +61,8 @@ type Service struct {
 	store Store
 	addr  net.Addr
 
-	wg sync.WaitGroup
+	wg   sync.WaitGroup
+	done chan struct{} // Is the service closing or closed?
 
 	logger *log.Logger
 }
@@ -78,7 +79,11 @@ func NewService(tn Transport, store Store) *Service {
 
 // Open opens the Service.
 func (s *Service) Open() error {
-	s.wg.Add(1)
+	if !s.closed() {
+		return nil // Already open.
+	}
+	s.done = make(chan struct{})
+
 	go s.serve()
 	s.logger.Println("service listening on", s.tn.Addr())
 	return nil
@@ -86,9 +91,23 @@ func (s *Service) Open() error {
 
 // Close closes the service.
 func (s *Service) Close() error {
+	if s.closed() {
+		return nil // Already closed.
+	}
+	close(s.done)
 	s.tn.Close()
 	s.wg.Wait()
 	return nil
+}
+
+func (s *Service) closed() bool {
+	select {
+	case <-s.done:
+		// Service is closing.
+		return true
+	default:
+	}
+	return s.done == nil
 }
 
 // Addr returns the address the service is listening on.
@@ -97,14 +116,18 @@ func (s *Service) Addr() string {
 }
 
 func (s *Service) serve() error {
-	defer s.wg.Done()
-
 	for {
-		conn, err := s.tn.Accept()
-		if err != nil {
-			return err
+		select {
+		case <-s.done:
+			// We closed the connection, time to go.
+			return nil
+		default:
+			conn, err := s.tn.Accept()
+			if err != nil {
+				s.logger.Errorf("accept error: %s", err.Error())
+			}
+			s.wg.Add(1)
+			go s.handleConn(conn)
 		}
-
-		go s.handleConn(conn)
 	}
 }
