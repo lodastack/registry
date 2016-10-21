@@ -1,11 +1,13 @@
 package model
 
 import (
+	"fmt"
 	"testing"
 )
 
-var boltByte = []byte{72, 0, 72, 72, 101, 108, 108, 111, 111, 1, 32, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 1, 1, 72, 72, 101, 108, 108, 111, 1, 32, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 1, 1, 1,
-	73, 0, 72, 101, 108, 108, 111, 111, 1, 32, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 1, 1, 72, 101, 108, 108, 111, 1, 32, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 2}
+// [map[HHello: playground _id:H HHelloo: playground] map[_id:I Helloo: playground Hello: playgrou]]
+var boltByte = []byte{72, 0, 72, 72, 101, 108, 108, 111, 111, 1, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 1, 1, 72, 72, 101, 108, 108, 111, 1, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 1, 1, 1,
+	73, 0, 72, 101, 108, 108, 111, 111, 1, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 1, 1, 72, 101, 108, 108, 111, 1, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 2}
 
 var rByte = []byte{72, 73, 74, 0, 72, 72, 101, 108, 108, 111, 111, 1, 32, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 1, 1,
 	72, 72, 101, 108, 108, 111, 1, 32, 112, 108, 97, 121, 103, 114, 111, 117, 110, 100, 2}
@@ -27,10 +29,27 @@ func TestRsUnmarshal(t *testing.T) {
 		t.Fatalf("unmarshal fail, expect result of unmarshal have length: 2")
 	}
 	for _, resouce := range boltv {
-		t.Log("%+v", resouce)
 		if _, ok := resouce["_id"]; !ok || len(resouce) != 3 {
 			t.Fatalf("unmarshal fail, resource should have _id")
 		}
+		if resouce["_id"] == "H" {
+			if v, ok := resouce["HHello"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect")
+			}
+			if v, ok := resouce["HHelloo"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect")
+			}
+		} else if resouce["_id"] == "I" {
+			if v, ok := resouce["Hello"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect")
+			}
+			if v, ok := resouce["Helloo"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect, v is: %s", v)
+			}
+		}
+	}
+	if boltv[0]["_id"] == boltv[1]["_id"] {
+		t.Fatalf("unmarshal fail, resource have same resource")
 	}
 }
 
@@ -53,11 +72,12 @@ func TestRsMarshal(t *testing.T) {
 	if len(*ressStruct) != 2 {
 		t.Fatalf("unmarshal fail, expect result of unmarshal have length: 2")
 	}
-	for _, resouce := range *ressStruct {
-		_, havKey1 := resouce["res_key1"]
-		_, havKey2 := resouce["res_key2"]
-		if !havKey1 || !havKey2 {
-			t.Fatalf("unmarshal fail, resource should have _id")
+	for index, resouce := range *ressStruct {
+		if v, k := resouce["res_key1"]; !k || v != fmt.Sprintf("res%d_v1", index+1) {
+			t.Fatalf("unmarshal not match with expect, Unmarshal value is: %s", v)
+		}
+		if v, k := resouce["res_key2"]; !k || v != fmt.Sprintf("res%d_v2", index+1) {
+			t.Fatalf("unmarshal not match with expect, Unmarshal value is: %s", v)
 		}
 	}
 }
@@ -73,7 +93,7 @@ func TestRUnmarshal(t *testing.T) {
 	t.Log(r)
 }
 
-func TestLoadByte(t *testing.T) {
+func TestNewResources(t *testing.T) {
 	ressStruct, err := NewResources(resByte)
 	if err != nil {
 		t.Fatalf("Resources load byte fail", err.Error())
@@ -81,11 +101,12 @@ func TestLoadByte(t *testing.T) {
 	if len(*ressStruct) != 2 {
 		t.Fatalf("Resources load byte error: num of resource(map) not match")
 	}
-	for _, res := range *ressStruct {
-		_, key1 := res["res_key1"]
-		_, key2 := res["res_key2"]
-		if !key1 || !key2 {
-			t.Fatalf("Resources load byte error: property of resource(map) not match")
+	for index, resouce := range *ressStruct {
+		if v, k := resouce["res_key1"]; !k || v != fmt.Sprintf("res%d_v1", index+1) {
+			t.Fatalf("unmarshal not match with expect, Unmarshal value is: %s", v)
+		}
+		if v, k := resouce["res_key2"]; !k || v != fmt.Sprintf("res%d_v2", index+1) {
+			t.Fatalf("unmarshal not match with expect, Unmarshal value is: %s", v)
 		}
 	}
 

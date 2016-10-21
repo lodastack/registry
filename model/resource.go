@@ -58,9 +58,9 @@ func NewResources(byteData []byte) (*Resources, error) {
 
 func NewResourcesMaps(resMaps []map[string]string) (*Resources, error) {
 	rs := &Resources{}
-	*rs = make([]Resource, 0)
-	for _, resMap := range resMaps {
-		*rs = append(*rs, Resource(resMap))
+	*rs = make([]Resource, len(resMaps))
+	for i := 0; i < len(resMaps); i++ {
+		(*rs)[i] = Resource(resMaps[i])
 	}
 	return rs, nil
 }
@@ -80,7 +80,7 @@ func (rs *Resources) Unmarshal(raw []byte) error {
 		case endByte:
 			//  End of resources.
 			r := Resource{}
-			if err := r.Unmarshal(raw[startPos : endPos-len(deliRes)+1]); err != nil {
+			if err := r.Unmarshal(raw[startPos:index]); err != nil {
 				return fmt.Errorf("unmarshal byte to resource fail")
 			} else {
 				*rs = append(*rs, r)
@@ -98,6 +98,7 @@ func (rs *Resources) Unmarshal(raw []byte) error {
 					} else {
 						*rs = append(*rs, r)
 					}
+					startPos = index
 				}
 				deliLen = 0
 			}
