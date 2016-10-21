@@ -11,6 +11,7 @@ import (
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
+	_ "github.com/lodastack/registry/node"
 
 	"github.com/julienschmidt/httprouter"
 )

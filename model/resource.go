@@ -7,9 +7,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-// data format:
-// map1uuid 1 map1key1 0 map1value1 00 map1key2 0 map1value2 000 map2uuid 1 map2key1 0 map2value1 00 map2key2 0 map2value2
-// todo: use other utf8 byte delimiter to change deliProp/deliRes; end map with delimiter
+// Data Format: map1uuid 0 map1key1 1 map1value1 11 map1key2 1 map1value2 111 map2uuid 0 map2key1 1 map2value1 11 map2key2 1 map2value2 2
 
 const (
 	idKey      = "_id"
@@ -49,9 +47,9 @@ func NewResources(byteData []byte) (*Resources, error) {
 		return rs, fmt.Errorf("marshal bytes to map fail: %s", err.Error())
 	}
 
-	*rs = make([]Resource, 0)
-	for _, resMap := range resMaps {
-		*rs = append(*rs, Resource(resMap))
+	*rs = make([]Resource, len(resMaps))
+	for i := 0; i < len(resMaps); i++ {
+		(*rs)[i] = Resource(resMaps[i])
 	}
 	return rs, nil
 }
