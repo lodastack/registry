@@ -7,11 +7,12 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
-	_ "github.com/lodastack/registry/node"
+	"github.com/lodastack/registry/node"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -26,6 +27,9 @@ type Cluster interface {
 
 	// Create a bucket, via distributed consensus.
 	CreateBucket(name []byte) error
+
+	// Create a bucket via distributed consensus if not exist.
+	CreateBucketIfNotExist(name []byte) error
 
 	// Remove a bucket, via distributed consensus.
 	RemoveBucket(name []byte) error
@@ -51,15 +55,17 @@ type Service struct {
 	router *httprouter.Router
 
 	cluster Cluster
+	tree    node.TreeMethod
 
 	logger *log.Logger
 }
 
 // New returns an uninitialized HTTP service.
-func New(addr string, cluster Cluster) *Service {
+func New(addr string, cluster Cluster, tree node.TreeMethod) *Service {
 	return &Service{
 		addr:    addr,
 		cluster: cluster,
+		tree:    tree,
 		router:  httprouter.New(),
 		logger:  log.New("INFO", "http", model.LogBackend),
 	}
@@ -83,7 +89,7 @@ func (s *Service) Start() error {
 	go func() {
 		err := server.Serve(s.ln)
 		if err != nil {
-			s.logger.Errorf("Serve error: ", err.Error())
+			s.logger.Fatalf("Serve error: %s\n", err.Error())
 		}
 	}()
 	s.logger.Println("service listening on: ", s.addr)
@@ -118,8 +124,11 @@ func (s *Service) FormRedirect(r *http.Request, host string) string {
 // all handlers just for test
 
 func (s *Service) initHandler() {
-	s.router.POST("/key", s.handlerKeySet)
-	s.router.GET("/key", s.handlerKeyGet)
+	s.router.POST("/resource", s.handlerResourceSet)
+	s.router.GET("/resource", s.handlerResourceGet)
+
+	s.router.POST("/ns", s.handlerNsNew)
+	s.router.GET("/ns", s.handlerNsGet)
 
 	s.router.POST("/batch", s.handlerBatch)
 
@@ -134,7 +143,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/backup", s.handlerBackup)
 }
 
-func (s *Service) handlerKeySet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	queryString := r.URL.Query()
 	key := queryString.Get("key")
 	value := queryString.Get("value")
@@ -166,7 +175,7 @@ func (s *Service) handlerKeySet(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 }
 
-func (s *Service) handlerKeyGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	key := r.FormValue("key")
 	bucket := r.FormValue("bucket")
 
@@ -176,12 +185,54 @@ func (s *Service) handlerKeyGet(w http.ResponseWriter, r *http.Request, _ httpro
 		fmt.Fprintf(w, "%s", err)
 		return
 	}
-
 	ressStruct := model.Resources{}
 	if err = ressStruct.Unmarshal(res); err == nil {
 		res, _ = json.Marshal(ressStruct)
 	}
 	fmt.Fprintf(w, "%s", string(res))
+}
+
+func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var nodes *node.Node
+	var err error
+	var res []byte
+	nodeid := r.FormValue("nodeid")
+	// nodename := r.FormValue("nodename")
+
+	if nodeid == "" {
+		nodes, err = s.tree.GetAllNodes()
+	} else {
+		nodes, err = s.tree.GetNodesByID(nodeid)
+	}
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+
+	// TODO: ffjson
+	res, _ = json.Marshal(nodes)
+	fmt.Fprintf(w, "%s", string(res))
+}
+
+func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var err error
+	var id string
+	queryString := r.URL.Query()
+	name := queryString.Get("name")
+	parent := queryString.Get("parent")
+	nodeType := queryString.Get("type")
+
+	nodeT, err := strconv.Atoi(nodeType)
+	if name == "" || parent == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
+		fmt.Fprintf(w, "%s", "invalid param no create node, please check and try again")
+		return
+	}
+	if id, err = s.tree.NewNode(name, parent, nodeT); err != nil {
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+
+	fmt.Fprintf(w, "%s", id)
 }
 
 // search bucket by nodes/key(resource)/resource_property
