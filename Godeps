@@ -5,5 +5,5 @@ github.com/hashicorp/go-msgpack fa3f63826f7c23912c15263591e65d54d080b458
 github.com/hashicorp/raft 1f230096d08c6e6a039048f38ba04da329c22cf3
 github.com/hashicorp/raft-boltdb d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee
 github.com/julienschmidt/httprouter 6aacfd5ab513e34f7e64ea9627ab9670371b34e7
-github.com/lodastack/log 191ab4e8e96ed4b6c28f090dfae893646abda6c8
+github.com/lodastack/log b25a4d2e8c2235ee21a1663198a4b26c7f7b4aaa
 github.com/satori/go.uuid 879c5887cd475cd7864858769793b2ceb0d44feb
