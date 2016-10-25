@@ -14,13 +14,14 @@ import (
 var ErrNotLeader = raft.ErrNotLeader
 
 var (
-	TypPeer    = []byte("peer")
-	TypCBucket = []byte("createrBucket")
-	TypRBucket = []byte("removeBucket")
-	TypUpdate  = []byte("update")
-	TypBatch   = []byte("batch")
-	TypJoin    = []byte("join")
-	TypRemove  = []byte("remove")
+	TypPeer            = []byte("peer")
+	TypCBucket         = []byte("createrBucket")
+	TypRBucket         = []byte("removeBucket")
+	TypUpdate          = []byte("update")
+	TypBatch           = []byte("batch")
+	TypJoin            = []byte("join")
+	TypRemove          = []byte("remove")
+	TypCBucketNotExist = []byte("createBucketIfNotExist")
 )
 
 type response struct {
@@ -32,84 +33,79 @@ type response struct {
 func (s *Service) SetPeer(raftAddr, apiAddr string) error {
 	// Try the local store. It might be the leader.
 	err := s.store.UpdateAPIPeers(map[string]string{raftAddr: apiAddr})
-	if err == nil || err != ErrNotLeader {
-		return err
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"api":  []byte(apiAddr),
+			"raft": []byte(raftAddr),
+			"type": TypPeer,
+		})
 	}
-
-	msg := map[string][]byte{
-		"api":  []byte(apiAddr),
-		"raft": []byte(raftAddr),
-	}
-
-	msg["type"] = TypPeer
-	return s.WriteLeader(msg)
-
+	return err
 }
 
 // Join joins the node, reachable at addr, to the cluster.
 func (s *Service) Join(addr string) error {
 	// Try the local store. It might be the leader.
 	err := s.store.Join(addr)
-	if err == nil || err != ErrNotLeader {
-		return err
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"addr": []byte(addr),
+			"type": TypJoin,
+		})
 	}
-
-	msg := map[string][]byte{
-		"addr": []byte(addr),
-	}
-
-	msg["type"] = TypJoin
-	return s.WriteLeader(msg)
-
+	return err
 }
 
 // Remove removes a node from the store, specified by addr.
 func (s *Service) Remove(addr string) error {
 	// Try the local store. It might be the leader.
 	err := s.store.Remove(addr)
-	if err == nil || err != ErrNotLeader {
-		return err
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"addr": []byte(addr),
+			"type": TypRemove,
+		})
 	}
-
-	msg := map[string][]byte{
-		"addr": []byte(addr),
-	}
-
-	msg["type"] = TypRemove
-	return s.WriteLeader(msg)
-
+	return err
 }
 
 // CreateBucket will create bucket via the cluster.
 func (s *Service) CreateBucket(name []byte) error {
 	// Try the local store. It might be the leader.
 	err := s.store.CreateBucket(name)
-	if err == nil || err != ErrNotLeader {
-		return err
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"name": name,
+			"type": TypCBucket,
+		})
 	}
+	return err
+}
 
-	msg := map[string][]byte{
-		"name": name,
+// CreateBucket will create bucket via the cluster if not exist.
+func (s *Service) CreateBucketIfNotExist(name []byte) error {
+	// Try the local store. It might be the leader.
+	err := s.store.CreateBucketIfNotExist(name)
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"name": name,
+			"type": TypCBucketNotExist,
+		})
 	}
-
-	msg["type"] = TypCBucket
-	return s.WriteLeader(msg)
+	return err
 }
 
 // RemoveBucket will remove bucket via the cluster.
 func (s *Service) RemoveBucket(name []byte) error {
 	// Try the local store. It might be the leader.
 	err := s.store.RemoveBucket(name)
-	if err == nil || err != ErrNotLeader {
-		return err
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"name": name,
+			"type": TypRBucket,
+		})
 	}
-
-	msg := map[string][]byte{
-		"name": name,
-	}
-
-	msg["type"] = TypRBucket
-	return s.WriteLeader(msg)
+	return err
 }
 
 // Get returns the value for the given key.
@@ -117,51 +113,40 @@ func (s *Service) View(bucket, key []byte) ([]byte, error) {
 	return s.store.View(bucket, key)
 }
 
-// TODO: Get buckets list by search ns.
-func searchBucket(node []byte) []string {
-	return []string{string(node)}
-}
-
 // Update will update the value of the given key in bucket via the cluster.
 func (s *Service) Update(bucket []byte, key []byte, value []byte) error {
 	// Try the local store. It might be the leader.
 	err := s.store.Update(bucket, key, value)
-	if err == nil || err != ErrNotLeader {
-		return err
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"key":    key,
+			"value":  value,
+			"bucket": bucket,
+			"type":   TypUpdate,
+		})
 	}
-
-	msg := map[string][]byte{
-		"key":    key,
-		"value":  value,
-		"bucket": bucket,
-	}
-
-	msg["type"] = TypUpdate
-	return s.WriteLeader(msg)
+	return err
 }
 
 // Batch update values for given keys in given buckets, via distributed consensus.
 func (s *Service) Batch(rows []model.Row) error {
 	// Try the local store. It might be the leader.
 	err := s.store.Batch(rows)
-	if err == nil || err != ErrNotLeader {
-		return err
-	}
+	if err == ErrNotLeader {
+		// Don't use binary to encode?
+		// https://github.com/golang/go/issues/478
+		buf := &bytes.Buffer{}
+		e := json.NewEncoder(buf)
+		if err := e.Encode(rows); err != nil {
+			return err
+		}
 
-	// Don't use binary to encode?
-	// https://github.com/golang/go/issues/478
-	buf := &bytes.Buffer{}
-	e := json.NewEncoder(buf)
-	if err := e.Encode(rows); err != nil {
-		return err
+		return s.WriteLeader(map[string][]byte{
+			"rows": buf.Bytes(),
+			"type": TypBatch,
+		})
 	}
-
-	msg := map[string][]byte{
-		"rows": buf.Bytes(),
-	}
-
-	msg["type"] = TypBatch
-	return s.WriteLeader(msg)
+	return err
 }
 
 // Backup database.
@@ -226,6 +211,8 @@ func (s *Service) handleConn(conn net.Conn) {
 		s.handleSetPeer(msg, conn)
 	case string(TypCBucket):
 		s.handleCreateBucket(msg, conn)
+	case string(TypCBucketNotExist):
+		s.handleCreateBucketIfNotExist(msg, conn)
 	case string(TypRBucket):
 		s.handleRemoveBucket(msg, conn)
 	case string(TypUpdate):
@@ -327,6 +314,23 @@ func (s *Service) handleCreateBucket(msg map[string][]byte, conn net.Conn) {
 	return
 }
 
+func (s *Service) handleCreateBucketIfNotExist(msg map[string][]byte, conn net.Conn) {
+	name, ok := msg["name"]
+	if !ok {
+		resp := response{1, "need para"}
+		s.writeResponse(resp, conn)
+		return
+	}
+
+	if err := s.store.CreateBucketIfNotExist(name); err != nil {
+		resp := response{1, err.Error()}
+		s.writeResponse(resp, conn)
+		return
+	}
+	s.writeResponse(response{}, conn)
+	return
+}
+
 func (s *Service) handleRemoveBucket(msg map[string][]byte, conn net.Conn) {
 	name, ok := msg["name"]
 	if !ok {
@@ -368,6 +372,7 @@ func (s *Service) handleUpdate(msg map[string][]byte, conn net.Conn) {
 
 	if err := s.store.Update(bucket, key, value); err != nil {
 		resp := response{1, err.Error()}
+		s.logger.Errorf("cluster handleUpdate error: %s\n", err.Error())
 		s.writeResponse(resp, conn)
 		return
 	}

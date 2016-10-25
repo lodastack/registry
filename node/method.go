@@ -16,6 +16,9 @@ type Cluster interface {
 	// Create a bucket, via distributed consensus.
 	CreateBucket(name []byte) error
 
+	// Create a bucket via distributed consensus if not exist.
+	CreateBucketIfNotExist(name []byte) error
+
 	// Remove a bucket, via distributed consensus.
 	RemoveBucket(name []byte) error
 
@@ -30,4 +33,20 @@ type Cluster interface {
 
 	// Backup database.
 	Backup() ([]byte, error)
+}
+
+// TreeMethod is the interface tree must implement.
+type TreeMethod interface {
+	// GetAllNodes return all nodes.
+	GetAllNodes() (*Node, error)
+
+	// GetNodesById return exact node by nodeid.
+	GetNodesByID(id string) (*Node, error)
+
+	// NewNode create node.
+	NewNode(name, parentId string, nodeType int, property ...string) (string, error)
+
+	GetChild(nodeId string, leaf bool) []string
+
+	GetNsResource(NodeId string, ResourceType string) (*model.Resources, error)
 }

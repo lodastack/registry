@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/satori/go.uuid"
+	"github.com/lodastack/registry/common"
 )
 
 // Data Format: map1uuid 0 map1key1 1 map1value1 11 map1key2 1 map1value2 111 map2uuid 0 map2key1 1 map2value1 11 map2key2 1 map2value2 2
@@ -179,7 +179,7 @@ func (r *Resource) Marshal() ([]byte, error) {
 	if ok {
 		uuid = append([]byte(uuidStr), uuidByte)
 	} else {
-		uuid = append([]byte(genUUID()), uuidByte)
+		uuid = append([]byte(common.GenUUID()), uuidByte)
 	}
 	raw = append(raw, uuid...)
 
@@ -201,8 +201,4 @@ func (r *Resource) Marshal() ([]byte, error) {
 func (r *Resource) ReadProperty(key string) (string, bool) {
 	v, ok := (*r)[key]
 	return v, ok
-}
-
-func genUUID() string {
-	return uuid.NewV4().String()
 }

@@ -53,6 +53,7 @@ const (
 	createBucket                    // Commands which create the bucket.
 	removeBucket                    // Commands which remove the bucket.
 	peer
+	createBucketIfNotExist // Commands which createBucketIfNotExist
 )
 
 // ClusterState defines the possible Raft states the current node can be in
@@ -462,6 +463,38 @@ func (s *Store) CreateBucket(name []byte) error {
 	return r.error
 }
 
+// Create a bucket if not exist.
+func (s *Store) CreateBucketIfNotExist(name []byte) error {
+	s.logger.Printf("store createBucketIfNotExist bucket, bucket:%s", string(name))
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
+
+	d := &databaseSub{
+		Name: name,
+	}
+
+	c, err := newCommand(createBucketIfNotExist, d)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	f := s.raft.Apply(b, raftTimeout)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return ErrNotLeader
+		}
+		return e.Error()
+	}
+	r := f.Response().(*fsmGenericResponse)
+	return r.error
+}
+
 // RemoveBucket remove a bucket.
 func (s *Store) RemoveBucket(name []byte) error {
 	s.logger.Printf("store remove bucket, bucket:%s", string(name))
@@ -625,6 +658,9 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 			}
 		}()
 		return &fsmGenericResponse{}
+	case createBucketIfNotExist:
+		err := f.applyCreateBucketIfNotExist(c.Sub)
+		return &fsmGenericResponse{error: err}
 	default:
 		err := fmt.Errorf("unrecognized command op: %s", c.Typ)
 		f.logger.Printf(err.Error())
@@ -769,6 +805,28 @@ func (f *fsm) applyCreateBucket(sub json.RawMessage) error {
 		_, err := tx.CreateBucket(name)
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
+		}
+		return nil
+	})
+}
+
+func (f *fsm) applyCreateBucketIfNotExist(sub json.RawMessage) error {
+	var d databaseSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+	name := d.Name
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	// remove cache at first
+	f.cache.RemoveBucket(name)
+
+	return f.db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists(name)
+		if err != nil {
+			return fmt.Errorf("create bucket if not exist: %s", err)
 		}
 		return nil
 	})

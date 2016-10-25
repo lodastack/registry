@@ -16,6 +16,7 @@ import (
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
+	"github.com/lodastack/registry/node"
 	"github.com/lodastack/registry/store"
 	"github.com/lodastack/registry/tcp"
 )
@@ -128,12 +129,6 @@ func (m *Main) Start() error {
 		return fmt.Errorf("failed to open cluster service: %s", err.Error())
 	}
 
-	// Create and configure HTTP service.
-	h := httpd.New(config.C.CommonConf.HttpBind, cs)
-	if err := h.Start(); err != nil {
-		return fmt.Errorf("failed to start HTTP service: %s", err.Error())
-	}
-
 	// If join was specified, make the join request.
 	nodes, err := s.Nodes()
 	if err != nil {
@@ -152,8 +147,21 @@ func (m *Main) Start() error {
 		return fmt.Errorf("failed to set peer for %s to %s: %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind, err.Error())
 	}
 	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind)
-
 	m.logger.Printf("registry started successfully")
+
+	// Create and init Tree
+	m.logger.Info("begin init tree...")
+	tree, err := node.NewTree(cs)
+	if err != nil {
+		return fmt.Errorf("build tree fail: %s\n", err.Error())
+	}
+	m.logger.Info("build tree success")
+
+	// Create and configure HTTP service.
+	h := httpd.New(config.C.CommonConf.HttpBind, cs, tree)
+	if err := h.Start(); err != nil {
+		return fmt.Errorf("failed to start HTTP service: %s", err.Error())
+	}
 
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)

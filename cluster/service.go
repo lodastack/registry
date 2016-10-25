@@ -38,6 +38,9 @@ type Store interface {
 	// Create a bucket, via distributed consensus.
 	CreateBucket(name []byte) error
 
+	// Create a bucket via distributed consensus if not exist.
+	CreateBucketIfNotExist(name []byte) error
+
 	// Remove a bucket, via distributed consensus.
 	RemoveBucket(name []byte) error
 
