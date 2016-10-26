@@ -93,6 +93,54 @@ func Test_SingleNode_SetGetKey(t *testing.T) {
 	}
 }
 
+func Test_SingleNode_GetAfterAnotherBucketSetKey(t *testing.T) {
+	s := mustNewStore()
+	defer os.RemoveAll(s.Path())
+
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+
+	if err := s.CreateBucket([]byte(bucket)); err != nil {
+		t.Fatalf("failed to create bucket: %s", err.Error())
+	}
+
+	if err := s.Update([]byte(bucket), []byte(key), []byte(value)); err != nil {
+		t.Fatalf("failed to update key: %s", err.Error())
+	}
+
+	var v []byte
+	var err error
+	// Get at first
+	if v, err = s.View([]byte(bucket), []byte(key)); err != nil {
+		t.Fatalf("failed to get key: %s", err.Error())
+	}
+
+	if string(v) != value {
+		t.Fatalf("funexpected results for get: %s - %s ", string(v), value)
+	}
+
+	// Another Bucket
+	if err := s.CreateBucket([]byte("another")); err != nil {
+		t.Fatalf("failed to create bucket: %s", err.Error())
+	}
+
+	if err := s.Update([]byte("another"), []byte(key), []byte(value)); err != nil {
+		t.Fatalf("failed to update key: %s", err.Error())
+	}
+
+	// Test Result
+	if v, err = s.View([]byte(bucket), []byte(key)); err != nil {
+		t.Fatalf("failed to get key: %s", err.Error())
+	}
+
+	if string(v) != value {
+		t.Fatalf("funexpected results for get: %s - %s ", string(v), value)
+	}
+}
+
 func Test_MultiNode_SetGetKey(t *testing.T) {
 	s0 := mustNewStore()
 	defer os.RemoveAll(s0.Path())

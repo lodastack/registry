@@ -67,14 +67,7 @@ func (c *Cache) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for bucket, keys := range c.items {
-		for k, v := range keys {
-			if c.onEvict != nil {
-				c.onEvict([]byte(bucket), []byte(k), v.Value.(*entry).value)
-			}
-			delete(c.items, string(bucket))
-		}
-	}
+	c.items = make(map[string]map[string]*list.Element)
 	c.count = 0
 	c.size = 0
 	c.evictList.Init()
