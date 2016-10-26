@@ -208,6 +208,7 @@ func (s *Store) Open(enableSingle bool) error {
 		return fmt.Errorf("new raft: %s", err)
 	}
 	s.raft = ra
+	s.cache.Open()
 	s.logger.Printf("open store finished")
 	return nil
 }
@@ -721,7 +722,8 @@ func (f *fsm) applyUpdate(sub json.RawMessage) error {
 		err := b.Put(rows[0].Key, rows[0].Value)
 
 		// remove cache at last
-		f.cache.Remove(rows[0].Bucket, rows[0].Key)
+		// boltDB.Put will affect cache items, so clean all
+		f.cache.Purge()
 		return err
 	})
 }
