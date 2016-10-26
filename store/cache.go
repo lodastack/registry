@@ -22,6 +22,7 @@ type Cache struct {
 	size    uint64
 	maxSize uint64
 
+	enable bool
 	logger *log.Logger
 }
 
@@ -53,8 +54,16 @@ func NewCache(maxSize uint64, onEvict EvictCallback) *Cache {
 	return c
 }
 
+// Open cache
+func (c *Cache) Open() {
+	c.enable = true
+}
+
 // Purge is used to completely clear the cache.
 func (c *Cache) Purge() {
+	if !c.enable {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -73,6 +82,9 @@ func (c *Cache) Purge() {
 
 // Add adds a value to the cache.  Returns true if an eviction occurred.
 func (c *Cache) Add(bucketName []byte, key []byte, value []byte) bool {
+	if !c.enable {
+		return false
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -113,6 +125,9 @@ func (c *Cache) Add(bucketName []byte, key []byte, value []byte) bool {
 
 // Get looks up a key's value from the cache.
 func (c *Cache) Get(bucket, key []byte) (value []byte, ok bool) {
+	if !c.enable {
+		return nil, false
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -129,6 +144,9 @@ func (c *Cache) Get(bucket, key []byte) (value []byte, ok bool) {
 // Check if a key is in the cache, without updating the recent-ness
 // or deleting it for being stale.
 func (c *Cache) Contains(bucket, key []byte) (ok bool) {
+	if !c.enable {
+		return false
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -142,6 +160,9 @@ func (c *Cache) Contains(bucket, key []byte) (ok bool) {
 // Returns the key value (or undefined if not found) without updating
 // the "recently used"-ness of the key.
 func (c *Cache) Peek(bucket, key []byte) (value []byte, ok bool) {
+	if !c.enable {
+		return
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -156,6 +177,9 @@ func (c *Cache) Peek(bucket, key []byte) (value []byte, ok bool) {
 // Remove Bucket removes the provided bucket from the cache, returning if the
 // bucket was contained.
 func (c *Cache) RemoveBucket(bucket []byte) bool {
+	if !c.enable {
+		return false
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -172,6 +196,9 @@ func (c *Cache) RemoveBucket(bucket []byte) bool {
 // Remove removes the provided key from the cache, returning if the
 // key was contained.
 func (c *Cache) Remove(bucket, key []byte) bool {
+	if !c.enable {
+		return false
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -186,6 +213,9 @@ func (c *Cache) Remove(bucket, key []byte) bool {
 
 // RemoveOldest removes the oldest item from the cache.
 func (c *Cache) RemoveOldest() ([]byte, []byte, []byte, bool) {
+	if !c.enable {
+		return nil, nil, nil, false
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -200,6 +230,9 @@ func (c *Cache) RemoveOldest() ([]byte, []byte, []byte, bool) {
 
 // GetOldest returns the oldest entry.
 func (c *Cache) GetOldest() ([]byte, []byte, []byte, bool) {
+	if !c.enable {
+		return nil, nil, nil, false
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -213,6 +246,9 @@ func (c *Cache) GetOldest() ([]byte, []byte, []byte, bool) {
 
 // Keys returns a slice of the keys in the cache, from oldest to newest.
 func (c *Cache) Keys() []string {
+	if !c.enable {
+		return nil
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -227,6 +263,9 @@ func (c *Cache) Keys() []string {
 
 // Len returns the number of items in the cache.
 func (c *Cache) Len() int {
+	if !c.enable {
+		return 0
+	}
 	return c.evictList.Len()
 }
 
