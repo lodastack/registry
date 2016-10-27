@@ -139,11 +139,11 @@ func (s *Service) initHandler() {
 
 func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	queryString := r.URL.Query()
-	key := queryString.Get("key")
-	id := queryString.Get("id")
-	name := queryString.Get("name")
+	res := queryString.Get("resource")
+	id := queryString.Get("nodeid")
+	name := queryString.Get("nodename")
 
-	buf := bytes.NewBufferString("")
+	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r.Body); err != nil {
 		fmt.Fprintf(w, "%s", "read body fail, please check and try again")
 		return
@@ -151,9 +151,9 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 
 	var err error
 	if id != "" {
-		err = s.tree.SetResourceByNodeID(id, key, buf.Bytes())
+		err = s.tree.SetResourceByNodeID(id, res, buf.Bytes())
 	} else if name != "" {
-		err = s.tree.SetResourceByNodeName(name, key, buf.Bytes())
+		err = s.tree.SetResourceByNodeName(name, res, buf.Bytes())
 	} else {
 		err = fmt.Errorf("invalid node infomation to get resource")
 	}
@@ -166,17 +166,17 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 }
 
 func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var res []byte
+	var resByte []byte
 	var err error
 	var resource *model.Resources
-	key := r.FormValue("key")
-	id := r.FormValue("id")
-	name := r.FormValue("name")
+	res := r.FormValue("resource")
+	id := r.FormValue("nodeid")
+	name := r.FormValue("nodename")
 
 	if id != "" {
-		resource, err = s.tree.GetResourceByNodeID(id, key)
+		resource, err = s.tree.GetResourceByNodeID(id, res)
 	} else if name != "" {
-		resource, err = s.tree.GetResourceByNodeName(name, key)
+		resource, err = s.tree.GetResourceByNodeName(name, res)
 	} else {
 		err = fmt.Errorf("invalid node infomation to get resource")
 	}
@@ -185,8 +185,12 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
-	res, _ = json.Marshal(resource)
-	fmt.Fprintf(w, "%s", string(res))
+	// TODO: ffjson
+	if resByte, err = json.Marshal(resource); err != nil {
+		s.logger.Errorf("marshal resource to output fail:%s\n", err.Error())
+		fmt.Fprintf(w, "%s", err)
+	}
+	fmt.Fprintf(w, "%s", string(resByte))
 }
 
 func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -206,8 +210,10 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	// TODO: ffjson
-	res, _ = json.Marshal(nodes)
+	if res, err = nodes.MarshalJSON(); err != nil {
+		s.logger.Errorf("marshal node to output fail:%s\n", err.Error())
+		fmt.Fprintf(w, "%s", err)
+	}
 	fmt.Fprintf(w, "%s", string(res))
 }
 
