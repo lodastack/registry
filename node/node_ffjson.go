@@ -33,15 +33,20 @@ func (mj *Node) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	var obj []byte
 	_ = obj
 	_ = err
-	buf.WriteString(`{"Clildren":`)
-	if mj.Clildren != nil {
+	buf.WriteString(`{"Children":`)
+	if mj.Children != nil {
 		buf.WriteString(`[`)
-		for i, v := range mj.Clildren {
+		for i, v := range mj.Children {
 			if i != 0 {
 				buf.WriteString(`,`)
 			}
 
 			{
+
+				if v == nil {
+					buf.WriteString("null")
+					return nil
+				}
 
 				err = v.MarshalJSONBuf(buf)
 				if err != nil {
@@ -70,7 +75,7 @@ const (
 	ffj_t_Nodebase = iota
 	ffj_t_Nodeno_such_key
 
-	ffj_t_Node_Clildren
+	ffj_t_Node_Children
 
 	ffj_t_Node_ID
 
@@ -81,7 +86,7 @@ const (
 	ffj_t_Node_MachineReg
 )
 
-var ffj_key_Node_Clildren = []byte("Clildren")
+var ffj_key_Node_Children = []byte("Children")
 
 var ffj_key_Node_ID = []byte("ID")
 
@@ -152,8 +157,8 @@ mainparse:
 
 				case 'C':
 
-					if bytes.Equal(ffj_key_Node_Clildren, kn) {
-						currentKey = ffj_t_Node_Clildren
+					if bytes.Equal(ffj_key_Node_Children, kn) {
+						currentKey = ffj_t_Node_Children
 						state = fflib.FFParse_want_colon
 						goto mainparse
 					}
@@ -216,8 +221,8 @@ mainparse:
 					goto mainparse
 				}
 
-				if fflib.SimpleLetterEqualFold(ffj_key_Node_Clildren, kn) {
-					currentKey = ffj_t_Node_Clildren
+				if fflib.SimpleLetterEqualFold(ffj_key_Node_Children, kn) {
+					currentKey = ffj_t_Node_Children
 					state = fflib.FFParse_want_colon
 					goto mainparse
 				}
@@ -239,8 +244,8 @@ mainparse:
 			if tok == fflib.FFTok_left_brace || tok == fflib.FFTok_left_bracket || tok == fflib.FFTok_integer || tok == fflib.FFTok_double || tok == fflib.FFTok_string || tok == fflib.FFTok_bool || tok == fflib.FFTok_null {
 				switch currentKey {
 
-				case ffj_t_Node_Clildren:
-					goto handle_Clildren
+				case ffj_t_Node_Children:
+					goto handle_Children
 
 				case ffj_t_Node_ID:
 					goto handle_ID
@@ -268,9 +273,9 @@ mainparse:
 		}
 	}
 
-handle_Clildren:
+handle_Children:
 
-	/* handler: uj.Clildren type=[]node.Node kind=slice quoted=false*/
+	/* handler: uj.Children type=[]*node.Node kind=slice quoted=false*/
 
 	{
 
@@ -281,16 +286,16 @@ handle_Clildren:
 		}
 
 		if tok == fflib.FFTok_null {
-			uj.Clildren = nil
+			uj.Children = nil
 		} else {
 
-			uj.Clildren = make([]Node, 0)
+			uj.Children = make([]*Node, 0)
 
 			wantVal := true
 
 			for {
 
-				var v Node
+				var v *Node
 
 				tok = fs.Scan()
 				if tok == fflib.FFTok_error {
@@ -311,13 +316,19 @@ handle_Clildren:
 					wantVal = true
 				}
 
-				/* handler: v type=node.Node kind=struct quoted=false*/
+				/* handler: v type=*node.Node kind=ptr quoted=false*/
 
 				{
 					if tok == fflib.FFTok_null {
 
+						v = nil
+
 						state = fflib.FFParse_after_value
 						goto mainparse
+					}
+
+					if v == nil {
+						v = new(Node)
 					}
 
 					err = v.UnmarshalJSONFFLexer(fs, fflib.FFParse_want_key)
@@ -327,7 +338,7 @@ handle_Clildren:
 					state = fflib.FFParse_after_value
 				}
 
-				uj.Clildren = append(uj.Clildren, v)
+				uj.Children = append(uj.Children, v)
 				wantVal = false
 			}
 		}
@@ -1099,7 +1110,7 @@ done:
 	return nil
 }
 
-func (mj *nodeIdMap) MarshalJSON() ([]byte, error) {
+func (mj *nodeIDMap) MarshalJSON() ([]byte, error) {
 	var buf fflib.Buffer
 	if mj == nil {
 		buf.WriteString("null")
@@ -1111,7 +1122,7 @@ func (mj *nodeIdMap) MarshalJSON() ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
-func (mj *nodeIdMap) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
+func (mj *nodeIDMap) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	if mj == nil {
 		buf.WriteString("null")
 		return nil
@@ -1148,26 +1159,26 @@ func (mj *nodeIdMap) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 }
 
 const (
-	ffj_t_nodeIdMapbase = iota
-	ffj_t_nodeIdMapno_such_key
+	ffj_t_nodeIDMapbase = iota
+	ffj_t_nodeIDMapno_such_key
 
-	ffj_t_nodeIdMap_Cache
+	ffj_t_nodeIDMap_Cache
 
-	ffj_t_nodeIdMap_RWsync
+	ffj_t_nodeIDMap_RWsync
 )
 
-var ffj_key_nodeIdMap_Cache = []byte("Cache")
+var ffj_key_nodeIDMap_Cache = []byte("Cache")
 
-var ffj_key_nodeIdMap_RWsync = []byte("RWsync")
+var ffj_key_nodeIDMap_RWsync = []byte("RWsync")
 
-func (uj *nodeIdMap) UnmarshalJSON(input []byte) error {
+func (uj *nodeIDMap) UnmarshalJSON(input []byte) error {
 	fs := fflib.NewFFLexer(input)
 	return uj.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
 }
 
-func (uj *nodeIdMap) UnmarshalJSONFFLexer(fs *fflib.FFLexer, state fflib.FFParseState) error {
+func (uj *nodeIDMap) UnmarshalJSONFFLexer(fs *fflib.FFLexer, state fflib.FFParseState) error {
 	var err error = nil
-	currentKey := ffj_t_nodeIdMapbase
+	currentKey := ffj_t_nodeIDMapbase
 	_ = currentKey
 	tok := fflib.FFTok_init
 	wantedTok := fflib.FFTok_init
@@ -1213,7 +1224,7 @@ mainparse:
 			kn := fs.Output.Bytes()
 			if len(kn) <= 0 {
 				// "" case. hrm.
-				currentKey = ffj_t_nodeIdMapno_such_key
+				currentKey = ffj_t_nodeIDMapno_such_key
 				state = fflib.FFParse_want_colon
 				goto mainparse
 			} else {
@@ -1221,35 +1232,35 @@ mainparse:
 
 				case 'C':
 
-					if bytes.Equal(ffj_key_nodeIdMap_Cache, kn) {
-						currentKey = ffj_t_nodeIdMap_Cache
+					if bytes.Equal(ffj_key_nodeIDMap_Cache, kn) {
+						currentKey = ffj_t_nodeIDMap_Cache
 						state = fflib.FFParse_want_colon
 						goto mainparse
 					}
 
 				case 'R':
 
-					if bytes.Equal(ffj_key_nodeIdMap_RWsync, kn) {
-						currentKey = ffj_t_nodeIdMap_RWsync
+					if bytes.Equal(ffj_key_nodeIDMap_RWsync, kn) {
+						currentKey = ffj_t_nodeIDMap_RWsync
 						state = fflib.FFParse_want_colon
 						goto mainparse
 					}
 
 				}
 
-				if fflib.EqualFoldRight(ffj_key_nodeIdMap_RWsync, kn) {
-					currentKey = ffj_t_nodeIdMap_RWsync
+				if fflib.EqualFoldRight(ffj_key_nodeIDMap_RWsync, kn) {
+					currentKey = ffj_t_nodeIDMap_RWsync
 					state = fflib.FFParse_want_colon
 					goto mainparse
 				}
 
-				if fflib.SimpleLetterEqualFold(ffj_key_nodeIdMap_Cache, kn) {
-					currentKey = ffj_t_nodeIdMap_Cache
+				if fflib.SimpleLetterEqualFold(ffj_key_nodeIDMap_Cache, kn) {
+					currentKey = ffj_t_nodeIDMap_Cache
 					state = fflib.FFParse_want_colon
 					goto mainparse
 				}
 
-				currentKey = ffj_t_nodeIdMapno_such_key
+				currentKey = ffj_t_nodeIDMapno_such_key
 				state = fflib.FFParse_want_colon
 				goto mainparse
 			}
@@ -1266,13 +1277,13 @@ mainparse:
 			if tok == fflib.FFTok_left_brace || tok == fflib.FFTok_left_bracket || tok == fflib.FFTok_integer || tok == fflib.FFTok_double || tok == fflib.FFTok_string || tok == fflib.FFTok_bool || tok == fflib.FFTok_null {
 				switch currentKey {
 
-				case ffj_t_nodeIdMap_Cache:
+				case ffj_t_nodeIDMap_Cache:
 					goto handle_Cache
 
-				case ffj_t_nodeIdMap_RWsync:
+				case ffj_t_nodeIDMap_RWsync:
 					goto handle_RWsync
 
-				case ffj_t_nodeIdMapno_such_key:
+				case ffj_t_nodeIDMapno_such_key:
 					err = fs.SkipField(tok)
 					if err != nil {
 						return fs.WrapErr(err)

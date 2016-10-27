@@ -43,7 +43,7 @@ type NodeProperty struct {
 
 type Node struct {
 	NodeProperty
-	Clildren []Node
+	Children []*Node
 }
 
 func (n *Node) IsLeaf() bool {
@@ -55,8 +55,8 @@ func (n *Node) GetByID(nodeId string) (*Node, error) {
 	if n.ID == nodeId {
 		return n, nil
 	} else {
-		for index := range n.Clildren {
-			if detNode, err := n.Clildren[index].GetByID(nodeId); err == nil {
+		for index := range n.Children {
+			if detNode, err := n.Children[index].GetByID(nodeId); err == nil {
 				return detNode, nil
 			}
 		}
@@ -69,8 +69,8 @@ func (n *Node) GetByName(nodeName string) (*Node, error) {
 	if n.Name == nodeName {
 		return n, nil
 	} else {
-		for index := range n.Clildren {
-			if detNode, err := n.Clildren[index].GetByName(nodeName); err == nil {
+		for index := range n.Children {
+			if detNode, err := n.Children[index].GetByName(nodeName); err == nil {
 				return detNode, nil
 			}
 		}
@@ -78,19 +78,19 @@ func (n *Node) GetByName(nodeName string) (*Node, error) {
 	return nil, ErrNodeNotFound
 }
 
-type nodeIdMap struct {
+type nodeIDMap struct {
 	Cache  map[string]string
 	RWsync *sync.RWMutex
 }
 
-func (i *nodeIdMap) Get(name string) (string, bool) {
+func (i *nodeIDMap) Get(name string) (string, bool) {
 	i.RWsync.RLock()
 	defer i.RWsync.RUnlock()
 	id, ok := i.Cache[name]
 	return id, ok
 }
 
-func (i *nodeIdMap) Set(name, id string) {
+func (i *nodeIDMap) Set(name, id string) {
 	i.RWsync.Lock()
 	defer i.RWsync.Unlock()
 	i.Cache[name] = id
@@ -100,19 +100,19 @@ type Tree struct {
 	Nodes   *Node
 	Cluster Cluster
 
-	idMap  nodeIdMap
-	RWsync *sync.RWMutex
+	nsIDCache nodeIDMap
+	RWsync    *sync.RWMutex
 
 	logger *log.Logger
 }
 
 func NewTree(cluster Cluster) (*Tree, error) {
 	t := Tree{
-		Nodes:   &Node{NodeProperty{ID: "0", Name: rootNode, Type: NonLeaf, MachineReg: "*"}, []Node{}},
-		Cluster: cluster,
-		RWsync:  &sync.RWMutex{},
-		idMap:   nodeIdMap{map[string]string{}, &sync.RWMutex{}},
-		logger:  log.New("INFO", "tree", model.LogBackend),
+		Nodes:     &Node{NodeProperty{ID: "0", Name: rootNode, Type: NonLeaf, MachineReg: "*"}, []*Node{}},
+		Cluster:   cluster,
+		RWsync:    &sync.RWMutex{},
+		nsIDCache: nodeIDMap{map[string]string{}, &sync.RWMutex{}},
+		logger:    log.New("INFO", "tree", model.LogBackend),
 	}
 	err := t.Cluster.CreateBucketIfNotExist([]byte(nodeBucket))
 	if err != nil {
@@ -145,7 +145,7 @@ func (t *Tree) initIfNotExist(key string) error {
 	switch key {
 	case nodeDataKey:
 		// Initialization node Data to store.
-		initNodes := Node{NodeProperty{ID: "0", Name: rootNode, Type: NonLeaf, MachineReg: "*"}, []Node{}}
+		initNodes := Node{NodeProperty{ID: "0", Name: rootNode, Type: NonLeaf, MachineReg: "*"}, []*Node{}}
 		initByte, err := initNodes.MarshalJSON()
 		if err != nil {
 			return ErrInitNodeKey
@@ -168,7 +168,11 @@ func (t *Tree) initIfNotExist(key string) error {
 
 // Save Nodes to store.
 func (t *Tree) saveTree() error {
-	treeByte, _ := t.Nodes.MarshalJSON()
+	treeByte, err := t.Nodes.MarshalJSON()
+	if err != nil {
+		t.logger.Errorf("Tree save fail: %s\n", err.Error())
+		return err
+	}
 	return t.Cluster.Update([]byte(nodeBucket), []byte(nodeDataKey), treeByte)
 }
 
@@ -178,31 +182,32 @@ func (t *Tree) createBucketForNode(nodeId string) error {
 }
 
 // Get type resType resource of node with ID bucketId.
-func (t *Tree) getResByteOfNode(bucketId, resType []byte) ([]byte, error) {
+func (t *Tree) getResByteOfNode(bucketId, resType string) ([]byte, error) {
 	return t.Cluster.View([]byte(bucketId), []byte(resType))
 }
 
 // Get []byte of allnodes.
 func (t *Tree) getAllNodeByte() ([]byte, error) {
-	return t.getResByteOfNode([]byte(nodeBucket), []byte(nodeDataKey))
+	return t.getResByteOfNode(nodeBucket, nodeDataKey)
 }
 
+// Set resource to node bucket.
 func (t *Tree) setResourceByNodeID(nodeId, resType string, resByte []byte) error {
 	return t.Cluster.Update([]byte(nodeId), []byte(resType), resByte)
 }
 
 // getNodeIDByName return id of node with name nodeName.
-// NOTE: if two nodes have the same name, will return the first one it find.
+// NOTE: if two nodes have the same name, will return the first one matched.
 func (t *Tree) getNodeIDByName(nodeName string) string {
-	NodeId, ok := t.idMap.Get(nodeName)
-	// If cannot get Node from cache, get from tree and set tree cache.
+	NodeId, ok := t.nsIDCache.Get(nodeName)
+	// If cannot get Node from cache, get from tree and set cache.
 	if !ok {
 		if node, err := t.GetNodeByName(nodeName); err != nil {
 			return ""
 		} else {
 			NodeId = node.ID
 		}
-		t.idMap.Set(nodeName, NodeId)
+		t.nsIDCache.Set(nodeName, NodeId)
 	}
 	return NodeId
 }
@@ -215,7 +220,7 @@ func (t *Tree) GetAllNodes() (*Node, error) {
 		return nil, ErrGetNode
 	}
 
-	allNode := Node{}
+	var allNode Node
 	if err := allNode.UnmarshalJSON(v); err != nil {
 		t.logger.Errorf("GetAllNodes unmarshal byte to node fail: %s\n", err)
 		return nil, ErrGetNode
@@ -251,7 +256,7 @@ func (t *Tree) GetNodeByName(name string) (*Node, error) {
 // 2. Permission Check
 func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) (string, error) {
 	nodeId := common.GenUUID()
-	newNode := Node{NodeProperty{ID: nodeId, Name: name, Type: nodeType, MachineReg: "-"}, []Node{}}
+	newNode := Node{NodeProperty{ID: nodeId, Name: name, Type: nodeType, MachineReg: "-"}, []*Node{}}
 
 	t.RWsync.Lock()
 	defer t.RWsync.Unlock()
@@ -270,7 +275,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 		return "", ErrCreateNodeUnderLeaf
 	}
 
-	parent.Clildren = append(parent.Clildren, newNode)
+	parent.Children = append(parent.Children, &newNode)
 	t.Nodes = nodes
 
 	if err := t.saveTree(); err != nil {
@@ -280,8 +285,8 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	// Create a now bucket fot this node.
 	if err := t.createBucketForNode(nodeId); err != nil {
 		t.logger.Errorf("NewNode createNodeBucket fail, nodeid:%s\n", nodeId)
-		// Delete node to rollback tree
-		parent.Clildren = parent.Clildren[:len(parent.Clildren)-1]
+		// Delete the new node in tree to rollback.
+		parent.Children = parent.Children[:len(parent.Children)-1]
 		if err := t.saveTree(); err != nil {
 			t.logger.Error("Rollback tree node fail!")
 		}
@@ -293,11 +298,11 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 // GetResource return the ResourceType resource belong to the node with NodeId.
 // TODO: Permission Check
 func (t *Tree) GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error) {
-	resByte, err := t.getResByteOfNode([]byte(NodeId), []byte(ResourceType))
+	resByte, err := t.getResByteOfNode(NodeId, ResourceType)
 	if err != nil {
 		return nil, err
 	}
-	resources := &model.Resources{}
+	resources := new(model.Resources)
 	err = resources.Unmarshal(resByte)
 	if err != nil {
 		t.logger.Error("GetResourceByNodeID fail:", err, string(resByte))
