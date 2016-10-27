@@ -41,12 +41,22 @@ type TreeMethod interface {
 	GetAllNodes() (*Node, error)
 
 	// GetNodesById return exact node by nodeid.
-	GetNodesByID(id string) (*Node, error)
+	GetNodeByID(id string) (*Node, error)
 
 	// NewNode create node.
 	NewNode(name, parentId string, nodeType int, property ...string) (string, error)
 
-	GetChild(nodeId string, leaf bool) []string
+	// Get resource by NodeID and resour type
+	GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error)
 
-	GetNsResource(NodeId string, ResourceType string) (*model.Resources, error)
+	// Get resource by NodeName and resour type
+	GetResourceByNodeName(NodeName string, ResourceType string) (*model.Resources, error)
+
+	// Set Resource to node with nodeid.
+	SetResourceByNodeID(nodeId, resType string, ResByte []byte) error
+
+	// Set resource to node with nodename.
+	SetResourceByNodeName(nodeName, resType string, ResByte []byte) error
+
+	GetChild(nodeId string, leaf bool) []string
 }

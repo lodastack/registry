@@ -34,12 +34,6 @@ type Cluster interface {
 	// Remove a bucket, via distributed consensus.
 	RemoveBucket(name []byte) error
 
-	// Get returns the value for the given key.
-	View(bucket, key []byte) ([]byte, error)
-
-	// Set sets the value for the given key, via distributed consensus.
-	Update(bucket []byte, key []byte, value []byte) error
-
 	// Batch update values for given keys in given buckets, via distributed consensus.
 	Batch(rows []model.Row) error
 
@@ -146,8 +140,8 @@ func (s *Service) initHandler() {
 func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	queryString := r.URL.Query()
 	key := queryString.Get("key")
-	value := queryString.Get("value")
-	bucket := queryString.Get("bucket")
+	id := queryString.Get("id")
+	name := queryString.Get("name")
 
 	buf := bytes.NewBufferString("")
 	if _, err := buf.ReadFrom(r.Body); err != nil {
@@ -156,16 +150,12 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 	}
 
 	var err error
-	resesStruct, err := model.NewResources(buf.Bytes())
-	if err != nil {
-		log.Debug("loda byte to resources fail, set value in url")
-		err = s.cluster.Update([]byte(bucket), []byte(key), []byte(value))
+	if id != "" {
+		err = s.tree.SetResourceByNodeID(id, key, buf.Bytes())
+	} else if name != "" {
+		err = s.tree.SetResourceByNodeName(name, key, buf.Bytes())
 	} else {
-		resByte, err := resesStruct.Marshal()
-		if err != nil {
-			err = fmt.Errorf("marshal body to resources fail, please check and try again")
-		}
-		err = s.cluster.Update([]byte(bucket), []byte(key), resByte)
+		err = fmt.Errorf("invalid node infomation to get resource")
 	}
 
 	if err != nil {
@@ -176,19 +166,26 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 }
 
 func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	key := r.FormValue("key")
-	bucket := r.FormValue("bucket")
-
 	var res []byte
 	var err error
-	if res, err = s.cluster.View([]byte(bucket), []byte(key)); err != nil {
+	var resource *model.Resources
+	key := r.FormValue("key")
+	id := r.FormValue("id")
+	name := r.FormValue("name")
+
+	if id != "" {
+		resource, err = s.tree.GetResourceByNodeID(id, key)
+	} else if name != "" {
+		resource, err = s.tree.GetResourceByNodeName(name, key)
+	} else {
+		err = fmt.Errorf("invalid node infomation to get resource")
+	}
+	if err != nil {
 		fmt.Fprintf(w, "%s", err)
 		return
 	}
-	ressStruct := model.Resources{}
-	if err = ressStruct.Unmarshal(res); err == nil {
-		res, _ = json.Marshal(ressStruct)
-	}
+
+	res, _ = json.Marshal(resource)
 	fmt.Fprintf(w, "%s", string(res))
 }
 
@@ -202,7 +199,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 	if nodeid == "" {
 		nodes, err = s.tree.GetAllNodes()
 	} else {
-		nodes, err = s.tree.GetNodesByID(nodeid)
+		nodes, err = s.tree.GetNodeByID(nodeid)
 	}
 	if err != nil {
 		fmt.Fprintf(w, "%s", err)
