@@ -647,18 +647,8 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		err := f.applyRemoveBucket(c.Sub)
 		return &fsmGenericResponse{error: err}
 	case peer:
-		var d peersSub
-		if err := json.Unmarshal(c.Sub, &d); err != nil {
-			return &fsmGenericResponse{error: err}
-		}
-		func() {
-			f.metaMu.Lock()
-			defer f.metaMu.Unlock()
-			for k, v := range d {
-				f.meta.APIPeers[k] = v
-			}
-		}()
-		return &fsmGenericResponse{}
+		err := f.applyPeer(c.Sub)
+		return &fsmGenericResponse{error: err}
 	case createBucketIfNotExist:
 		err := f.applyCreateBucketIfNotExist(c.Sub)
 		return &fsmGenericResponse{error: err}
@@ -733,6 +723,21 @@ func (f *fsm) Restore(rc io.ReadCloser) error {
 	}
 
 	f.db = db
+	return nil
+}
+
+func (f *fsm) applyPeer(sub json.RawMessage) error {
+	var d peersSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+
+	f.metaMu.Lock()
+	defer f.metaMu.Unlock()
+	for k, v := range d {
+		f.meta.APIPeers[k] = v
+	}
+
 	return nil
 }
 
