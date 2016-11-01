@@ -788,8 +788,9 @@ func (f *fsm) applyBatch(sub json.RawMessage) error {
 			if err := b.Put(row.Key, row.Value); err != nil {
 				return err
 			}
-			// remove cache
-			f.cache.Remove(row.Bucket, row.Key)
+			// remove cache at last
+			// boltDB.Put will affect cache items, so clean all
+			f.cache.Purge()
 		}
 		return nil
 	})
@@ -805,8 +806,9 @@ func (f *fsm) applyCreateBucket(sub json.RawMessage) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	// remove cache at first
-	f.cache.RemoveBucket(name)
+	// remove cache at last
+	// boltDB.Put will affect cache items, so clean all
+	f.cache.Purge()
 
 	return f.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucket(name)
@@ -827,8 +829,9 @@ func (f *fsm) applyCreateBucketIfNotExist(sub json.RawMessage) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	// remove cache at first
-	f.cache.RemoveBucket(name)
+	// remove cache at last
+	// boltDB.Put will affect cache items, so clean all
+	f.cache.Purge()
 
 	return f.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists(name)
