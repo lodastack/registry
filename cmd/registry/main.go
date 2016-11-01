@@ -26,7 +26,7 @@ const (
 	DefaultConfigFile = "/etc/registry/registry.conf"
 
 	publishPeerDelay   = 1 * time.Second
-	publishPeerTimeout = 30 * time.Second
+	publishPeerTimeout = 60 * time.Second
 	waitLeaderTimeout  = 10 * time.Second
 )
 
@@ -143,17 +143,18 @@ func (m *Main) Start() error {
 		}
 	}
 
-	// update cluster meta
-	if err := publishAPIAddr(cs, raftTn.Addr().String(), config.C.CommonConf.HttpBind, publishPeerTimeout); err != nil {
-		return fmt.Errorf("failed to set peer for %s to %s: %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind, err.Error())
-	}
-	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind)
-
+	// wait for leader
 	l, err := s.WaitForLeader(waitLeaderTimeout)
 	if err != nil || l == "" {
 		return fmt.Errorf("wait leader failed: %s", err.Error())
 	}
 	m.logger.Printf("cluster leader is: %s", l)
+
+	// update cluster meta
+	if err := publishAPIAddr(cs, raftTn.Addr().String(), config.C.CommonConf.HttpBind, publishPeerTimeout); err != nil {
+		return fmt.Errorf("failed to set peer for %s to %s: %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind, err.Error())
+	}
+	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind)
 
 	// Create and init Tree
 	m.logger.Info("begin init tree...")
