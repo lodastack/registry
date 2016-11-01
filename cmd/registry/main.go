@@ -27,6 +27,7 @@ const (
 
 	publishPeerDelay   = 1 * time.Second
 	publishPeerTimeout = 30 * time.Second
+	waitLeaderTimeout  = 10 * time.Second
 )
 
 // Command line parameters
@@ -147,7 +148,12 @@ func (m *Main) Start() error {
 		return fmt.Errorf("failed to set peer for %s to %s: %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind, err.Error())
 	}
 	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind)
-	m.logger.Printf("registry started successfully")
+
+	l, err := s.WaitForLeader(waitLeaderTimeout)
+	if err != nil || l == "" {
+		return fmt.Errorf("wait leader failed: %s", err.Error())
+	}
+	m.logger.Printf("cluster leader is: %s", l)
 
 	// Create and init Tree
 	m.logger.Info("begin init tree...")
@@ -162,6 +168,8 @@ func (m *Main) Start() error {
 	if err := h.Start(); err != nil {
 		return fmt.Errorf("failed to start HTTP service: %s", err.Error())
 	}
+
+	m.logger.Printf("registry started successfully")
 
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
