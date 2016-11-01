@@ -169,7 +169,7 @@ func (s *Store) Open(enableSingle bool) error {
 
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
-	config.Logger = stdlog.New(ioutil.Discard, "raft", stdlog.Lshortfile)
+	config.Logger = stdlog.New(os.Stderr, "raft", stdlog.Lshortfile)
 
 	// Check for any existing peers.
 	peers, err := readPeersJSON(filepath.Join(s.raftDir, "peers.json"))
@@ -186,13 +186,13 @@ func (s *Store) Open(enableSingle bool) error {
 	}
 
 	// Setup Raft communication.
-	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, ioutil.Discard)
+	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, os.Stderr)
 
 	// Create peer storage.
 	s.peerStore = raft.NewJSONPeers(s.raftDir, transport)
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
-	snapshots, err := raft.NewFileSnapshotStore(s.raftDir, retainSnapshotCount, ioutil.Discard)
+	snapshots, err := raft.NewFileSnapshotStore(s.raftDir, retainSnapshotCount, os.Stderr)
 	if err != nil {
 		return fmt.Errorf("file snapshot store: %s", err)
 	}

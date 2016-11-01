@@ -216,13 +216,13 @@ func (t *Tree) getNodeIDByName(nodeName string) string {
 func (t *Tree) GetAllNodes() (*Node, error) {
 	v, err := t.getAllNodeByte()
 	if err != nil || len(v) == 0 {
-		t.logger.Error("get allNode fail:", err, string(v))
+		t.logger.Errorf("get allNode fail: %s", err.Error())
 		return nil, ErrGetNode
 	}
 
 	var allNode Node
 	if err := allNode.UnmarshalJSON(v); err != nil {
-		t.logger.Errorf("GetAllNodes unmarshal byte to node fail: %s\n", err)
+		t.logger.Errorf("GetAllNodes unmarshal byte to node fail: %s", err.Error())
 		return nil, ErrGetNode
 	}
 	return &allNode, nil
@@ -262,7 +262,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	defer t.RWsync.Unlock()
 	nodes, err := t.GetAllNodes()
 	if err != nil {
-		t.logger.Error("get all nodes error:", parentId)
+		t.logger.Errorf("get all nodes error, parent id: %s, error: %s", parentId, err.Error())
 		return "", err
 	}
 	parent, err := nodes.GetByID(parentId)
