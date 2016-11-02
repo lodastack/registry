@@ -26,8 +26,8 @@ var (
 )
 
 const (
-	kPosi int = iota
-	vPosi
+	propertyKey int = iota
+	propertyValue
 )
 
 // ResAction is the interface that resources Marshal and Unmarshal method.
@@ -132,7 +132,7 @@ func (rs *Resources) AppendResource(resByte []byte) error {
 
 func (r *Resource) Unmarshal(raw []byte) error {
 	tmpk, tmpv := make([]byte, 0), make([]byte, 0)
-	kvFlag := kPosi
+	kvFlag := propertyKey
 	deliLen := 0
 
 	for _, byt := range raw {
@@ -148,19 +148,19 @@ func (r *Resource) Unmarshal(raw []byte) error {
 			if deliLen != 0 {
 				switch deliLen {
 				case len(deliVal):
-					if kvFlag == kPosi {
-						kvFlag = vPosi
+					if kvFlag == propertyKey {
+						kvFlag = propertyValue
 					} else {
 						return fmt.Errorf("unmarshal resources fail")
 					}
 				case len(deliProp):
-					kvFlag = kPosi
+					kvFlag = propertyKey
 					(*r)[string(tmpk)] = string(tmpv)
 					tmpk, tmpv = make([]byte, 0), make([]byte, 0)
 				}
 				deliLen = 0
 			}
-			if kvFlag == kPosi {
+			if kvFlag == propertyKey {
 				tmpk = append(tmpk, byt)
 			} else {
 				tmpv = append(tmpv, byt)
