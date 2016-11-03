@@ -154,6 +154,11 @@ func (s *Service) Backup() ([]byte, error) {
 	return s.store.Backup()
 }
 
+// Restore database.
+func (s *Service) Restore(Backupfile string) error {
+	return s.store.Restore(Backupfile)
+}
+
 func (s *Service) WriteLeader(msg interface{}) error {
 	// Try talking to the leader over the network.
 	if leader := s.store.Leader(); leader == "" {

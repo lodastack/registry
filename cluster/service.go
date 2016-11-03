@@ -55,6 +55,9 @@ type Store interface {
 
 	// Backup database.
 	Backup() ([]byte, error)
+
+	// Restore restores backup data file.
+	Restore(backupfile string) error
 }
 
 // Service allows access to the cluster and associated meta data,
