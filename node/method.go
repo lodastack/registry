@@ -50,13 +50,13 @@ type TreeMethod interface {
 	GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error)
 
 	// Get resource by NodeName and resour type
-	GetResourceByNodeName(NodeName string, ResourceType string) (*model.Resources, error)
+	GetResourceByNs(NodeName string, ResourceType string) (*model.Resources, error)
 
 	// Set Resource to node with nodeid.
 	SetResourceByNodeID(nodeId, resType string, ResByte []byte) error
 
 	// Set resource to node with nodename.
-	SetResourceByNodeName(nodeName, resType string, ResByte []byte) error
+	SetResourceByNs(nodeName, resType string, ResByte []byte) error
 
-	GetChild(nodeId string, leaf bool) []string
+	GetLeafChild(ns string) ([]string, error)
 }
