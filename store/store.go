@@ -37,7 +37,7 @@ const (
 	retainSnapshotCount = 2
 	raftTimeout         = 10 * time.Second
 	leaderWaitDelay     = 100 * time.Millisecond
-	heartbeatTimeout    = 3 * time.Second
+	heartbeatTimeout    = 1 * time.Second
 
 	boltFile = "registry.db"
 
@@ -149,6 +149,9 @@ func (s *Store) raftConfig() *raft.Config {
 	if s.HeartbeatTimeout != 0 {
 		config.HeartbeatTimeout = s.HeartbeatTimeout
 	}
+	// avoid raft logs increase fast
+	config.TrailingLogs = 10
+	config.SnapshotThreshold = 100
 	return config
 }
 
@@ -168,7 +171,7 @@ func (s *Store) Open(enableSingle bool) error {
 	s.db = db
 
 	// Setup Raft configuration.
-	config := raft.DefaultConfig()
+	config := s.raftConfig()
 	config.Logger = stdlog.New(os.Stderr, "raft", stdlog.Lshortfile)
 
 	// Check for any existing peers.
