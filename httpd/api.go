@@ -39,6 +39,9 @@ type Cluster interface {
 
 	// Backup database.
 	Backup() ([]byte, error)
+
+	// Restore restores backup data file.
+	Restore(backupfile string) error
 }
 
 // Service provides HTTP service.
@@ -135,6 +138,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/search", s.handlerSearch)
 
 	s.router.GET("/backup", s.handlerBackup)
+	s.router.GET("/restore", s.handlerRestore)
 }
 
 func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -371,5 +375,15 @@ func (s *Service) handlerBackup(w http.ResponseWriter, r *http.Request, _ httpro
 		fmt.Fprintf(w, "%s", err)
 	} else {
 		fmt.Fprintf(w, "%s", data)
+	}
+}
+
+func (s *Service) handlerRestore(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	file := r.FormValue("file")
+	var err error
+	if err = s.cluster.Restore(file); err != nil {
+		fmt.Fprintf(w, "%s", err)
+	} else {
+		fmt.Fprintf(w, "%s", "success")
 	}
 }

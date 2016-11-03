@@ -38,8 +38,10 @@ const (
 	raftTimeout         = 10 * time.Second
 	leaderWaitDelay     = 100 * time.Millisecond
 	heartbeatTimeout    = 1 * time.Second
+	waitSnapshotTimeout = 60 * time.Second
 
 	boltFile = "registry.db"
+	raftDir  = "raft"
 
 	// cacheMaxMemorySize is the maximum size
 	cacheMaxMemorySize = 1024 * 1024 * 50
@@ -48,12 +50,14 @@ const (
 type commandType int
 
 const (
-	update       commandType = iota // Commands which query the database.
-	batch                           // Commands which modify the database.
-	createBucket                    // Commands which create the bucket.
-	removeBucket                    // Commands which remove the bucket.
+	update                 commandType = iota // Commands which query the database.
+	batch                                     // Commands which modify the database.
+	createBucket                              // Commands which create the bucket.
+	removeBucket                              // Commands which remove the bucket.
+	createBucketIfNotExist                    // Commands which createBucketIfNotExist
+
 	peer
-	createBucketIfNotExist // Commands which createBucketIfNotExist
+	restore
 )
 
 // ClusterState defines the possible Raft states the current node can be in
@@ -103,9 +107,10 @@ type Transport interface {
 
 // Store is a bolt key-value store, where all changes are made via Raft consensus.
 type Store struct {
-	raftDir  string
+	Dir      string
 	raftBind string
 	dbPath   string
+	ready    chan struct{} // Wait for snapshot
 
 	mu sync.Mutex
 	db *bolt.DB // The backend bolt store for the system.
@@ -129,7 +134,7 @@ type Store struct {
 // New returns a new Store.
 func New(path string, tn Transport) *Store {
 	return &Store{
-		raftDir:          path,
+		Dir:              path,
 		raftBind:         tn.Addr().String(),
 		raftTransport:    tn,
 		HeartbeatTimeout: heartbeatTimeout,
@@ -150,16 +155,16 @@ func (s *Store) raftConfig() *raft.Config {
 		config.HeartbeatTimeout = s.HeartbeatTimeout
 	}
 	// avoid raft logs increase fast
-	config.TrailingLogs = 10
-	config.SnapshotThreshold = 100
+	config.TrailingLogs = 1000
+	config.SnapshotThreshold = 500
 	return config
 }
 
 // Open opens the store. If enableSingle is set, and there are no existing peers,
 // then this node becomes the first node, and therefore leader, of the cluster.
 func (s *Store) Open(enableSingle bool) error {
-
-	if err := os.MkdirAll(s.raftDir, 0700); err != nil {
+	raftPath := filepath.Join(s.Dir, raftDir)
+	if err := os.MkdirAll(raftPath, 0700); err != nil {
 		return err
 	}
 
@@ -175,7 +180,7 @@ func (s *Store) Open(enableSingle bool) error {
 	config.Logger = stdlog.New(os.Stderr, "raft", stdlog.Lshortfile)
 
 	// Check for any existing peers.
-	peers, err := readPeersJSON(filepath.Join(s.raftDir, "peers.json"))
+	peers, err := readPeersJSON(filepath.Join(raftPath, "peers.json"))
 	if err != nil {
 		return err
 	}
@@ -192,16 +197,16 @@ func (s *Store) Open(enableSingle bool) error {
 	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, os.Stderr)
 
 	// Create peer storage.
-	s.peerStore = raft.NewJSONPeers(s.raftDir, transport)
+	s.peerStore = raft.NewJSONPeers(raftPath, transport)
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
-	snapshots, err := raft.NewFileSnapshotStore(s.raftDir, retainSnapshotCount, os.Stderr)
+	snapshots, err := raft.NewFileSnapshotStore(raftPath, retainSnapshotCount, os.Stderr)
 	if err != nil {
 		return fmt.Errorf("file snapshot store: %s", err)
 	}
 
 	// Create the log store and stable store.
-	logStore, err := raftboltdb.NewBoltStore(filepath.Join(s.raftDir, "raft.db"))
+	logStore, err := raftboltdb.NewBoltStore(filepath.Join(raftPath, "raft.db"))
 	if err != nil {
 		return fmt.Errorf("new bolt store: %s", err)
 	}
@@ -239,7 +244,7 @@ func (s *Store) IsLeader() bool {
 
 // Path returns the path to the store's storage directory.
 func (s *Store) Path() string {
-	return s.raftDir
+	return s.Dir
 }
 
 // Leader returns the current leader. Returns a blank string if there is
@@ -299,23 +304,46 @@ func (s *Store) WaitForLeader(timeout time.Duration) (string, error) {
 	defer tck.Stop()
 	tmr := time.NewTimer(timeout)
 	defer tmr.Stop()
+	tms := time.NewTimer(waitSnapshotTimeout)
+	defer tms.Stop()
+
+	var leader string
+	var err error
 
 	for {
 		select {
 		case <-tck.C:
 			l := s.Leader()
 			if l != "" {
-				return l, nil
+				leader = l
+				err = nil
+				goto WAITEND
 			}
 		case <-tmr.C:
-			return "", fmt.Errorf("timeout expired")
+			return "", fmt.Errorf("wait for leader timeout")
 		}
 	}
+
+WAITEND:
+
+	// wait for snapshot
+	time.Sleep(1 * time.Second)
+	if s.ready != nil {
+		for {
+			select {
+			case <-s.ready:
+				return leader, err
+			case <-tms.C:
+				return "", fmt.Errorf("wait for snapshot timeout")
+			}
+		}
+	}
+	return leader, err
 }
 
 // View returns the value for the given key.
 func (s *Store) View(bucket, key []byte) ([]byte, error) {
-	s.logger.Printf("store view request, bucket:%s, key:%s", string(bucket), string(key))
+	s.logger.Debug("store view request, bucket:%s, key:%s", string(bucket), string(key))
 	var value []byte
 	if v, exist := s.cache.Get(bucket, key); exist {
 		return v, nil
@@ -572,6 +600,37 @@ func (s *Store) Backup() ([]byte, error) {
 	return data, nil
 }
 
+// Restore restores backup data file.
+func (s *Store) Restore(backupfile string) error {
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
+
+	d := &databaseSub{
+		Name: []byte(backupfile),
+	}
+
+	c, err := newCommand(restore, d)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	f := s.raft.Apply(b, raftTimeout)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return ErrNotLeader
+		}
+		return e.Error()
+	}
+	r := f.Response().(*fsmGenericResponse)
+	return r.error
+}
+
 // Join joins a node, located at addr, to this store. The node must be ready to
 // respond to Raft communications at that address.
 func (s *Store) Join(addr string) error {
@@ -649,11 +708,14 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 	case removeBucket:
 		err := f.applyRemoveBucket(c.Sub)
 		return &fsmGenericResponse{error: err}
+	case createBucketIfNotExist:
+		err := f.applyCreateBucketIfNotExist(c.Sub)
+		return &fsmGenericResponse{error: err}
 	case peer:
 		err := f.applyPeer(c.Sub)
 		return &fsmGenericResponse{error: err}
-	case createBucketIfNotExist:
-		err := f.applyCreateBucketIfNotExist(c.Sub)
+	case restore:
+		err := f.applyRestore(c.Sub)
 		return &fsmGenericResponse{error: err}
 	default:
 		err := fmt.Errorf("unrecognized command op: %s", c.Typ)
@@ -701,6 +763,14 @@ func (f *fsm) Snapshot() (raft.FSMSnapshot, error) {
 
 // Restore stores the key-value store to a previous state.
 func (f *fsm) Restore(rc io.ReadCloser) error {
+	f.ready = make(chan struct{})
+	defer func() {
+		close(f.ready)
+		f.ready = nil
+	}()
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	if err := f.db.Close(); err != nil {
 		return err
 	}
@@ -864,6 +934,54 @@ func (f *fsm) applyRemoveBucket(sub json.RawMessage) error {
 		f.cache.RemoveBucket(name)
 		return nil
 	})
+}
+
+// Restore stores the key-value store to a backup data file.
+func (f *fsm) applyRestore(sub json.RawMessage) error {
+	var d databaseSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+	file := string(d.Name)
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if err := f.db.Close(); err != nil {
+		return err
+	}
+
+	defer func() {
+		// Re-open it.
+		// Open backend storage
+		db, err := bolt.Open(f.dbPath, 0600, nil)
+		if err != nil {
+			panic(err)
+		}
+
+		f.db = db
+	}()
+
+	// start restore data file
+	backup, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer backup.Close()
+
+	dbfile, err := os.OpenFile(f.dbPath, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer dbfile.Close()
+
+	// Write backup data file over any existing database file.
+	// buffer: 32MB
+	if _, err := io.Copy(dbfile, backup); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type fsmSnapshot struct {
