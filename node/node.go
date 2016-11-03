@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/lodastack/log"
@@ -28,7 +29,9 @@ var (
 	ErrNodeNotFound        = errors.New("node not found")
 	ErrGetParent           = errors.New("get parent node error")
 	ErrCreateNodeUnderLeaf = errors.New("can not create node under leaf node")
+	ErrSetResourceToLeaf   = errors.New("can not set resource to leaf node")
 	ErrGetNodeID           = errors.New("get nodeid fail")
+	ErrInvalidParam        = errors.New("invalid param")
 )
 
 type NodeProperty struct {
@@ -50,57 +53,115 @@ func (n *Node) IsLeaf() bool {
 	return n.Type == Leaf
 }
 
-// GetById return exact node by nodeid.
-func (n *Node) GetByID(nodeId string) (*Node, error) {
-	if n.ID == nodeId {
-		return n, nil
-	} else {
-		for index := range n.Children {
-			if detNode, err := n.Children[index].GetByID(nodeId); err == nil {
-				return detNode, nil
+// getLeafChild return the leaf ns list of the Node.
+func (n *Node) getLeafChild() ([]string, error) {
+	childNs := []string{}
+	for index := range n.Children {
+		if n.Children[index].Type == Leaf {
+			childNs = append(childNs, n.Children[index].Name)
+		} else {
+			if childLeaf, err := n.Children[index].getLeafChild(); err != nil {
+				return nil, err
+			} else {
+				for childIndex := range childLeaf {
+					childNs = append(childNs, childLeaf[childIndex]+nodeDeli+n.Children[index].Name)
+				}
 			}
 		}
 	}
-	return nil, ErrNodeNotFound
+	return childNs, nil
+}
+
+// GetById return exact node and ns which with nodeid.
+func (n *Node) GetByID(nodeId string) (*Node, string, error) {
+	if n.ID == nodeId {
+		return n, n.Name, nil
+	} else {
+		for index := range n.Children {
+			if detNode, ns, err := n.Children[index].GetByID(nodeId); err == nil {
+				return detNode, ns + nodeDeli + n.Name, nil
+			}
+		}
+	}
+	return nil, "", ErrNodeNotFound
 }
 
 // GetByName return exact node by nodename.
-func (n *Node) GetByName(nodeName string) (*Node, error) {
-	if n.Name == nodeName {
+func (n *Node) GetByNs(ns string) (*Node, error) {
+	nsSplit := strings.Split(ns, nodeDeli)
+	if len(nsSplit) == 1 && ns == rootNode {
+		// return tree if get root.
 		return n, nil
-	} else {
-		for index := range n.Children {
-			if detNode, err := n.Children[index].GetByName(nodeName); err == nil {
-				return detNode, nil
+	} else if len(nsSplit) < 2 {
+		// the query is invalid.
+		return nil, ErrInvalidParam
+	}
+
+	// Func to check if children node match the ns.
+	// Get name of next part of the ns, search it in the child nodes.
+	checkChild := func(node *Node, nsSplit []string) (*Node, bool) {
+		nextNsPart := nsSplit[len(nsSplit)-2]
+		for index := range node.Children {
+			if node.Children[index].Name == nextNsPart {
+				return node.Children[index], true
 			}
 		}
+		return nil, false
 	}
-	return nil, ErrNodeNotFound
+
+	if rootNode != nsSplit[len(nsSplit)-1] {
+		return nil, ErrNodeNotFound
+	}
+
+	checkNode := n
+	var ok bool
+	// Seach each part of the ns, finally get the node of the ns.
+	for index := range nsSplit {
+		checkNode, ok = checkChild(checkNode, nsSplit[0:len(nsSplit)-index])
+		// Return error if not match.
+		if !ok {
+			return nil, ErrNodeNotFound
+		}
+		// If each part of the ns is match, return.
+		if index+1 == len(nsSplit)-1 {
+			break
+		}
+	}
+	return checkNode, nil
 }
 
-type nodeIDMap struct {
-	Cache  map[string]string
+type nodeCache struct {
+	Cache  *map[string]string
 	RWsync *sync.RWMutex
 }
 
-func (i *nodeIDMap) Get(name string) (string, bool) {
+func (i *nodeCache) Get(name string) (string, bool) {
 	i.RWsync.RLock()
 	defer i.RWsync.RUnlock()
-	id, ok := i.Cache[name]
-	return id, ok
+	v, ok := (*i.Cache)[name]
+	return v, ok
 }
 
-func (i *nodeIDMap) Set(name, id string) {
+func (i *nodeCache) Set(name, v string) {
 	i.RWsync.Lock()
 	defer i.RWsync.Unlock()
-	i.Cache[name] = id
+	(*i.Cache)[name] = v
+}
+
+func (i *nodeCache) Purge() {
+	i.RWsync.Lock()
+	defer i.RWsync.Unlock()
+	for k := range *i.Cache {
+		delete((*i.Cache), k)
+	}
 }
 
 type Tree struct {
 	Nodes   *Node
 	Cluster Cluster
 
-	nsIDCache nodeIDMap
+	nsIDCache nodeCache
+	nsNSCache nodeCache
 	RWsync    *sync.RWMutex
 
 	logger *log.Logger
@@ -111,7 +172,8 @@ func NewTree(cluster Cluster) (*Tree, error) {
 		Nodes:     &Node{NodeProperty{ID: "0", Name: rootNode, Type: NonLeaf, MachineReg: "*"}, []*Node{}},
 		Cluster:   cluster,
 		RWsync:    &sync.RWMutex{},
-		nsIDCache: nodeIDMap{map[string]string{}, &sync.RWMutex{}},
+		nsIDCache: nodeCache{&map[string]string{}, &sync.RWMutex{}},
+		nsNSCache: nodeCache{&map[string]string{}, &sync.RWMutex{}},
 		logger:    log.New("INFO", "tree", model.LogBackend),
 	}
 	err := t.Cluster.CreateBucketIfNotExist([]byte(nodeBucket))
@@ -173,6 +235,8 @@ func (t *Tree) saveTree() error {
 		t.logger.Errorf("Tree save fail: %s\n", err.Error())
 		return err
 	}
+	t.nsIDCache.Purge()
+	t.nsNSCache.Purge()
 	return t.Cluster.Update([]byte(nodeBucket), []byte(nodeDataKey), treeByte)
 }
 
@@ -196,22 +260,6 @@ func (t *Tree) setResourceByNodeID(nodeId, resType string, resByte []byte) error
 	return t.Cluster.Update([]byte(nodeId), []byte(resType), resByte)
 }
 
-// getNodeIDByName return id of node with name nodeName.
-// NOTE: if two nodes have the same name, will return the first one matched.
-func (t *Tree) getNodeIDByName(nodeName string) string {
-	NodeId, ok := t.nsIDCache.Get(nodeName)
-	// If cannot get Node from cache, get from tree and set cache.
-	if !ok {
-		if node, err := t.GetNodeByName(nodeName); err != nil {
-			return ""
-		} else {
-			NodeId = node.ID
-		}
-		t.nsIDCache.Set(nodeName, NodeId)
-	}
-	return NodeId
-}
-
 // GetAllNodes return the whole nodes.
 func (t *Tree) GetAllNodes() (*Node, error) {
 	v, err := t.getAllNodeByte()
@@ -230,24 +278,67 @@ func (t *Tree) GetAllNodes() (*Node, error) {
 
 // GetNodesById return exact node with nodeid.
 func (t *Tree) GetNodeByID(id string) (*Node, error) {
-	// TODO: use nodeidKey as cache
+	// Return GetNodeByNs if read ns from cache, becasue GetNodeByNs donot need read the whole tree.
+	// Update tree will purge cache, so cache can be trust.
+	NodeNs, ok := t.nsIDCache.Get(id)
+	if ok {
+		return t.GetNodeByNs(NodeNs)
+	}
 	nodes, err := t.GetAllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return nil, err
 	}
-	return nodes.GetByID(id)
+	node, ns, err := nodes.GetByID(id)
+
+	if _, ok := t.nsIDCache.Get(id); !ok {
+		t.nsIDCache.Set(id, ns)
+	}
+
+	return node, err
+}
+
+// getNsByID return id of node with name nodeName.
+func (t *Tree) getNsByID(id string) (string, error) {
+	var err error
+	ns, ok := t.nsIDCache.Get(id)
+
+	if !ok {
+		if _, err = t.GetNodeByID(id); err != nil {
+			t.logger.Errorf("GetNodeByID fail when get id:%s, error: %s\n", id, err.Error)
+			return "", err
+		}
+		if ns, ok = t.nsIDCache.Get(id); !ok {
+			return "", ErrGetNode
+		}
+	}
+	return ns, nil
 }
 
 // GetNodesById return exact node with name.
-func (t *Tree) GetNodeByName(name string) (*Node, error) {
+func (t *Tree) GetNodeByNs(ns string) (*Node, error) {
 	// TODO: use nodeidKey as cache
 	nodes, err := t.GetAllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return nil, err
 	}
-	return nodes.GetByName(name)
+	return nodes.GetByNs(ns)
+}
+
+func (t *Tree) getIDByNs(ns string) (string, error) {
+	id, ok := t.nsNSCache.Get(ns)
+	// If cannot get Node from cache, get from tree and set cache.
+	if !ok {
+		node, err := t.GetNodeByNs(ns)
+		if err != nil {
+			t.logger.Errorf("GetNodeByNs fail when get ns:%s, error: %s\n", ns, err.Error)
+			return "", err
+		}
+		id = node.ID
+		t.nsNSCache.Set(ns, node.ID)
+	}
+	return id, nil
 }
 
 // NewNode create a node, return a pointer which point to node, and it bucketId. Property is preserved.
@@ -265,7 +356,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 		t.logger.Errorf("get all nodes error, parent id: %s, error: %s", parentId, err.Error())
 		return "", err
 	}
-	parent, err := nodes.GetByID(parentId)
+	parent, _, err := nodes.GetByID(parentId)
 	if err != nil {
 		t.logger.Error("get parent id error:", parentId)
 		return "", ErrGetParent
@@ -279,7 +370,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	t.Nodes = nodes
 
 	if err := t.saveTree(); err != nil {
-		t.logger.Error("NewNode save tree node fail")
+		t.logger.Error("NewNode save tree node fail,", err.Error())
 		return "", err
 	}
 	// Create a now bucket fot this node.
@@ -312,17 +403,33 @@ func (t *Tree) GetResourceByNodeID(NodeId string, ResourceType string) (*model.R
 
 // GetResource return the ResourceType resource belong to the node with NodeName.
 // TODO: Permission Check
-func (t *Tree) GetResourceByNodeName(nodeName string, ResourceType string) (*model.Resources, error) {
-	nodeId := t.getNodeIDByName(nodeName)
-	if nodeId == "" {
-		t.logger.Error("GetResourceByNodeName GetNodeByName fail: %s \n", nodeName)
+func (t *Tree) GetResourceByNs(ns string, ResourceType string) (*model.Resources, error) {
+	nodeId, err := t.getIDByNs(ns)
+	if nodeId == "" || err != nil {
+		t.logger.Error("GetResourceByNodeName GetNodeByNs fail, ns %s, error:%+v \n", ns, err)
 		return nil, ErrGetNodeID
 	}
 	return t.GetResourceByNodeID(nodeId, ResourceType)
 }
 
 func (t *Tree) SetResourceByNodeID(nodeId, resType string, ResByte []byte) error {
-	var err error
+	ns, err := t.getNsByID(nodeId)
+	if err != nil {
+		return err
+	}
+	return t.SetResourceByNs(ns, resType, ResByte)
+}
+
+func (t *Tree) SetResourceByNs(ns, resType string, ResByte []byte) error {
+	node, err := t.GetNodeByNs(ns)
+	if err != nil || node.ID == "" {
+		t.logger.Error("Get node by ns(%s) fail\n", ns)
+		return ErrGetNode
+	}
+	if !node.IsLeaf() {
+		return ErrSetResourceToLeaf
+	}
+
 	resesStruct, err := model.NewResources(ResByte)
 	if err != nil {
 		t.logger.Errorf("set resource to node fail, unmarshal resource fail: %s\n", err)
@@ -334,24 +441,26 @@ func (t *Tree) SetResourceByNodeID(nodeId, resType string, ResByte []byte) error
 		t.logger.Errorf("set resource to node fail, marshal resource to byte fail: %s\n", err)
 		return err
 	}
-	return t.setResourceByNodeID(nodeId, resType, resStore)
+
+	return t.setResourceByNodeID(node.ID, resType, resStore)
 }
 
-func (t *Tree) SetResourceByNodeName(nodeName, resType string, ResByte []byte) error {
-	nodeId := t.getNodeIDByName(nodeName)
-	if nodeId == "" {
-		t.logger.Error("GetResourceByNodeName GetNodeByName fail: %s \n", nodeName)
-		return ErrGetNodeID
+// Return leaf node of the ns.
+func (t *Tree) GetLeafChild(ns string) ([]string, error) {
+	// childNs := []string{}
+	nodes, err := t.GetNodeByNs(ns)
+	if err != nil {
+		return nil, err
 	}
-	return t.SetResourceByNodeID(nodeId, resType, ResByte)
-}
 
-// Return nodeid of child nodes of a node.
-// If leaf is true, GetChild return nodeid of all leaf children node.
-// If leaf is false, GetChild return nodeid of non-leaf childtre node.
-func (t *Tree) GetChild(nodeId string, leaf bool) []string {
-	// TODO
-	return []string{string(nodeId)}
+	childNsList, err := nodes.getLeafChild()
+	if err != nil {
+		return nil, err
+	}
+	for index := range childNsList {
+		childNsList[index] = childNsList[index] + nodeDeli + ns
+	}
+	return childNsList, nil
 }
 
 // Return NodeId if pretty is id, else return resource data.

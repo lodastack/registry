@@ -141,7 +141,7 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 	queryString := r.URL.Query()
 	res := queryString.Get("resource")
 	id := queryString.Get("nodeid")
-	name := queryString.Get("nodename")
+	ns := queryString.Get("ns")
 
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r.Body); err != nil {
@@ -152,8 +152,8 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 	var err error
 	if id != "" {
 		err = s.tree.SetResourceByNodeID(id, res, buf.Bytes())
-	} else if name != "" {
-		err = s.tree.SetResourceByNodeName(name, res, buf.Bytes())
+	} else if ns != "" {
+		err = s.tree.SetResourceByNs(ns, res, buf.Bytes())
 	} else {
 		err = fmt.Errorf("invalid node infomation to get resource")
 	}
@@ -171,12 +171,12 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 	var resource *model.Resources
 	res := r.FormValue("resource")
 	id := r.FormValue("nodeid")
-	name := r.FormValue("nodename")
+	ns := r.FormValue("ns")
 
 	if id != "" {
 		resource, err = s.tree.GetResourceByNodeID(id, res)
-	} else if name != "" {
-		resource, err = s.tree.GetResourceByNodeName(name, res)
+	} else if ns != "" {
+		resource, err = s.tree.GetResourceByNs(ns, res)
 	} else {
 		err = fmt.Errorf("invalid node infomation to get resource")
 	}
