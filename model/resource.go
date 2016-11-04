@@ -121,13 +121,17 @@ func (rs *Resources) Marshal() ([]byte, error) {
 	return raw[0 : len(raw)-len(deliRes)+1], nil
 }
 
-func (rs *Resources) AppendResource(resByte []byte) error {
+func (rs *Resources) AppendResourceByte(resByte []byte) error {
 	r := Resource{}
 	if err := r.Unmarshal(resByte); err != nil {
 		return fmt.Errorf("unmarshal resource fail")
 	}
 	(*rs) = append((*rs), r)
 	return nil
+}
+
+func (rs *Resources) AppendResources(res Resources) {
+	(*rs) = append((*rs), res...)
 }
 
 func (r *Resource) Unmarshal(raw []byte) error {

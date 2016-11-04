@@ -58,5 +58,9 @@ type TreeMethod interface {
 	// Set resource to node with nodename.
 	SetResourceByNs(nodeName, resType string, ResByte []byte) error
 
-	GetLeafChild(ns string) ([]string, error)
+	// SearchResourceByNs return the map[ns]resources which match the search.
+	SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error)
+
+	// Return leaf child node of one ns.
+	GetLeaf(ns string, format string) ([]string, error)
 }

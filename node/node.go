@@ -20,6 +20,9 @@ const (
 	nodeIdKey   = "nodeid"
 	rootNode    = "loda"
 	nodeDeli    = "."
+
+	NsFormat = "ns"
+	IDFormat = "id"
 )
 
 var (
@@ -32,6 +35,9 @@ var (
 	ErrSetResourceToLeaf   = errors.New("can not set resource to leaf node")
 	ErrGetNodeID           = errors.New("get nodeid fail")
 	ErrInvalidParam        = errors.New("invalid param")
+	ErrNilChildNode        = errors.New("get none child node")
+
+	ErrHappen = errors.New("error happen")
 )
 
 type NodeProperty struct {
@@ -54,18 +60,35 @@ func (n *Node) IsLeaf() bool {
 }
 
 // getLeafChild return the leaf ns list of the Node.
-func (n *Node) getLeafChild() ([]string, error) {
+func (n *Node) getLeafNs() ([]string, error) {
 	childNs := []string{}
 	for index := range n.Children {
 		if n.Children[index].Type == Leaf {
 			childNs = append(childNs, n.Children[index].Name)
 		} else {
-			if childLeaf, err := n.Children[index].getLeafChild(); err != nil {
+			if childLeaf, err := n.Children[index].getLeafNs(); err != nil {
 				return nil, err
 			} else {
 				for childIndex := range childLeaf {
 					childNs = append(childNs, childLeaf[childIndex]+nodeDeli+n.Children[index].Name)
 				}
+			}
+		}
+	}
+	return childNs, nil
+}
+
+// getLeafChild return the leaf id list of the Node.
+func (n *Node) getLeafID() ([]string, error) {
+	childNs := []string{}
+	for index := range n.Children {
+		if n.Children[index].Type == Leaf {
+			childNs = append(childNs, n.Children[index].ID)
+		} else {
+			if childLeaf, err := n.Children[index].getLeafID(); err != nil {
+				return nil, err
+			} else {
+				childNs = append(childNs, childLeaf...)
 			}
 		}
 	}
@@ -444,22 +467,63 @@ func (t *Tree) SetResourceByNs(ns, resType string, ResByte []byte) error {
 	return t.setResourceByNodeID(node.ID, resType, resStore)
 }
 
+func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error) {
+	leafIDs, err := t.GetLeaf(ns, IDFormat)
+	if err != nil {
+		return nil, err
+	} else if len(leafIDs) == 0 {
+		return nil, ErrNilChildNode
+	}
+
+	result := map[string]*model.Resources{}
+
+	for _, leafID := range leafIDs {
+		resByte, err := t.getResByteOfNode(leafID, resType)
+		if err != nil {
+			return nil, err
+		}
+
+		search.Init()
+		if resOfOneNs, err := search.Process(resByte); err != nil {
+			return nil, err
+		} else if len(resOfOneNs) != 0 {
+			ns, err := t.getNsByID(leafID)
+			if err != nil {
+				return nil, err
+			}
+			result[ns] = &model.Resources{}
+			result[ns].AppendResources(resOfOneNs)
+		}
+	}
+
+	return result, nil
+}
+
 // Return leaf node of the ns.
-func (t *Tree) GetLeafChild(ns string) ([]string, error) {
-	// childNs := []string{}
+func (t *Tree) GetLeaf(ns string, format string) ([]string, error) {
 	nodes, err := t.GetNodeByNs(ns)
 	if err != nil {
 		return nil, err
 	}
-
-	childNsList, err := nodes.getLeafChild()
-	if err != nil {
-		return nil, err
+	switch format {
+	case IDFormat:
+		childNsList, err := nodes.getLeafID()
+		if err != nil {
+			return nil, err
+		}
+		return childNsList, nil
+	default:
+		childNsList, err := nodes.getLeafNs()
+		if err != nil {
+			return nil, err
+		}
+		// add the search ns to child relative ns.
+		for index := range childNsList {
+			childNsList[index] = childNsList[index] + nodeDeli + ns
+		}
+		return childNsList, nil
 	}
-	for index := range childNsList {
-		childNsList[index] = childNsList[index] + nodeDeli + ns
-	}
-	return childNsList, nil
+	return nil, ErrHappen
 }
 
 // Return NodeId if pretty is id, else return resource data.

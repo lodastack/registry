@@ -276,6 +276,98 @@ func TestSetResourceByNs(t *testing.T) {
 	}
 }
 
+func TestSearchResource(t *testing.T) {
+	s := mustNewStore(t)
+	defer os.RemoveAll(s.Path())
+
+	resourceByte1, _ := json.Marshal(resMap1)
+	resourceByte2, _ := json.Marshal(resMap2)
+
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, err := NewTree(s)
+
+	// Set resource to leaf.
+	if _, err := tree.NewNode("test1", "0", Leaf); err != nil {
+		t.Fatalf("create leaf behind root fail: %s", err.Error())
+	}
+	err = tree.SetResourceByNs("test1."+rootNode, "machine", resourceByte1)
+	if err != nil {
+		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
+	}
+	if _, err := tree.NewNode("test2", "0", Leaf); err != nil {
+		t.Fatalf("create leaf behind root fail: %s", err.Error())
+	}
+	err = tree.SetResourceByNs("test2."+rootNode, "machine", resourceByte2)
+	if err != nil {
+		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
+	}
+
+	// search 127.0.0.1 show get 1 node each has one resource.
+	search1_1 := model.ResourceSearch{
+		Key:   "host",
+		Value: []byte("127.0.0.1"),
+		Fuzzy: false,
+	}
+	search1_2 := search1_1
+	search1_2.Fuzzy = true
+	res, err := tree.SearchResourceByNs(rootNode, "machine", search1_1)
+	if resMachine, ok := res["test1."+rootNode]; err != nil || len(res) != 1 || !ok {
+		t.Fatalf("search host 127.0.0.1 by not fuzzy type not match with expect")
+	} else {
+		if ip, ok := (*resMachine)[0].ReadProperty("host"); !ok || ip != "127.0.0.1" {
+			t.Fatalf("search host 127.0.0.1 by not fuzzy type not match with expect")
+		}
+	}
+	res, err = tree.SearchResourceByNs(rootNode, "machine", search1_2)
+	if resMachine, ok := res["test1."+rootNode]; err != nil || len(res) != 1 || !ok {
+		t.Fatalf("search host 127.0.0.1 by fuzzy type not match with expect")
+	} else {
+		if ip, ok := (*resMachine)[0].ReadProperty("host"); !ok || ip != "127.0.0.1" {
+			t.Fatalf("search host 127.0.0.1 by fuzzy type not match with expect")
+		}
+	}
+
+	// search 127.0.0.2 show get 2 node each has one resource.
+	search2_1 := model.ResourceSearch{
+		Key:   "host",
+		Value: []byte("127.0.0.2"),
+		Fuzzy: false,
+	}
+	search2_2 := search2_1
+	search2_2.Fuzzy = true
+	if res, err = tree.SearchResourceByNs(rootNode, "machine", search2_1); err != nil || len(res) != 2 {
+		t.Fatalf("search host 127.0.0.2 by not fuzzy type not match with expect")
+	}
+	if res, err = tree.SearchResourceByNs(rootNode, "machine", search2_2); err != nil || len(res) != 2 {
+		t.Fatalf("search host 127.0.0.2 by fuzzy type not match with expect")
+	}
+
+	// search 127.0.0. with not fuzzy type should get none result.
+	search3_1 := model.ResourceSearch{
+		Key:   "host",
+		Value: []byte("127.0.0."),
+		Fuzzy: false,
+	}
+	// search 127.0.0. with fuzzy type should get two node, and each has two resource.
+	search3_2 := search3_1
+	search3_2.Fuzzy = true
+	if res, err = tree.SearchResourceByNs(rootNode, "machine", search3_1); err != nil || len(res) != 0 {
+		t.Fatalf("search host 127.0.0. by not fuzzy type not match with expect")
+	}
+	if res, err = tree.SearchResourceByNs(rootNode, "machine", search3_2); len(res) != 2 {
+		t.Fatalf("search host 127.0.0. by fuzzy type not match with expect")
+	}
+	for _, resMachine := range res {
+		if len(*resMachine) != 2 {
+			t.Fatalf("search host 127.0.0.3 by fuzzy type not match with expect")
+		}
+	}
+}
+
 func TestGetResAfterSetOtherNs(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
@@ -333,7 +425,7 @@ func checkStringInList(ori []string, dest string) bool {
 }
 
 func TestNodeGetLeafChild(t *testing.T) {
-	childNs, err := nodes.getLeafChild()
+	childNs, err := nodes.getLeafNs()
 	t.Log("result of GetLeafChild:", childNs)
 	if err != nil || len(childNs) != 4 {
 		t.Fatal("GetLeafChild not match with expect")
@@ -346,7 +438,7 @@ func TestNodeGetLeafChild(t *testing.T) {
 	}
 }
 
-func TestTreeGetLeafChild(t *testing.T) {
+func TestTreeGetLeaf(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
@@ -365,8 +457,8 @@ func TestTreeGetLeafChild(t *testing.T) {
 		t.Fatal("saveTree error")
 	}
 
-	childNs, err := tree.GetLeafChild(rootNode)
-	t.Log("result of GetLeafChild:", childNs)
+	childNs, err := tree.GetLeaf(rootNode, NsFormat)
+	t.Log("result of NS GetLeafChild:", childNs)
 	if err != nil || len(childNs) != 4 {
 		t.Fatal("GetLeafChild not match with expect")
 	}
@@ -374,6 +466,18 @@ func TestTreeGetLeafChild(t *testing.T) {
 		!checkStringInList(childNs, "0-2-2-1.0-2-2.0-2.loda") ||
 		!checkStringInList(childNs, "0-3-2-1.0-3-2.0-3.loda") ||
 		!checkStringInList(childNs, "0-4.loda") {
+		t.Fatal("GetLeafChild not match with expect")
+	}
+
+	childNs, err = tree.GetLeaf(rootNode, IDFormat)
+	t.Log("result of ID GetLeafChild:", childNs)
+	if err != nil || len(childNs) != 4 {
+		t.Fatal("GetLeafChild not match with expect")
+	}
+	if !checkStringInList(childNs, "0-2-1") ||
+		!checkStringInList(childNs, "0-2-2-1") ||
+		!checkStringInList(childNs, "0-3-2-1") ||
+		!checkStringInList(childNs, "0-4") {
 		t.Fatal("GetLeafChild not match with expect")
 	}
 }
