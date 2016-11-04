@@ -203,7 +203,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 	if nodeid == "" {
 		nodes, err = s.tree.GetAllNodes()
 	} else {
-		nodes, err = s.tree.GetNodeByID(nodeid)
+		nodes, _, err = s.tree.GetNodeByID(nodeid)
 	}
 	if err != nil {
 		fmt.Fprintf(w, "%s", err)

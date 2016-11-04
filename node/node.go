@@ -276,18 +276,19 @@ func (t *Tree) GetAllNodes() (*Node, error) {
 	return &allNode, nil
 }
 
-// GetNodesById return exact node with nodeid.
-func (t *Tree) GetNodeByID(id string) (*Node, error) {
+// GetNodesById return node and its ns which have the nodeid.
+func (t *Tree) GetNodeByID(id string) (*Node, string, error) {
 	// Return GetNodeByNs if read ns from cache, becasue GetNodeByNs donot need read the whole tree.
 	// Update tree will purge cache, so cache can be trust.
 	NodeNs, ok := t.nsIDCache.Get(id)
 	if ok {
-		return t.GetNodeByNs(NodeNs)
+		node, err := t.GetNodeByNs(NodeNs)
+		return node, NodeNs, err
 	}
 	nodes, err := t.GetAllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
-		return nil, err
+		return nil, "", err
 	}
 	node, ns, err := nodes.GetByID(id)
 
@@ -295,7 +296,7 @@ func (t *Tree) GetNodeByID(id string) (*Node, error) {
 		t.nsIDCache.Set(id, ns)
 	}
 
-	return node, err
+	return node, ns, err
 }
 
 // getNsByID return id of node with name nodeName.
@@ -304,13 +305,11 @@ func (t *Tree) getNsByID(id string) (string, error) {
 	ns, ok := t.nsIDCache.Get(id)
 
 	if !ok {
-		if _, err = t.GetNodeByID(id); err != nil {
+		if _, ns, err = t.GetNodeByID(id); err != nil {
 			t.logger.Errorf("GetNodeByID fail when get id:%s, error: %s\n", id, err.Error)
 			return "", err
 		}
-		if ns, ok = t.nsIDCache.Get(id); !ok {
-			return "", ErrGetNode
-		}
+
 	}
 	return ns, nil
 }

@@ -41,7 +41,7 @@ type TreeMethod interface {
 	GetAllNodes() (*Node, error)
 
 	// GetNodesById return exact node by nodeid.
-	GetNodeByID(id string) (*Node, error)
+	GetNodeByID(id string) (*Node, string, error)
 
 	// NewNode create node.
 	NewNode(name, parentId string, nodeType int, property ...string) (string, error)
