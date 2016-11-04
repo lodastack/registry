@@ -36,8 +36,6 @@ var (
 	ErrGetNodeID           = errors.New("get nodeid fail")
 	ErrInvalidParam        = errors.New("invalid param")
 	ErrNilChildNode        = errors.New("get none child node")
-
-	ErrHappen = errors.New("error happen")
 )
 
 type NodeProperty struct {
@@ -501,19 +499,16 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 
 // Return leaf node of the ns.
 func (t *Tree) GetLeaf(ns string, format string) ([]string, error) {
+	var childNsList []string
 	nodes, err := t.GetNodeByNs(ns)
 	if err != nil {
 		return nil, err
 	}
 	switch format {
 	case IDFormat:
-		childNsList, err := nodes.getLeafID()
-		if err != nil {
-			return nil, err
-		}
-		return childNsList, nil
-	default:
-		childNsList, err := nodes.getLeafNs()
+		childNsList, err = nodes.getLeafID()
+	case NsFormat:
+		childNsList, err = nodes.getLeafNs()
 		if err != nil {
 			return nil, err
 		}
@@ -521,9 +516,10 @@ func (t *Tree) GetLeaf(ns string, format string) ([]string, error) {
 		for index := range childNsList {
 			childNsList[index] = childNsList[index] + nodeDeli + ns
 		}
-		return childNsList, nil
+	default:
+		err = ErrInvalidParam
 	}
-	return nil, ErrHappen
+	return childNsList, err
 }
 
 // Return NodeId if pretty is id, else return resource data.
