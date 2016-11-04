@@ -240,11 +240,30 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 
 // search bucket by nodes/key(resource)/resource_property
 func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// ns := r.FormValue("ns")
-	// key := r.FormValue("key")
+	ns := r.FormValue("ns")
+	resource := r.FormValue("resource")
+	k := r.FormValue("k")
+	v := r.FormValue("v")
+	searchType := r.FormValue("type")
+	search := model.ResourceSearch{
+		Key:   k,
+		Value: []byte(v),
+		Fuzzy: searchType == "fuzzy",
+	}
+	res, err := s.tree.SearchResourceByNs(ns, resource, search)
+	if err != nil {
+		s.logger.Errorf("handlerSearch SearchResourceByNs fail: %s", err.Error())
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	// TODO: return only ns or some property of resource from res.
 
-	var result map[string]map[string]string = make(map[string]map[string]string, 0)
-	out, _ := json.Marshal(result)
+	out, err := json.Marshal(res)
+	if err != nil {
+		s.logger.Errorf("handlerSearch marshal resource fail, error: %s, data: %+v", err.Error(), res)
+		fmt.Fprintf(w, "%s", "marshal resource fail")
+		return
+	}
 	fmt.Fprintf(w, "%s", string(out))
 }
 

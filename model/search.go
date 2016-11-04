@@ -49,7 +49,7 @@ func (s *ResourceSearch) IdSearch(raw []byte) (Resources, error) {
 		case endByte:
 			//  End of resources.
 			if matchFlag {
-				if err := matchReses.AppendResource(raw[startPos:]); err != nil {
+				if err := matchReses.AppendResourceByte(raw[startPos:]); err != nil {
 					return matchReses, fmt.Errorf("unmarshal resource fail")
 				}
 			}
@@ -60,7 +60,7 @@ func (s *ResourceSearch) IdSearch(raw []byte) (Resources, error) {
 				case len(deliRes):
 					if matchFlag {
 						endPos = index - 3
-						if err := matchReses.AppendResource(raw[startPos : endPos+1]); err != nil {
+						if err := matchReses.AppendResourceByte(raw[startPos : endPos+1]); err != nil {
 							return matchReses, fmt.Errorf("unmarshal resource fail")
 						}
 					}
@@ -96,7 +96,7 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (Resources, error) {
 		}
 		// If the resource is matched, append it to result.
 		if matchFlag {
-			if err := matchReses.AppendResource(raw[resStartPos:end]); err != nil {
+			if err := matchReses.AppendResourceByte(raw[resStartPos:end]); err != nil {
 				return fmt.Errorf("unmarshal resource fail")
 			}
 		}
