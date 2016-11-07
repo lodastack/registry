@@ -1,13 +1,49 @@
-***先写个临时readme，方便记录和调试***
+***方便记录和调试***
 
-### 接口
+# HTTP API Doc
 
-#### 节点接口
+
+### 0 管理接口
+---
+
+#### 0.1 加入成员
+
+向集群中加入一个成员。
+
+```
+curl -x POST -d '{"addr":"127.0.0.2:9991"}' "http://127.0.0.1:9991/join"
+```
+#### 0.2 删除成员
+
+在集群中删除一个成员。
+
+```
+curl -x DELETE -d '{"addr":"127.0.0.2:9991"}' "http://127.0.0.1:9991/join"
+```
+
+#### 0.3 备份数据（只能在leader上操作）
+备份整个数据库。
+
+```
+curl "http://127.0.0.1:9991/backup" > /data/backup.db
+```
+
+#### 0.4 恢复数据（只能在leader上操作）
+
+从备份的文件中恢复操作会恢复整个集群中每个节点的数据。
+
+```
+curl "http://127.0.0.1:9991/restore?file=/data/backup.db"
+```
+
+
+### 1 节点接口
+---
 程序会初始化一个初始节点，ID为`0`，name为`loda`。所有节点都基于这个初始节点。
 
 每个节点都会对应一个ns。比如：`test.service.product.loda`
 
-###### 新建节点
+#### 1.1 新建节点
 只能在非叶子节点下新建节点。
 新建节点会同时创建节点ID，并创建节点对用存储bucket。
 需要提供3个参数：
@@ -30,8 +66,8 @@
     #在zzznl.loda下新建叶子节点
 	curl -X POST "http://127.0.0.1:9991/ns?parent=98a6586c-4f4f-475c-9c5c-8d4e31d14cd2&type=0&name=zzzl2"
 
-##### 查询节点
--查询全部节点
+#### 1.2 查询节点
+查询全部节点
 
     curl "http://127.0.0.1:9991/ns"
     #返回
@@ -43,9 +79,10 @@
     # 返回
     {"Children":[],"ID":"c357e90e-641b-4576-8df6-3325fdffe6b8","Name":"zzzl2","Type":0,"MachineReg":"-"}
 
-#### 资源接口
+### 2 资源接口
+---
 
-##### 设置资源
+#### 2.1 设置资源
 
 只能在叶子节点下设置资源，目前只能设置全量资源，不能追加资源。
 提供参数：
@@ -58,7 +95,7 @@
     curl -d '[{"host":"127.0.0.2"},{"host":"127.0.0.1"}]' "http://127.0.0.1:9991/resource?ns=zzzl.loda&resource=machine"
     curl -d '[{"host":"127.0.0.2"},{"host":"127.0.0.3"}]' "http://127.0.0.1:9991/resource?ns=zzzl2.zzznl.loda&resource=machine"
 
-##### 查询资源
+#### 2.2 查询资源
 
 提供参数：
 - query参数 ns：资源所在的叶子节点ns
@@ -69,7 +106,7 @@
      curl "http://127.0.0.1:9991/resource?ns=zzzl2.zzznl.loda&resource=machine"
      curl "http://127.0.0.1:9991/resource?ns=zzzl.loda&resource=machine"
 
-###### 搜索资源
+#### 2.3 搜索资源
 
 提供参数：
 - query参数 ns：资源所在的叶子节点ns
