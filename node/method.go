@@ -33,6 +33,9 @@ type Cluster interface {
 
 	// Backup database.
 	Backup() ([]byte, error)
+
+	// ViewPrefix returns the value for the keys has the keyPrefix.
+	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
 }
 
 // TreeMethod is the interface tree must implement.

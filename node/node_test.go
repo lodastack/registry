@@ -133,14 +133,14 @@ func TestCreateNode(t *testing.T) {
 
 	var leafID, nonLeafID, childID string
 	// Test reate Leaf node and create bucket.
-	if leafID, err = tree.NewNode("l1", "0", Leaf); err != nil {
+	if leafID, err = tree.NewNode("l1", rootID, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	if err := tree.setResourceByNodeID(leafID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to leafID fail: %s", err.Error())
 	}
 	// Test reate NonLeaf node and create bucket.
-	if nonLeafID, err = tree.NewNode("n1", "0", NonLeaf); err != nil {
+	if nonLeafID, err = tree.NewNode("n1", rootID, NonLeaf); err != nil {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
 	if err := tree.setResourceByNodeID(nonLeafID, "test", []byte("test")); err != nil {
@@ -159,6 +159,71 @@ func TestCreateNode(t *testing.T) {
 	}
 	if err := tree.setResourceByNodeID(childID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to childID fail: %s", err.Error())
+	}
+}
+
+func TestCopyTemplateDuringCreateNode(t *testing.T) {
+	s := mustNewStore(t)
+	defer os.RemoveAll(s.Path())
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, err := NewTree(s)
+	if err != nil {
+		t.Fatalf("NewTree fail: %s\n", err.Error())
+	}
+	var leafID, nonLeafID string
+	if leafID, err = tree.NewNode("testl", rootID, Leaf); err != nil {
+		t.Fatalf("create leaf behind root fail: %s", err.Error())
+	}
+	if nonLeafID, err = tree.NewNode("testnl", rootID, NonLeaf); err != nil {
+		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
+	}
+
+	if res, err := tree.GetResourceByNs(rootNode, template+"collect"); err != nil || len(*res) != 31 {
+		t.Fatalf("get root collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
+	}
+	if res, err := tree.GetResourceByNodeID(nonLeafID, template+"collect"); err != nil || len(*res) != 31 {
+		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
+	} else {
+	}
+	if res, err := tree.GetResourceByNodeID(leafID, "collect"); err != nil || len(*res) != 31 {
+		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
+	}
+}
+
+func TestUpdateTemplate(t *testing.T) {
+	s := mustNewStore(t)
+	defer os.RemoveAll(s.Path())
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, err := NewTree(s)
+	if err != nil {
+		t.Fatalf("NewTree fail: %s\n", err.Error())
+	}
+
+	resourceByte, _ := json.Marshal(resMap1)
+	err = tree.SetResourceByNs(rootNode, template+"collect", resourceByte)
+	if err != nil {
+		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
+	}
+	var leafID, nonLeafID string
+	if leafID, err = tree.NewNode("testl", rootID, Leaf); err != nil {
+		t.Fatalf("create leaf behind root fail: %s", err.Error())
+	}
+	if nonLeafID, err = tree.NewNode("testnl", rootID, NonLeaf); err != nil {
+		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
+	}
+	if res, err := tree.GetResourceByNodeID(nonLeafID, template+"collect"); err != nil || len(*res) != 2 {
+		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
+	}
+	if res, err := tree.GetResourceByNodeID(leafID, "collect"); err != nil || len(*res) != 2 {
+		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
 }
 
@@ -212,7 +277,7 @@ func TestSetResourceByID(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	leafID, err := tree.NewNode("test", "0", Leaf)
+	leafID, err := tree.NewNode("test", rootID, Leaf)
 	if err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
@@ -229,7 +294,7 @@ func TestSetResourceByID(t *testing.T) {
 	}
 
 	// Set resource to nonLeaf.
-	nonLeafID, err := tree.NewNode("testNonLeaf", "0", NonLeaf)
+	nonLeafID, err := tree.NewNode("testNonLeaf", rootID, NonLeaf)
 	if err != nil {
 		t.Fatalf("create nonLeaf behind root fail: %s", err.Error())
 	}
@@ -252,7 +317,7 @@ func TestSetResourceByNs(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("test", "0", Leaf); err != nil {
+	if _, err := tree.NewNode("test", rootID, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResourceByNs("test."+rootNode, "machine", resourceByte)
@@ -268,7 +333,7 @@ func TestSetResourceByNs(t *testing.T) {
 	}
 
 	// Set resource to nonLeaf.
-	if _, err := tree.NewNode("testNonLeaf", "0", NonLeaf); err != nil {
+	if _, err := tree.NewNode("testNonLeaf", rootID, NonLeaf); err != nil {
 		t.Fatalf("create nonLeaf behind root fail: %s", err.Error())
 	}
 	if err = tree.SetResourceByNs("testNonLeaf."+rootNode, "machine", resourceByte); err == nil {
@@ -291,14 +356,14 @@ func TestSearchResource(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("test1", "0", Leaf); err != nil {
+	if _, err := tree.NewNode("test1", rootID, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResourceByNs("test1."+rootNode, "machine", resourceByte1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
-	if _, err := tree.NewNode("test2", "0", Leaf); err != nil {
+	if _, err := tree.NewNode("test2", rootID, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResourceByNs("test2."+rootNode, "machine", resourceByte2)
@@ -368,6 +433,25 @@ func TestSearchResource(t *testing.T) {
 	}
 }
 
+func TestCreatePoolNode(t *testing.T) {
+	s := mustNewStore(t)
+	defer os.RemoveAll(s.Path())
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, err := NewTree(s)
+	if err != nil {
+		t.Fatal("newtree fail")
+	}
+
+	// Test root pool node.
+	if node, err := tree.GetNodeByNs(poolNode + nodeDeli + rootNode); err != nil || node.MachineReg != "^$" {
+		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", *node, err)
+	}
+}
+
 func TestGetResAfterSetOtherNs(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
@@ -383,7 +467,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("leaf1", "0", Leaf); err != nil {
+	if _, err := tree.NewNode("leaf1", rootID, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResourceByNs("leaf1."+rootNode, "machine", resourceByte1)
@@ -399,7 +483,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	}
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("leaf2", "0", Leaf); err != nil {
+	if _, err := tree.NewNode("leaf2", rootID, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResourceByNs("leaf2."+rootNode, "machine", resourceByte2)
@@ -430,10 +514,10 @@ func TestNodeGetLeafChild(t *testing.T) {
 	if err != nil || len(childNs) != 4 {
 		t.Fatal("GetLeafChild not match with expect")
 	}
-	if !checkStringInList(childNs, "0-2-1.0-2") ||
-		!checkStringInList(childNs, "0-2-2-1.0-2-2.0-2") ||
-		!checkStringInList(childNs, "0-3-2-1.0-3-2.0-3") ||
-		!checkStringInList(childNs, "0-4") {
+	if !checkStringInList(childNs, "0-2-1.0-2.loda") ||
+		!checkStringInList(childNs, "0-2-2-1.0-2-2.0-2.loda") ||
+		!checkStringInList(childNs, "0-3-2-1.0-3-2.0-3.loda") ||
+		!checkStringInList(childNs, "0-4.loda") {
 		t.Fatal("GetLeafChild not match with expect")
 	}
 }

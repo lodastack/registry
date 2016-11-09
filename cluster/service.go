@@ -47,6 +47,9 @@ type Store interface {
 	// Get returns the value for the given key.
 	View(bucket, key []byte) ([]byte, error)
 
+	// ViewPrefix returns the value for the keys has the keyPrefix.
+	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
+
 	// Set sets the value for the given key, via distributed consensus.
 	Update(bucket []byte, key []byte, value []byte) error
 

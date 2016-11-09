@@ -113,6 +113,11 @@ func (s *Service) View(bucket, key []byte) ([]byte, error) {
 	return s.store.View(bucket, key)
 }
 
+// ViewPrefix returns the value for the keys has the keyPrefix.
+func (s *Service) ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error) {
+	return s.store.ViewPrefix(bucket, keyPrefix)
+}
+
 // Update will update the value of the given key in bucket via the cluster.
 func (s *Service) Update(bucket []byte, key []byte, value []byte) error {
 	// Try the local store. It might be the leader.
