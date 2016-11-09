@@ -405,7 +405,7 @@ func (s *Store) Update(bucket []byte, key []byte, value []byte) error {
 }
 
 // View bucket by keyPerfix.
-func (s *Store) Views(bucket, keyPrefix []byte) (map[string][]byte, error) {
+func (s *Store) ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error) {
 	var result map[string][]byte = make(map[string][]byte, 0)
 	tx, err := s.db.Begin(true)
 	if err != nil {
@@ -417,7 +417,7 @@ func (s *Store) Views(bucket, keyPrefix []byte) (map[string][]byte, error) {
 	b := tx.Bucket(bucket)
 	if b == nil {
 		s.logger.Error("failed to copen bucket: ", string(bucket))
-		return result, errors.New("open bucket fail, may because invalue bucket")
+		return result, bucketNotFound
 	}
 	c := b.Cursor()
 	for k, v := c.Seek(keyPrefix); len(k) != 0 && strings.HasPrefix(string(k), string(keyPrefix)); k, v = c.Next() {

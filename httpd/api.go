@@ -40,6 +40,9 @@ type Cluster interface {
 	// Backup database.
 	Backup() ([]byte, error)
 
+	// ViewPrefix returns the value for the keys has the keyPrefix.
+	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
+
 	// Restore restores backup data file.
 	Restore(backupfile string) error
 }
