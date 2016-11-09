@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/lodastack/registry/common"
@@ -23,6 +24,12 @@ var (
 	uuidByte byte = 0
 	deliByte byte = 1
 	endByte  byte = 2
+	nilByte  byte = 3
+)
+
+var (
+	ErrResMarshal error = errors.New("marshal resources fail")
+	ErrEmptyRes   error = errors.New("empty resources")
 )
 
 const (
@@ -84,6 +91,9 @@ func (rs *Resources) Unmarshal(raw []byte) error {
 				*rs = append(*rs, r)
 			}
 			goto END
+		case nilByte:
+			// Read value is done if read a nilByte.
+			fallthrough
 		default:
 			if deliLen != 0 {
 				switch deliLen {
@@ -109,6 +119,11 @@ END:
 // Marshal returns the byte format data of Resources.
 func (rs *Resources) Marshal() ([]byte, error) {
 	raw := make([]byte, 0)
+	// return error when resource is empty.
+	if len(*rs) == 0 {
+		return nil, ErrEmptyRes
+	}
+
 	for _, resource := range *rs {
 		resourceByte, err := resource.Marshal()
 		if err != nil {
@@ -148,6 +163,8 @@ func (r *Resource) Unmarshal(raw []byte) error {
 		case deliByte:
 			// Count length of deliByte.
 			deliLen++
+		case nilByte:
+			fallthrough
 		default:
 			if deliLen != 0 {
 				switch deliLen {
@@ -166,7 +183,7 @@ func (r *Resource) Unmarshal(raw []byte) error {
 			}
 			if kvFlag == propertyKey {
 				tmpk = append(tmpk, byt)
-			} else {
+			} else if byt != nilByte {
 				tmpv = append(tmpv, byt)
 			}
 		}
@@ -178,9 +195,9 @@ func (r *Resource) Unmarshal(raw []byte) error {
 // Marshal return byte of resource
 func (r *Resource) Marshal() ([]byte, error) {
 	raw := make([]byte, 0)
-	uuidStr, ok := (*r)[idKey]
+	uuidStr, _ := (*r)[idKey]
 	uuid := []byte{}
-	if ok {
+	if uuidStr != "" {
 		uuid = append([]byte(uuidStr), uuidByte)
 	} else {
 		uuid = append([]byte(common.GenUUID()), uuidByte)
@@ -191,6 +208,11 @@ func (r *Resource) Marshal() ([]byte, error) {
 	for k, v := range *r {
 		raw = append(raw, []byte(k)...)
 		raw = append(raw, deliVal...)
+		// If value is empty, take a nil byte.
+		// Avoid deliVal and deliProp combine into deliRes.
+		if len(v) == 0 {
+			v = string(nilByte)
+		}
 		raw = append(raw, []byte(v)...)
 		raw = append(raw, deliProp...)
 	}

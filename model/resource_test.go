@@ -18,6 +18,29 @@ var resByte = []byte{91, 123, 34, 114, 101, 115, 95, 107, 101, 121, 49, 34, 58, 
 	107, 101, 121, 49, 34, 58, 32, 34, 114, 101, 115, 50, 95, 118, 49, 34, 44, 32, 34, 114, 101, 115, 95, 107, 101, 121, 50, 34,
 	58, 32, 34, 114, 101, 115, 50, 95, 118, 50, 34, 44, 32, 34, 95, 105, 100, 34, 58, 32, 34, 117, 117, 105, 100, 49, 34, 125, 93}
 
+var emptyResRes []map[string]string = []map[string]string{{"res_key1": "", "res_key2": ""}, {"res_key1": "res2_v1", "res_key2": "", "_id": ""}}
+
+func TestEmptyValueResource(t *testing.T) {
+	res, err := NewResourcesMaps(emptyResRes)
+	if err != nil {
+		t.Fatalf("new resource from a map with empty value fail: %s", err.Error())
+	}
+	ressByte, err := res.Marshal()
+	if err != nil {
+		t.Fatalf("marshal a resource with empty property value fail: %s", err.Error())
+	}
+	*res = Resources{}
+	err = res.Unmarshal(ressByte)
+	if err != nil ||
+		len(*res) != 2 ||
+		len((*res)[0]) != 3 ||
+		len((*res)[1]) != 3 ||
+		(*res)[0]["res_key2"] != "" {
+		t.Fatalf("unmarshal a resource byte with empty property value fail, len of resources: %d, len of rsource: %d %d, res_key2:%s, resources: %v, unmarshal error:%v", len(*res), len((*res)[0]), len((*res)[1]), (*res)[0]["res_key2"], *res, err)
+	}
+
+}
+
 func TestRsUnmarshal(t *testing.T) {
 	boltv := Resources{}
 	if err := boltv.Unmarshal(boltByte); err != nil {
