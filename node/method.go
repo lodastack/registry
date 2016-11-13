@@ -40,8 +40,8 @@ type Cluster interface {
 
 // TreeMethod is the interface tree must implement.
 type TreeMethod interface {
-	// GetAllNodes return all nodes.
-	GetAllNodes() (*Node, error)
+	// AllNodes return all nodes.
+	AllNodes() (*Node, error)
 
 	// GetNodesById return exact node by nodeid.
 	GetNodeByID(id string) (*Node, string, error)
@@ -65,5 +65,5 @@ type TreeMethod interface {
 	SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error)
 
 	// Return leaf child node of one ns.
-	GetLeaf(ns string, format string) ([]string, error)
+	Leaf(ns string, format string) ([]string, error)
 }

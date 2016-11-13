@@ -7,7 +7,7 @@ import (
 // GetResource return the ResourceType resource belong to the node with NodeId.
 // TODO: Permission Check
 func (t *Tree) GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error) {
-	resByte, err := t.getResByteOfNode(NodeId, ResourceType)
+	resByte, err := t.resByteOfNode(NodeId, ResourceType)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (t *Tree) SetResourceByNs(ns, resType string, ResByte []byte) error {
 		t.logger.Error("Get node by ns(%s) fail\n", ns)
 		return ErrGetNode
 	}
-	if !node.AllowResource(resType) {
+	if !node.AllowSetResource(resType) {
 		return ErrSetResourceToLeaf
 	}
 
@@ -65,7 +65,7 @@ func (t *Tree) SetResourceByNs(ns, resType string, ResByte []byte) error {
 }
 
 func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error) {
-	leafIDs, err := t.GetLeaf(ns, IDFormat)
+	leafIDs, err := t.Leaf(ns, IDFormat)
 	if err != nil {
 		return nil, err
 	} else if len(leafIDs) == 0 {
@@ -75,7 +75,7 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 	result := map[string]*model.Resources{}
 
 	for _, leafID := range leafIDs {
-		resByte, err := t.getResByteOfNode(leafID, resType)
+		resByte, err := t.resByteOfNode(leafID, resType)
 		if err != nil {
 			return nil, err
 		}

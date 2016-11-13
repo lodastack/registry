@@ -45,17 +45,17 @@ func (n *Node) IsLeaf() bool {
 	return n.Type == Leaf
 }
 
-func (n *Node) Exist(checkNs string) bool {
-	if _, err := n.GetByNs(checkNs); err == nil {
+func (n *Node) Exist(ns string) bool {
+	if _, err := n.GetByNs(ns); err == nil {
 		return true
 	}
 	return false
 }
 
-// Check if the node could be set a resource.
+// AllowSetResource checks if the node could be set a resource.
 // Leaf node could have any resource method.
 // NonLeaf node could be only set template resource.
-func (n *Node) AllowResource(resType string) bool {
+func (n *Node) AllowSetResource(resType string) bool {
 	if n.IsLeaf() {
 		return true
 	}
@@ -102,7 +102,7 @@ func (n *Node) Walk(walkFun WalkfFun) (map[string]string, error) {
 	return walkFun(n, childReturn)
 }
 
-func (n *Node) getLeafNs() ([]string, error) {
+func (n *Node) leafNs() ([]string, error) {
 	nsMap, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {
@@ -121,7 +121,7 @@ func (n *Node) getLeafNs() ([]string, error) {
 }
 
 // getLeafChild return the leaf id list of the Node.
-func (n *Node) getLeafID() ([]string, error) {
+func (n *Node) leafID() ([]string, error) {
 	IDMap, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {
@@ -139,7 +139,7 @@ func (n *Node) getLeafID() ([]string, error) {
 	return getKeysOfMap(IDMap), nil
 }
 
-func (n *Node) getLeafProperty() (map[string]string, error) {
+func (n *Node) leafProperty() (map[string]string, error) {
 	return n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {

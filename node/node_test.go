@@ -157,7 +157,7 @@ func checkStringInList(ori []string, dest string) bool {
 }
 
 func TestNodeGetLeafChild(t *testing.T) {
-	childNs, err := nodes.getLeafNs()
+	childNs, err := nodes.leafNs()
 	t.Log("result of GetLeafChild:", childNs)
 	if err != nil || len(childNs) != 4 {
 		t.Fatal("GetLeafChild not match with expect")

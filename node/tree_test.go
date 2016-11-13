@@ -159,7 +159,7 @@ func TestTreeGetLeaf(t *testing.T) {
 		t.Fatal("saveTree error")
 	}
 
-	childNs, err := tree.GetLeaf(rootNode, NsFormat)
+	childNs, err := tree.Leaf(rootNode, NsFormat)
 	t.Log("result of NS GetLeafChild:", childNs)
 	if err != nil || len(childNs) != 4 {
 		t.Fatal("GetLeafChild not match with expect")
@@ -171,7 +171,7 @@ func TestTreeGetLeaf(t *testing.T) {
 		t.Fatal("GetLeafChild not match with expect")
 	}
 
-	childNs, err = tree.GetLeaf(rootNode, IDFormat)
+	childNs, err = tree.Leaf(rootNode, IDFormat)
 	t.Log("result of ID GetLeafChild:", childNs)
 	if err != nil || len(childNs) != 4 {
 		t.Fatal("GetLeafChild not match with expect")
