@@ -208,7 +208,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 	// nodename := r.FormValue("nodename")
 
 	if nodeid == "" {
-		nodes, err = s.tree.GetAllNodes()
+		nodes, err = s.tree.AllNodes()
 	} else {
 		nodes, _, err = s.tree.GetNodeByID(nodeid)
 	}

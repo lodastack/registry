@@ -46,25 +46,29 @@ func NewTree(cluster Cluster) (*Tree, error) {
 		nsNSCache: nodeCache{&map[string]string{}, &sync.RWMutex{}},
 		logger:    log.New("INFO", "tree", model.LogBackend),
 	}
+	err := t.init()
+	return &t, err
+}
+
+func (t *Tree) init() error {
 	err := t.Cluster.CreateBucketIfNotExist([]byte(rootNode))
 	if err != nil {
 		t.logger.Error("itree CreateBucketIfNotExist fail:", err.Error())
-		return nil, err
+		return err
 	}
-
-	if err := t.initIfNotExist(nodeDataKey); err != nil {
+	if err := t.initKey(nodeDataKey); err != nil {
 		t.logger.Error("init nodeDataKey fail:", err.Error())
-		return nil, err
+		return err
 	}
-	if err := t.initIfNotExist(nodeIdKey); err != nil {
+	if err := t.initKey(nodeIdKey); err != nil {
 		t.logger.Error("init nodeidKey fail:", err.Error())
-		return nil, err
+		return err
 	}
-	return &t, nil
+	return nil
 }
 
-// initIfNotExist initialization tree data and idmap if they are nil.
-func (t *Tree) initIfNotExist(key string) error {
+// initKey initialization tree data and idmap if they are nil.
+func (t *Tree) initKey(key string) error {
 	v, err := t.Cluster.View([]byte(rootNode), []byte(key))
 	if err != nil {
 		return err
@@ -115,13 +119,13 @@ func (t *Tree) createBucketForNode(nodeId string) error {
 }
 
 // Get type resType resource of node with ID bucketId.
-func (t *Tree) getResByteOfNode(bucketId, resType string) ([]byte, error) {
+func (t *Tree) resByteOfNode(bucketId, resType string) ([]byte, error) {
 	return t.Cluster.View([]byte(bucketId), []byte(resType))
 }
 
 // Get []byte of allnodes.
-func (t *Tree) getAllNodeByte() ([]byte, error) {
-	return t.getResByteOfNode(rootNode, nodeDataKey)
+func (t *Tree) allNodeByte() ([]byte, error) {
+	return t.resByteOfNode(rootNode, nodeDataKey)
 }
 
 // Set resource to node bucket.
@@ -129,13 +133,13 @@ func (t *Tree) setResourceByNodeID(nodeId, resType string, resByte []byte) error
 	return t.Cluster.Update([]byte(nodeId), []byte(resType), resByte)
 }
 
-func (t *Tree) getTemplateOfNode(nodeId string) (map[string][]byte, error) {
+func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
 	return t.Cluster.ViewPrefix([]byte(nodeId), []byte(template))
 }
 
 // GetAllNodes return the whole nodes.
-func (t *Tree) GetAllNodes() (*Node, error) {
-	v, err := t.getAllNodeByte()
+func (t *Tree) AllNodes() (*Node, error) {
+	v, err := t.allNodeByte()
 	if err != nil || len(v) == 0 {
 		t.logger.Errorf("get allNode fail: %s", err.Error())
 		return nil, ErrGetNode
@@ -158,7 +162,7 @@ func (t *Tree) GetNodeByID(id string) (*Node, string, error) {
 		node, err := t.GetNodeByNs(NodeNs)
 		return node, NodeNs, err
 	}
-	nodes, err := t.GetAllNodes()
+	nodes, err := t.AllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return nil, "", err
@@ -190,7 +194,7 @@ func (t *Tree) getNsByID(id string) (string, error) {
 // GetNodesById return exact node with name.
 func (t *Tree) GetNodeByNs(ns string) (*Node, error) {
 	// TODO: use nodeidKey as cache
-	nodes, err := t.GetAllNodes()
+	nodes, err := t.AllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return nil, err
@@ -214,7 +218,7 @@ func (t *Tree) getIDByNs(ns string) (string, error) {
 }
 
 // Return leaf node of the ns.
-func (t *Tree) GetLeaf(ns string, format string) ([]string, error) {
+func (t *Tree) Leaf(ns string, format string) ([]string, error) {
 	var childNsList []string
 	nodes, err := t.GetNodeByNs(ns)
 	if err != nil {
@@ -222,9 +226,9 @@ func (t *Tree) GetLeaf(ns string, format string) ([]string, error) {
 	}
 	switch format {
 	case IDFormat:
-		childNsList, err = nodes.getLeafID()
+		childNsList, err = nodes.leafID()
 	case NsFormat:
-		childNsList, err = nodes.getLeafNs()
+		childNsList, err = nodes.leafNs()
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +270,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	} else {
 		var parentNs string
 		// append the node to the child node of its parent node.
-		nodes, err = t.GetAllNodes()
+		nodes, err = t.AllNodes()
 		if err != nil {
 			t.logger.Errorf("get all nodes error, parent id: %s, error: %s", parentId, err.Error())
 			return "", err
@@ -320,7 +324,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 		}
 	} else {
 		// Read the template of parent node.
-		templateRes, err := t.getTemplateOfNode(parentId)
+		templateRes, err := t.templateOfNode(parentId)
 		if err != nil {
 			return "nil", err
 		}
@@ -337,7 +341,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 }
 
 // Return  pool nodeID if create a pool node.
-func (t *Tree) NewPoolIfNotExist(parentId, offlineMatch string) (string, error) {
+func (t *Tree) NewPool(parentId, offlineMatch string) (string, error) {
 	poolId, ErrCreatePool := t.NewNode(poolNode, parentId, Leaf, offlineMatch)
 	if ErrCreatePool == nil {
 		return poolId, nil
