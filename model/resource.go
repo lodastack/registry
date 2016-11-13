@@ -116,24 +116,37 @@ END:
 	return nil
 }
 
+// Size returns marshed bytes size.
+func (rs *Resources) Size() int {
+	var totalSize int
+	for _, resource := range *rs {
+		totalSize += resource.Size()
+		totalSize += len(deliRes)
+	}
+	return totalSize
+}
+
 // Marshal returns the byte format data of Resources.
 func (rs *Resources) Marshal() ([]byte, error) {
-	raw := make([]byte, 0)
 	// return error when resource is empty.
 	if len(*rs) == 0 {
 		return nil, ErrEmptyRes
 	}
 
+	totalSize := rs.Size()
+	raw := make([]byte, totalSize)
+
+	var n int
 	for _, resource := range *rs {
 		resourceByte, err := resource.Marshal()
 		if err != nil {
 			return raw, err
 		}
-		raw = append(raw, resourceByte...)
-		raw = append(raw, deliRes...)
+		n += copy(raw[n:], resourceByte)
+		n += copy(raw[n:], deliRes)
 	}
-	raw[len(raw)-len(deliRes)] = endByte
-	return raw[0 : len(raw)-len(deliRes)+1], nil
+	raw[n-len(deliRes)] = endByte
+	return raw[0 : n-len(deliRes)+1], nil
 }
 
 func (rs *Resources) AppendResourceByte(resByte []byte) error {
@@ -192,35 +205,61 @@ func (r *Resource) Unmarshal(raw []byte) error {
 	return nil
 }
 
-// Marshal return byte of resource
-func (r *Resource) Marshal() ([]byte, error) {
-	raw := make([]byte, 0)
-	uuidStr, _ := (*r)[idKey]
-	uuid := []byte{}
-	if uuidStr != "" {
-		uuid = append([]byte(uuidStr), uuidByte)
-	} else {
-		uuid = append([]byte(common.GenUUID()), uuidByte)
-	}
-	raw = append(raw, uuid...)
-
-	delete(*r, idKey)
+// Size returns marshed bytes size.
+func (r *Resource) Size() int {
+	// string UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	// and UUID flag: uuidByte
+	totalSize := 36 + 1
 	for k, v := range *r {
-		raw = append(raw, []byte(k)...)
-		raw = append(raw, deliVal...)
+		if k == idKey {
+			continue
+		}
+		totalSize += len(k)
+		totalSize += len(deliVal)
+
 		// If value is empty, take a nil byte.
 		// Avoid deliVal and deliProp combine into deliRes.
 		if len(v) == 0 {
-			v = string(nilByte)
+			totalSize += 1
 		}
-		raw = append(raw, []byte(v)...)
-		raw = append(raw, deliProp...)
+		totalSize += len(v)
+		totalSize += len(deliProp)
 	}
-	lenTotal, lenDelli := len(raw), len(deliProp)
-	if lenTotal <= lenDelli {
-		return nil, fmt.Errorf("marshal resource fail")
+	return totalSize
+}
+
+// Marshal return byte of resource
+func (r *Resource) Marshal() ([]byte, error) {
+	totalSize := r.Size()
+	raw := make([]byte, totalSize)
+	var n int
+	uuidStr, _ := (*r)[idKey]
+	if uuidStr != "" {
+		n += copy(raw[n:], []byte(uuidStr))
+	} else {
+		n += copy(raw[n:], []byte(common.GenUUID()))
 	}
-	return raw[0 : lenTotal-lenDelli], nil
+	raw[n] = uuidByte
+	n += 1
+
+	for k, v := range *r {
+		if k == idKey {
+			continue
+		}
+		n += copy(raw[n:], []byte(k))
+		n += copy(raw[n:], deliVal)
+
+		// If value is empty, take a nil byte.
+		// Avoid deliVal and deliProp combine into deliRes.
+		if len(v) == 0 {
+			raw[n] = nilByte
+			n += 1
+		}
+
+		n += copy(raw[n:], []byte(v))
+		n += copy(raw[n:], deliProp)
+	}
+	return raw[0 : n-len(deliProp)], nil
 }
 
 // ReadProperty return property value value of key.
