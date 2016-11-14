@@ -152,7 +152,7 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r.Body); err != nil {
-		fmt.Fprintf(w, "%s", "read body fail, please check and try again")
+		ReturnBadRequest(w, err)
 		return
 	}
 
@@ -162,18 +162,18 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 	} else if ns != "" {
 		err = s.tree.SetResourceByNs(ns, res, buf.Bytes())
 	} else {
-		err = fmt.Errorf("invalid node infomation to get resource")
+		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
+		return
 	}
 
 	if err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 	} else {
-		fmt.Fprintf(w, "%s", "success")
+		ReturnOK(w, "success")
 	}
 }
 
 func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var resByte []byte
 	var err error
 	var resource *model.Resources
 	res := r.FormValue("resource")
@@ -185,25 +185,20 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 	} else if ns != "" {
 		resource, err = s.tree.GetResourceByNs(ns, res)
 	} else {
-		err = fmt.Errorf("invalid node infomation to get resource")
+		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
+		return
 	}
 	if err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 		return
 	}
 
-	// TODO: ffjson
-	if resByte, err = json.Marshal(resource); err != nil {
-		s.logger.Errorf("marshal resource to output fail:%s\n", err.Error())
-		fmt.Fprintf(w, "%s", err)
-	}
-	fmt.Fprintf(w, "%s", string(resByte))
+	ReturnJson(w, 200, resource)
 }
 
 func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var nodes *node.Node
 	var err error
-	var res []byte
 	nodeid := r.FormValue("nodeid")
 	// nodename := r.FormValue("nodename")
 
@@ -213,15 +208,11 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 		nodes, _, err = s.tree.GetNodeByID(nodeid)
 	}
 	if err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 		return
 	}
 
-	if res, err = nodes.MarshalJSON(); err != nil {
-		s.logger.Errorf("marshal node to output fail:%s\n", err.Error())
-		fmt.Fprintf(w, "%s", err)
-	}
-	fmt.Fprintf(w, "%s", string(res))
+	ReturnJson(w, 200, nodes)
 }
 
 func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -234,18 +225,18 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 
 	nodeT, err := strconv.Atoi(nodeType)
 	if name == "" || parent == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
-		fmt.Fprintf(w, "%s", "invalid param no create node, please check and try again")
+		ReturnServerError(w, fmt.Errorf("invalid information"))
 		return
 	}
 	if id, err = s.tree.NewNode(name, parent, nodeT); err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 		return
 	}
-
-	fmt.Fprintf(w, "%s", id)
+	ReturnOK(w, id)
 }
 
 // search bucket by nodes/key(resource)/resource_property
+// TODO: return only or preperty ns or some property of resource from res.
 func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ns := r.FormValue("ns")
 	resource := r.FormValue("resource")
@@ -260,18 +251,11 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 	res, err := s.tree.SearchResourceByNs(ns, resource, search)
 	if err != nil {
 		s.logger.Errorf("handlerSearch SearchResourceByNs fail: %s", err.Error())
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 		return
 	}
-	// TODO: return only ns or some property of resource from res.
 
-	out, err := json.Marshal(res)
-	if err != nil {
-		s.logger.Errorf("handlerSearch marshal resource fail, error: %s, data: %+v", err.Error(), res)
-		fmt.Fprintf(w, "%s", "marshal resource fail")
-		return
-	}
-	fmt.Fprintf(w, "%s", string(out))
+	ReturnJson(w, 200, res)
 }
 
 func (s *Service) handlerBatch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -279,12 +263,10 @@ func (s *Service) handlerBatch(w http.ResponseWriter, r *http.Request, _ httprou
 	rows = append(rows, model.Row{[]byte("k1"), []byte("v1"), []byte("bucket-test")})
 	rows = append(rows, model.Row{[]byte("k2"), []byte("v2"), []byte("bucket-test-no")})
 	if err := s.cluster.Batch(rows); err != nil {
-		b := bytes.NewBufferString(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(b.Bytes())
+		ReturnServerError(w, err)
 		return
 	}
-	fmt.Fprintf(w, "%s", "success")
+	ReturnOK(w, "success")
 }
 
 func (s *Service) handlerCreateBucket(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -292,9 +274,9 @@ func (s *Service) handlerCreateBucket(w http.ResponseWriter, r *http.Request, _ 
 
 	err := s.cluster.CreateBucket([]byte(name))
 	if err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 	} else {
-		fmt.Fprintf(w, "%s", "success")
+		ReturnOK(w, "success")
 	}
 }
 
@@ -303,9 +285,9 @@ func (s *Service) handlerRemoveBucket(w http.ResponseWriter, r *http.Request, _ 
 
 	err := s.cluster.RemoveBucket([]byte(name))
 	if err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 	} else {
-		fmt.Fprintf(w, "%s", "success")
+		ReturnOK(w, "success")
 	}
 }
 
@@ -317,25 +299,23 @@ func (s *Service) handlerJoin(w http.ResponseWriter, r *http.Request, _ httprout
 	}
 	m := map[string]string{}
 	if err := json.Unmarshal(b, &m); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ReturnBadRequest(w, fmt.Errorf("unmarshal fail"))
 		return
 	}
 
 	if len(m) != 1 {
-		w.WriteHeader(http.StatusBadRequest)
+		ReturnBadRequest(w, fmt.Errorf("only allow 1 addr to join one time"))
 		return
 	}
 
 	remoteAddr, ok := m["addr"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		ReturnBadRequest(w, fmt.Errorf("ihave no addr to join"))
 		return
 	}
 
 	if err := s.cluster.Join(remoteAddr); err != nil {
-		b := bytes.NewBufferString(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(b.Bytes())
+		ReturnServerError(w, err)
 		return
 	}
 }
@@ -343,30 +323,28 @@ func (s *Service) handlerJoin(w http.ResponseWriter, r *http.Request, _ httprout
 func (s *Service) handlerRemove(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ReturnBadRequest(w, fmt.Errorf("read body fail"))
 		return
 	}
 	m := map[string]string{}
 	if err := json.Unmarshal(b, &m); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ReturnBadRequest(w, fmt.Errorf("unmarshal fail"))
 		return
 	}
 
 	if len(m) != 1 {
-		w.WriteHeader(http.StatusBadRequest)
+		ReturnBadRequest(w, fmt.Errorf("only allow 1 addr to remove one time"))
 		return
 	}
 
 	remoteAddr, ok := m["addr"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		ReturnBadRequest(w, fmt.Errorf("have no addr to join"))
 		return
 	}
 
 	if err := s.cluster.Remove(remoteAddr); err != nil {
-		b := bytes.NewBufferString(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(b.Bytes())
+		ReturnServerError(w, err)
 		return
 	}
 }
@@ -375,9 +353,9 @@ func (s *Service) handlerBackup(w http.ResponseWriter, r *http.Request, _ httpro
 	var err error
 	var data []byte
 	if data, err = s.cluster.Backup(); err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 	} else {
-		fmt.Fprintf(w, "%s", data)
+		ReturnOK(w, string(data))
 	}
 }
 
@@ -385,8 +363,8 @@ func (s *Service) handlerRestore(w http.ResponseWriter, r *http.Request, _ httpr
 	file := r.FormValue("file")
 	var err error
 	if err = s.cluster.Restore(file); err != nil {
-		fmt.Fprintf(w, "%s", err)
+		ReturnServerError(w, err)
 	} else {
-		fmt.Fprintf(w, "%s", "success")
+		ReturnOK(w, "success")
 	}
 }
