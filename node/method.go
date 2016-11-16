@@ -66,4 +66,10 @@ type TreeMethod interface {
 
 	// Return leaf child node of one ns.
 	Leaf(ns string, format string) ([]string, error)
+
+	// Search Machine on tree.
+	SearchMachine(hostname string) (map[string]string, error)
+
+	// Regist machine on the tree.
+	RegisterMachine(newMachine model.Resource) (map[string]string, error)
 }
