@@ -343,7 +343,6 @@ WAITEND:
 
 // View returns the value for the given key.
 func (s *Store) View(bucket, key []byte) ([]byte, error) {
-	s.logger.Debug("store view request, bucket:%s, key:%s", string(bucket), string(key))
 	var value []byte
 	if v, exist := s.cache.Get(bucket, key); exist {
 		return v, nil
@@ -367,7 +366,6 @@ func (s *Store) View(bucket, key []byte) ([]byte, error) {
 
 // Update the value for the given key.
 func (s *Store) Update(bucket []byte, key []byte, value []byte) error {
-	s.logger.Printf("store update request, bucket:%s, key:%s, value:%s", string(bucket), string(key), string(value))
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
@@ -465,7 +463,6 @@ func (s *Store) Batch(rows []model.Row) error {
 
 // CreateBucket create a bucket.
 func (s *Store) CreateBucket(name []byte) error {
-	s.logger.Printf("store create bucket, bucket:%s", string(name))
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
@@ -497,7 +494,6 @@ func (s *Store) CreateBucket(name []byte) error {
 
 // Create a bucket if not exist.
 func (s *Store) CreateBucketIfNotExist(name []byte) error {
-	s.logger.Printf("store createBucketIfNotExist bucket, bucket:%s", string(name))
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
@@ -529,7 +525,6 @@ func (s *Store) CreateBucketIfNotExist(name []byte) error {
 
 // RemoveBucket remove a bucket.
 func (s *Store) RemoveBucket(name []byte) error {
-	s.logger.Printf("store remove bucket, bucket:%s", string(name))
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
 	}
