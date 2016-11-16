@@ -24,6 +24,8 @@ const (
 
 	NsFormat = "ns"
 	IDFormat = "id"
+
+	NoMachineMatch = "^$"
 )
 
 type Tree struct {
@@ -39,7 +41,7 @@ type Tree struct {
 
 func NewTree(cluster Cluster) (*Tree, error) {
 	t := Tree{
-		Nodes:     &Node{NodeProperty{ID: rootID, Name: rootNode, Type: NonLeaf, MachineReg: "^$"}, []*Node{}},
+		Nodes:     &Node{NodeProperty{ID: rootID, Name: rootNode, Type: NonLeaf, MachineReg: NoMachineMatch}, []*Node{}},
 		Cluster:   cluster,
 		RWsync:    &sync.RWMutex{},
 		nsIDCache: nodeCache{&map[string]string{}, &sync.RWMutex{}},
@@ -85,7 +87,7 @@ func (t *Tree) initKey(key string) error {
 			panic("create root node fail: " + err.Error())
 		}
 		// Create root pool node.
-		if _, err := t.NewNode(poolNode, rootID, Leaf, "^$"); err != nil {
+		if _, err := t.NewNode(poolNode, rootID, Leaf, NoMachineMatch); err != nil {
 			panic("create root pool node fail: " + err.Error())
 		}
 	case nodeIdKey:
@@ -119,18 +121,34 @@ func (t *Tree) createBucketForNode(nodeId string) error {
 }
 
 // Get type resType resource of node with ID bucketId.
-func (t *Tree) resByteOfNode(bucketId, resType string) ([]byte, error) {
+func (t *Tree) resByteByNodeID(bucketId, resType string) ([]byte, error) {
 	return t.Cluster.View([]byte(bucketId), []byte(resType))
 }
 
 // Get []byte of allnodes.
 func (t *Tree) allNodeByte() ([]byte, error) {
-	return t.resByteOfNode(rootNode, nodeDataKey)
+	return t.resByteByNodeID(rootNode, nodeDataKey)
 }
 
 // Set resource to node bucket.
 func (t *Tree) setResourceByNodeID(nodeId, resType string, resByte []byte) error {
 	return t.Cluster.Update([]byte(nodeId), []byte(resType), resByte)
+}
+
+// Append one resource to ns.
+func (t *Tree) appendResourceByNodeID(nodeId, resType string, appendRes model.Resource) (string, error) {
+	resOld, err := t.resByteByNodeID(nodeId, resType)
+	if err != nil {
+		t.logger.Error("resByteOfNode error, resOld: ", resOld, resOld, ", error:", err.Error())
+		return "", err
+	}
+	resByte, UUID, err := model.AppendResources(resOld, appendRes)
+	if err != nil {
+		t.logger.Errorf("AppendResources error, resOld: %s, appendRes: %+v, error: %s", resOld, appendRes, err.Error())
+		return "", err
+	}
+	err = t.setResourceByNodeID(nodeId, resType, resByte)
+	return UUID, err
 }
 
 func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
@@ -245,13 +263,13 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	var nodeId, matchReg string
 	var newNode Node
 	if nodeType == Root {
-		nodeId, name, nodeType, matchReg = rootID, rootNode, NonLeaf, "^$"
+		nodeId, name, nodeType, matchReg = rootID, rootNode, NonLeaf, NoMachineMatch
 		parentId = "-"
 	} else {
-		if len(property) > 0 {
+		if len(property) > 0 && property[0] != "" {
 			matchReg = property[0]
 		} else {
-			matchReg = "^$"
+			matchReg = NoMachineMatch
 		}
 		nodeId = common.GenUUID()
 	}
@@ -351,3 +369,9 @@ func (t *Tree) NewPool(parentId, offlineMatch string) (string, error) {
 	t.logger.Errorf("Create pool node fail:%s", ErrCreatePool.Error())
 	return "", ErrCreatePool
 }
+
+// TODO
+func (t *Tree) RmOneResource(ns, resType, resID string) {}
+
+// TODO
+func (t *Tree) RmResByMap(nsResIDMap map[string]string, resType string) {}

@@ -8,23 +8,23 @@ import (
 var nodes Node = Node{
 	NodeProperty{ID: rootNode, Name: rootNode, Type: NonLeaf, MachineReg: "*"},
 	[]*Node{
-		{NodeProperty{ID: "0-1", Name: "0-1", Type: NonLeaf, MachineReg: "*"}, []*Node{}},
-		{NodeProperty{ID: "0-2", Name: "0-2", Type: NonLeaf, MachineReg: "*"}, []*Node{
-			{NodeProperty{ID: "0-2-1", Name: "0-2-1", Type: Leaf, MachineReg: "*"}, []*Node{}},
-			{NodeProperty{ID: "0-2-2", Name: "0-2-2", Type: NonLeaf, MachineReg: "*"}, []*Node{
-				{NodeProperty{ID: "0-2-2-1", Name: "0-2-2-1", Type: Leaf, MachineReg: "*"}, []*Node{}},
-				{NodeProperty{ID: "0-2-2-2", Name: "0-2-2-2", Type: NonLeaf, MachineReg: "*"}, []*Node{}},
-				{NodeProperty{ID: "0-2-2-3", Name: "0-2-2-3", Type: NonLeaf, MachineReg: "*"}, []*Node{}},
-				{NodeProperty{ID: "0-2-2-4", Name: "0-2-2-4", Type: NonLeaf, MachineReg: "*"}, []*Node{}},
+		{NodeProperty{ID: "0-1", Name: "0-1", Type: NonLeaf, MachineReg: "0-1"}, []*Node{}},
+		{NodeProperty{ID: "0-2", Name: "0-2", Type: NonLeaf, MachineReg: "0-2"}, []*Node{
+			{NodeProperty{ID: "0-2-1", Name: "0-2-1", Type: Leaf, MachineReg: "0-2-"}, []*Node{}},
+			{NodeProperty{ID: "0-2-2", Name: "0-2-2", Type: NonLeaf, MachineReg: "0-2-2"}, []*Node{
+				{NodeProperty{ID: "0-2-2-1", Name: "0-2-2-1", Type: Leaf, MachineReg: "0-2-2-1"}, []*Node{}},
+				{NodeProperty{ID: "0-2-2-2", Name: "0-2-2-2", Type: NonLeaf, MachineReg: "0-2-2-2"}, []*Node{}},
+				{NodeProperty{ID: "0-2-2-3", Name: "0-2-2-3", Type: NonLeaf, MachineReg: "0-2-2-3"}, []*Node{}},
+				{NodeProperty{ID: "0-2-2-4", Name: "0-2-2-4", Type: NonLeaf, MachineReg: "0-2-2-4"}, []*Node{}},
 			}},
 		}},
-		{NodeProperty{ID: "0-3", Name: "0-3", Type: NonLeaf, MachineReg: "*"}, []*Node{
-			{NodeProperty{ID: "0-3-1", Name: "0-3-1", Type: NonLeaf, MachineReg: "*"}, []*Node{}},
-			{NodeProperty{ID: "0-3-2", Name: "0-3-2", Type: NonLeaf, MachineReg: "*"}, []*Node{
-				{NodeProperty{ID: "0-3-2-1", Name: "0-3-2-1", Type: Leaf, MachineReg: "*"}, []*Node{}},
+		{NodeProperty{ID: "0-3", Name: "0-3", Type: NonLeaf, MachineReg: "0-3"}, []*Node{
+			{NodeProperty{ID: "0-3-1", Name: "0-3-1", Type: NonLeaf, MachineReg: "0-3-1"}, []*Node{}},
+			{NodeProperty{ID: "0-3-2", Name: "0-3-2", Type: NonLeaf, MachineReg: "0-3-2"}, []*Node{
+				{NodeProperty{ID: "0-3-2-1", Name: "0-3-2-1", Type: Leaf, MachineReg: "0-3-2-1"}, []*Node{}},
 			}},
 		}},
-		{NodeProperty{ID: "0-4", Name: "0-4", Type: Leaf, MachineReg: "*"}, []*Node{}},
+		{NodeProperty{ID: "0-4", Name: "0-4", Type: Leaf, MachineReg: "0-4"}, []*Node{}},
 	},
 }
 
@@ -36,13 +36,16 @@ var nodeNsMap map[string]int = map[string]int{"0-1." + rootNode: 0,
 	"0-2." + rootNode: 2, "0-2-1.0-2." + rootNode: 0, "0-2-2.0-2." + rootNode: 4, "0-2-2-1.0-2-2.0-2." + rootNode: 0, "0-2-2-2.0-2-2.0-2." + rootNode: 0, "0-2-2-3.0-2-2.0-2." + rootNode: 0, "0-2-2-4.0-2-2.0-2." + rootNode: 0,
 	"0-3." + rootNode: 2, "0-3-1.0-3." + rootNode: 0, "0-3-2.0-3." + rootNode: 1, "0-3-2-1.0-3-2.0-3." + rootNode: 0,
 	"0-4." + rootNode: 0}
+var leafMachineReg map[string]string = map[string]string{
+	"0-2-1.0-2." + rootNode: "0-2-", "0-2-2-1.0-2-2.0-2." + rootNode: "0-2-2-1",
+	"0-3-2-1.0-3-2.0-3." + rootNode: "0-3-2-1", "0-4." + rootNode: "0-4"}
 
 var resMap1 []map[string]string = []map[string]string{
-	{"host": "127.0.0.1", "application": "loda"},
-	{"host": "127.0.0.2", "application": "loda"}}
+	{"host": "127.0.0.1", "hostname": "127.0.0.1", "application": "loda"},
+	{"host": "127.0.0.2", "hostname": "127.0.0.2", "application": "loda"}}
 var resMap2 []map[string]string = []map[string]string{
-	{"host": "127.0.0.2", "application": "loda"},
-	{"host": "127.0.0.3", "application": "loda"}}
+	{"host": "127.0.0.2", "hostname": "127.0.0.2", "application": "loda"},
+	{"host": "127.0.0.3", "hostname": "127.0.0.3", "application": "loda"}}
 
 func getNodesByte() ([]byte, error) {
 	return nodes.MarshalJSON()
@@ -167,6 +170,21 @@ func TestNodeGetLeafChild(t *testing.T) {
 		!checkStringInList(childNs, "0-3-2-1.0-3-2.0-3.loda") ||
 		!checkStringInList(childNs, "0-4.loda") {
 		t.Fatal("GetLeafChild not match with expect")
+	}
+}
+
+func TestLeafMachineReg(t *testing.T) {
+	machineRegMap, err := nodes.leafMachineReg()
+	if err != nil {
+		t.Fatal("leafMachineReg error:", err.Error())
+	}
+	if len(machineRegMap) != 4 {
+		t.Fatal("leafMachineReg not match with expect")
+	}
+	for ns, reg := range leafMachineReg {
+		if machineRegMap[ns] != reg {
+			t.Fatal("leafMachineReg not match with expect")
+		}
 	}
 }
 

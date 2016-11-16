@@ -199,6 +199,21 @@ func mustNewStore(t *testing.T) *store.Store {
 	return s
 }
 
+func mustNewStoreB(b *testing.B) *store.Store {
+	path := mustTempDir()
+	var err error
+	// Ugly
+	model.LogBackend, err = log.NewFileBackend(path)
+	if err != nil {
+		return nil
+	}
+	s := store.New(path, mustMockTransport())
+	if s == nil {
+		panic("failed to create new store")
+	}
+	return s
+}
+
 func mustTempDir() string {
 	var err error
 	path, err := ioutil.TempDir("", "registry-test-")

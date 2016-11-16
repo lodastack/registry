@@ -38,7 +38,7 @@ func join(joinAddr, raftAddr string) error {
 	}
 
 	// Check for protocol scheme, and insert default if necessary.
-	fullAddr := httpd.NormalizeAddr(fmt.Sprintf("%s/peer", joinAddr))
+	fullAddr := httpd.NormalizeAddr(fmt.Sprintf("%s/api/v1/peer", joinAddr))
 
 	// Enable skipVerify as requested.
 	tr := &http.Transport{

@@ -30,6 +30,7 @@ var (
 var (
 	ErrResMarshal error = errors.New("marshal resources fail")
 	ErrEmptyRes   error = errors.New("empty resources")
+	ErrResFormat  error = errors.New("invalid resource fromat")
 )
 
 const (
@@ -70,6 +71,11 @@ func NewResourcesMaps(resMaps []map[string]string) (*Resources, error) {
 	return rs, nil
 }
 
+func NewResource(resMap map[string]string) Resource {
+	addRes := Resource(resMap)
+	return addRes
+}
+
 // Unmarshal the byte format data and stores the result
 // in the value pointed to Resources.
 func (rs *Resources) Unmarshal(raw []byte) error {
@@ -86,7 +92,7 @@ func (rs *Resources) Unmarshal(raw []byte) error {
 			//  End of resources.
 			r := Resource{}
 			if err := r.Unmarshal(raw[startPos:index]); err != nil {
-				return fmt.Errorf("unmarshal byte to resource fail")
+				return fmt.Errorf("unmarshal resources fail: %s", err.Error())
 			} else {
 				*rs = append(*rs, r)
 			}
@@ -158,6 +164,10 @@ func (rs *Resources) AppendResourceByte(resByte []byte) error {
 	return nil
 }
 
+func (rs *Resources) AppendResource(r Resource) {
+	(*rs) = append((*rs), r)
+}
+
 func (rs *Resources) AppendResources(res Resources) {
 	(*rs) = append((*rs), res...)
 }
@@ -185,7 +195,7 @@ func (r *Resource) Unmarshal(raw []byte) error {
 					if kvFlag == propertyKey {
 						kvFlag = propertyValue
 					} else {
-						return fmt.Errorf("unmarshal resources fail")
+						return fmt.Errorf("unmarshal resource fail")
 					}
 				case len(deliProp):
 					kvFlag = propertyKey
@@ -228,17 +238,15 @@ func (r *Resource) Size() int {
 	return totalSize
 }
 
-// Marshal return byte of resource
+// Marshal will create UUID if the resource have no ID.
+// Return the resource []byte/ID.
 func (r *Resource) Marshal() ([]byte, error) {
 	totalSize := r.Size()
 	raw := make([]byte, totalSize)
 	var n int
-	uuidStr, _ := (*r)[idKey]
-	if uuidStr != "" {
-		n += copy(raw[n:], []byte(uuidStr))
-	} else {
-		n += copy(raw[n:], []byte(common.GenUUID()))
-	}
+
+	UUID := r.InitID()
+	n += copy(raw[n:], []byte(UUID))
 	raw[n] = uuidByte
 	n += 1
 
@@ -266,4 +274,55 @@ func (r *Resource) Marshal() ([]byte, error) {
 func (r *Resource) ReadProperty(key string) (string, bool) {
 	v, ok := (*r)[key]
 	return v, ok
+}
+
+// InitID create ID for the resource if not have, and return ID.
+func (r *Resource) InitID() string {
+	if id, _ := r.ID(); id == "" {
+		(*r)[idKey] = common.GenUUID()
+	}
+	return (*r)[idKey]
+}
+
+func (r *Resource) ID() (string, bool) {
+	return r.ReadProperty(idKey)
+}
+
+func delEndByte(ori []byte) ([]byte, error) {
+	oriLen := len(ori)
+	if ori[oriLen-1] != endByte {
+		return nil, ErrResFormat
+	}
+	return ori[:oriLen-1], nil
+}
+
+// ResourcesAppendByte append the resource to resources.
+func AppendResources(rsByte []byte, resource Resource) ([]byte, string, error) {
+	UUID := resource.InitID()
+
+	// If append res to nil, new resources.
+	if len(rsByte) == 0 {
+		rs := Resources{}
+		rs.AppendResource(resource)
+		rsByte, err := rs.Marshal()
+		return rsByte, UUID, err
+	}
+
+	// rm the endByte of resource
+	resNoEnd, err := delEndByte(rsByte)
+	if err != nil {
+		return nil, "", err
+	}
+	// append deliRes/new resource/endByte
+	addLen := len(deliRes) + resource.Size() + 1
+	addByte := make([]byte, addLen)
+	resByte, err := resource.Marshal()
+	if err != nil {
+		return nil, "", ErrResMarshal
+	}
+	n := copy(addByte, deliRes)
+	n += copy(addByte[n:], resByte)
+	addByte[n] = endByte
+
+	return append(resNoEnd, addByte[:n+1]...), UUID, nil
 }

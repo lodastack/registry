@@ -7,7 +7,7 @@ import (
 // GetResource return the ResourceType resource belong to the node with NodeId.
 // TODO: Permission Check
 func (t *Tree) GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error) {
-	resByte, err := t.resByteOfNode(NodeId, ResourceType)
+	resByte, err := t.resByteByNodeID(NodeId, ResourceType)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 	result := map[string]*model.Resources{}
 
 	for _, leafID := range leafIDs {
-		resByte, err := t.resByteOfNode(leafID, resType)
+		resByte, err := t.resByteByNodeID(leafID, resType)
 		if err != nil {
 			return nil, err
 		}

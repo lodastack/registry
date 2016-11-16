@@ -124,24 +124,60 @@ func (s *Service) FormRedirect(r *http.Request, host string) string {
 // all handlers just for test
 
 func (s *Service) initHandler() {
-	s.router.POST("/resource", s.handlerResourceSet)
-	s.router.GET("/resource", s.handlerResourceGet)
+	s.router.POST("/api/v1/resource", s.handlerResourceSet)
+	s.router.GET("/api/v1/resource", s.handlerResourceGet)
+	s.router.GET("/api/v1/resource/search", s.handlerSearch)
 
-	s.router.POST("/ns", s.handlerNsNew)
-	s.router.GET("/ns", s.handlerNsGet)
+	s.router.POST("/api/v1/ns", s.handlerNsNew)
+	s.router.GET("/api/v1/ns", s.handlerNsGet)
 
-	s.router.POST("/batch", s.handlerBatch)
+	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 
-	s.router.POST("/bucket", s.handlerCreateBucket)
-	s.router.DELETE("/bucket", s.handlerRemoveBucket)
+	s.router.POST("/api/v1/batch", s.handlerBatch)
 
-	s.router.POST("/peer", s.handlerJoin)
-	s.router.DELETE("/peer", s.handlerRemove)
+	s.router.POST("/api/v1/bucket", s.handlerCreateBucket)
+	s.router.DELETE("/api/v1/bucket", s.handlerRemoveBucket)
 
-	s.router.GET("/search", s.handlerSearch)
+	s.router.POST("/api/v1/peer", s.handlerJoin)
+	s.router.DELETE("/api/v1/peer", s.handlerRemove)
 
-	s.router.GET("/backup", s.handlerBackup)
-	s.router.GET("/restore", s.handlerRestore)
+	s.router.GET("/api/v1/backup", s.handlerBackup)
+	s.router.GET("/api/v1/restore", s.handlerRestore)
+}
+
+// Handle handlerRegister search hostname on the tree first,
+// and register it if the machine not on the tree.
+func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(r.Body); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	machine := model.Resource{}
+	if err := json.Unmarshal(buf.Bytes(), &machine); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	hostname, _ := machine.ReadProperty(node.HostnameProp)
+	if hostname == "" {
+		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
+		return
+	}
+
+	if matchineMap, err := s.tree.SearchMachine(hostname); err != nil {
+		ReturnServerError(w, err)
+		return
+	} else if len(matchineMap) != 0 {
+		ReturnJson(w, 200, matchineMap)
+		return
+	}
+
+	regMap, err := s.tree.RegisterMachine(machine)
+	if err != nil {
+		ReturnServerError(w, err)
+	} else {
+		ReturnJson(w, 200, regMap)
+	}
 }
 
 func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -222,13 +258,15 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	name := queryString.Get("name")
 	parent := queryString.Get("parent")
 	nodeType := queryString.Get("type")
+	machineMatch := queryString.Get("machinereg")
 
 	nodeT, err := strconv.Atoi(nodeType)
 	if name == "" || parent == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
 		ReturnServerError(w, fmt.Errorf("invalid information"))
 		return
 	}
-	if id, err = s.tree.NewNode(name, parent, nodeT); err != nil {
+
+	if id, err = s.tree.NewNode(name, parent, nodeT, machineMatch); err != nil {
 		ReturnServerError(w, err)
 		return
 	}

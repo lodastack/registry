@@ -76,6 +76,56 @@ func TestRsUnmarshal(t *testing.T) {
 	}
 }
 
+func TestAppendResource(t *testing.T) {
+	addRes := NewResource(map[string]string{"add_key1": "add_v1", "add_key2": "add_v2"})
+	// addRes := Resource{}
+	// addRes = addResMap
+
+	newRsByte, _, err := AppendResources(boltByte, addRes)
+	if err != nil {
+		t.Fatalf("AppendResource fail: %s", err.Error())
+	}
+
+	newRs := Resources{}
+	if err = newRs.Unmarshal(newRsByte); err != nil {
+		t.Fatalf("unmarshal fail: %s", err.Error())
+		return
+	}
+	if len(newRs) != 3 {
+		t.Fatalf("unmarshal fail, expect result of unmarshal have length: 2")
+	}
+	for _, resouce := range newRs {
+		if _, ok := resouce["_id"]; !ok || len(resouce) != 3 {
+			t.Fatalf("unmarshal fail, resource should have _id")
+		}
+		if resouce["_id"] == "H" {
+			if v, ok := resouce["HHello"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect")
+			}
+			if v, ok := resouce["HHelloo"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect")
+			}
+		} else if resouce["_id"] == "I" {
+			if v, ok := resouce["Hello"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect")
+			}
+			if v, ok := resouce["Helloo"]; !ok || v != "playground" {
+				t.Fatalf("unmarshal fail, resource not match with expect, v is: %s", v)
+			}
+		} else {
+			if v, ok := resouce["add_key1"]; !ok || v != "add_v1" {
+				t.Fatalf("unmarshal fail, resource not match with expect")
+			}
+			if v, ok := resouce["add_key2"]; !ok || v != "add_v2" {
+				t.Fatalf("unmarshal fail, resource not match with expect, v is: %s", v)
+			}
+		}
+	}
+	if newRs[0]["_id"] == newRs[1]["_id"] {
+		t.Fatalf("unmarshal fail, resource have same resource")
+	}
+}
+
 func TestRsMarshal(t *testing.T) {
 	ressStruct, err := NewResourcesMaps(resMaps)
 	if err != nil {

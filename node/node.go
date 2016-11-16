@@ -139,14 +139,15 @@ func (n *Node) leafID() ([]string, error) {
 	return getKeysOfMap(IDMap), nil
 }
 
-func (n *Node) leafProperty() (map[string]string, error) {
+// leafMachineReg return the ns-MachineReg Map.
+func (n *Node) leafMachineReg() (map[string]string, error) {
 	return n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {
-			result[node.ID] = node.MachineReg
+			result[node.Name] = node.MachineReg
 		} else {
-			for id, reg := range childReturn {
-				result[id] = reg
+			for relativeNs, reg := range childReturn {
+				result[relativeNs+nodeDeli+node.Name] = reg
 			}
 		}
 		return result, nil
