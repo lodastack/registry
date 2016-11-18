@@ -121,13 +121,13 @@ func (t *Tree) createBucketForNode(nodeId string) error {
 }
 
 // Get type resType resource of node with ID bucketId.
-func (t *Tree) resByteByNodeID(bucketId, resType string) ([]byte, error) {
+func (t *Tree) getByteFromStore(bucketId, resType string) ([]byte, error) {
 	return t.Cluster.View([]byte(bucketId), []byte(resType))
 }
 
 // Get []byte of allnodes.
 func (t *Tree) allNodeByte() ([]byte, error) {
-	return t.resByteByNodeID(rootNode, nodeDataKey)
+	return t.getByteFromStore(rootNode, nodeDataKey)
 }
 
 // Set resource to node bucket.
@@ -137,7 +137,7 @@ func (t *Tree) setResourceByNodeID(nodeId, resType string, resByte []byte) error
 
 // Append one resource to ns.
 func (t *Tree) appendResourceByNodeID(nodeId, resType string, appendRes model.Resource) (string, error) {
-	resOld, err := t.resByteByNodeID(nodeId, resType)
+	resOld, err := t.getByteFromStore(nodeId, resType)
 	if err != nil {
 		t.logger.Error("resByteOfNode error, resOld: ", resOld, resOld, ", error:", err.Error())
 		return "", err
@@ -186,7 +186,9 @@ func (t *Tree) GetNodeByID(id string) (*Node, string, error) {
 		return nil, "", err
 	}
 	node, ns, err := nodes.GetByID(id)
-
+	if err != nil {
+		t.logger.Errorf("get node by ID fail: %s.", err.Error())
+	}
 	if _, ok := t.nsIDCache.Get(id); !ok {
 		t.nsIDCache.Set(id, ns)
 	}
