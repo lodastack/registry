@@ -24,6 +24,7 @@ var (
 	ErrInvalidParam        = errors.New("invalid param")
 	ErrNilChildNode        = errors.New("get none child node")
 	ErrNodeAlreadyExist    = errors.New("node already exist")
+	ErrNoLeafChild         = errors.New("have no leaf child node")
 )
 
 type NodeProperty struct {
@@ -53,9 +54,12 @@ func (n *Node) Exist(ns string) bool {
 }
 
 // AllowSetResource checks if the node could be set a resource.
-// Leaf node could have any resource method.
-// NonLeaf node could be only set template resource.
-func (n *Node) AllowSetResource(resType string) bool {
+// Leaf node could set/get resource;
+// NonLeaf node could be only set/get template resource.
+//
+// If check fail, the node is NonLeaf and resType not template,
+// maybe need get/set at its leaf child node.
+func (n *Node) AllowResource(resType string) bool {
 	if n.IsLeaf() {
 		return true
 	}
@@ -135,6 +139,8 @@ func (n *Node) leafID() ([]string, error) {
 	})
 	if err != nil {
 		return nil, err
+	} else if len(IDMap) == 0 {
+		return nil, ErrNoLeafChild
 	}
 	return getKeysOfMap(IDMap), nil
 }

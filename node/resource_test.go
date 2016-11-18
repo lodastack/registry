@@ -224,4 +224,19 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 			t.Fatalf("resource not match with expect: %+v\n", *res)
 		}
 	}
+
+	// case 3: get resource from NonLeaf
+	if res, err := tree.GetResourceByNs(rootNode, "machine"); err != nil || len(*res) != 4 {
+		t.Fatalf("get root resource fail, length of return: %d, error: %v\n", len(*res), err)
+	}
+
+	// case 4: get template from NonLeaf
+	if res, err := tree.GetResourceByNs(rootNode, model.TemplatePrefix+"collect"); err != nil || len(*res) != 31 {
+		t.Fatalf("get template from NonLeaf fail, length of return: %d, error: %v\n", len(*res), err)
+	}
+
+	// case 5: get not exist resourct from NonLeaf
+	if res, err := tree.GetResourceByNs(rootNode, "not_exist"); err != nil || len(*res) != 0 {
+		t.Fatalf("get not exist resource from NonLeaf not expect with expect,return: %+v, error: %v\n", *res, err)
+	}
 }

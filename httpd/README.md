@@ -61,12 +61,12 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
     #返回
     98a6586c-4f4f-475c-9c5c-8d4e31d14cd2
     
-	#新建叶子节点
-	curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=0&type=0&name=server1"
+    #新建叶子节点
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=0&type=0&name=server1"
     curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=0&type=0&name=server2&machinereg=server2-machine"
     
     #在prodect1.loda下新建叶子节点
-	curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=prodect1-loda-NodeID&type=0&name=server1"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=prodect1-loda-NodeID&type=0&name=server1"
 
 #### 1.2 查询节点
 查询全部节点
@@ -142,14 +142,18 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 #### 2.2 查询资源
 
+如果查询非叶子节点的某种资源(非模板)，则对该节点下所有叶子节点进行查询。
+
 提供参数:
-- query参数 ns：资源所在的叶子节点ns
+- query参数 nodeid: 资源所在节点的ID
+- query参数 ns：资源所在的叶子节点ns(ID优先级较高)
 - query参数resouce：资源类型
 
 例子:
 
      curl "http://127.0.0.1:9991/api/v1/resource?ns=server1.product1.loda&resource=machine"
      curl "http://127.0.0.1:9991/api/v1/resource?ns=pool.loda&resource=machine"
+     curl "http://127.0.0.1:9991/api/v1/resource?nodeid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx&resource=machine"
 
 #### 2.3 搜索资源
 

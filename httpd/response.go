@@ -36,6 +36,7 @@ func (r *Response) ReturnJson(w http.ResponseWriter) {
 	if err != nil {
 		ReturnServerError(w, errMarshalOutput)
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(r.Code)
 		w.Write(r.Body)
 	}
@@ -48,6 +49,11 @@ func WriteResponse(w http.ResponseWriter, code int, body []byte) {
 // Return 200 http status.
 func ReturnOK(w http.ResponseWriter, body string) {
 	WriteResponse(w, http.StatusOK, []byte(body))
+}
+
+// Return 404 http status.
+func ReturnNotFound(w http.ResponseWriter, msg string) {
+	WriteResponse(w, http.StatusNotFound, []byte(msg))
 }
 
 // Return 400 http status.

@@ -228,7 +228,10 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 		ReturnServerError(w, err)
 		return
 	}
-
+	if len(*resource) == 0 {
+		ReturnNotFound(w, "No resources found.")
+		return
+	}
 	ReturnJson(w, 200, resource)
 }
 
@@ -243,8 +246,12 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 	} else {
 		nodes, _, err = s.tree.GetNodeByID(nodeid)
 	}
-	if err != nil {
+	if err != nil && err != node.ErrNodeNotFound {
 		ReturnServerError(w, err)
+		return
+	}
+	if nodes == nil {
+		ReturnNotFound(w, "No node found.")
 		return
 	}
 
@@ -293,6 +300,10 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 
+	if len(res) == 0 {
+		ReturnNotFound(w, "No resources found.")
+		return
+	}
 	ReturnJson(w, 200, res)
 }
 
