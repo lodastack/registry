@@ -124,6 +124,27 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
     # 返回
     {"Children":[],"ID":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx","Name":"server","Type":0,"MachineReg":"-"}
 
+
+#### 1.3 修改节点
+
+根据参数修改ns的Name/MachineReg属性。如果未提供则保持不变。
+需要提供3个参数：
+- ns: 节点ns
+- name（可选）: 节点新name **此参数会改变此节点及子节点的ns，请注意**
+- machinereg（可选）: 修改节点的机器匹配规则，请根据需求慎重修改
+
+    curl -X PUT "http://127.0.0.1:9991/api/v1/ns?ns=product1.loda&machinereg=product1"
+    curl -X PUT "http://127.0.0.1:9991/api/v1/ns?ns=product3.loda&name=product2&machinereg=product2"
+
+#### 1.4 节点删除
+
+从节点删除一个子节点。
+需要提供2个参数：
+- parentns：父节点ns，删除这个节点下的子节点。
+- delid：需要删除的节点ID
+
+    curl -X DELETE "http://127.0.0.1:9991/api/v1/ns?parentns=loda&delid=24d049f1-681b-4683-8005-235db6233aae"
+
 ### 2 资源接口
 ---
 

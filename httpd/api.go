@@ -129,7 +129,9 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/resource/search", s.handlerSearch)
 
 	s.router.POST("/api/v1/ns", s.handlerNsNew)
+	s.router.PUT("/api/v1/ns", s.handlerNsUpdate)
 	s.router.GET("/api/v1/ns", s.handlerNsGet)
+	s.router.DELETE("/api/v1/ns", s.handlerNsDel)
 
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 
@@ -165,6 +167,7 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 	}
 
 	if matchineMap, err := s.tree.SearchMachine(hostname); err != nil {
+		s.logger.Errorf("SearchMachine fail, error: %s", err.Error())
 		ReturnServerError(w, err)
 		return
 	} else if len(matchineMap) != 0 {
@@ -174,6 +177,7 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 
 	regMap, err := s.tree.RegisterMachine(machine)
 	if err != nil {
+		s.logger.Errorf("RegisterMachine fail, error: %s", err.Error())
 		ReturnServerError(w, err)
 	} else {
 		ReturnJson(w, 200, regMap)
@@ -278,6 +282,29 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 	ReturnOK(w, id)
+}
+
+func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ns := r.FormValue("ns")
+	name := r.FormValue("name")
+	machinereg := r.FormValue("machinereg")
+
+	if err := s.tree.UpdateNode(ns, name, machinereg); err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnOK(w, "success")
+}
+
+func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	parentNs := r.FormValue("parentns")
+	delID := r.FormValue("delid")
+
+	if err := s.tree.DelNode(parentNs, delID); err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnOK(w, "success")
 }
 
 // search bucket by nodes/key(resource)/resource_property

@@ -188,6 +188,49 @@ func TestLeafMachineReg(t *testing.T) {
 	}
 }
 
+func TestUpdateNode(t *testing.T) {
+	testNode := new(Node)
+	*testNode = nodes
+	testNode.update("newname", "*")
+	if testNode.Name != "newname" || len(testNode.Children) != 4 {
+		t.Fatalf("node update not match with expect: %v", testNode)
+	}
+}
+
+func TestDeleteNode(t *testing.T) {
+	var nodeTest Node = Node{
+		NodeProperty{ID: rootNode, Name: rootNode, Type: NonLeaf, MachineReg: "*"},
+		[]*Node{
+			{NodeProperty{ID: "noChild", Name: "noChild", Type: NonLeaf, MachineReg: "-"}, []*Node{}},
+			{NodeProperty{ID: "haveChild", Name: "haveChild", Type: NonLeaf, MachineReg: "-"}, []*Node{
+				{NodeProperty{ID: "child", Name: "child", Type: Leaf, MachineReg: "-"}, []*Node{}},
+			}},
+		},
+	}
+
+	if err := nodeTest.delChild("noChild"); err != nil {
+		t.Fatal("node delChild return false")
+	}
+	if nodeTest.Children[0].ID != "haveChild" {
+		t.Fatalf("node after del children node not match with expect: %+v", nodeTest)
+	}
+
+	if err := nodeTest.delChild("haveChild"); err == nil {
+		t.Fatal("node delChild success, not match with expect")
+	}
+
+	nodeParent, err := nodeTest.GetByNs("haveChild." + rootNode)
+	if err != nil || nodeParent == nil {
+		t.Fatalf("get node haveChild fail, error: %v", err)
+	}
+	if err := nodeParent.delChild("child"); err != nil {
+		t.Fatalf("del node child return false, error:%s", err.Error())
+	}
+	if err := nodeTest.delChild("haveChild"); err != nil {
+		t.Fatal("del node haveChild fail")
+	}
+}
+
 func BenchmarkNodeJsonUnmarshal(b *testing.B) {
 	var allNode Node
 	nodeMapByte, err := getNodesByte()

@@ -72,4 +72,10 @@ type TreeMethod interface {
 
 	// Regist machine on the tree.
 	RegisterMachine(newMachine model.Resource) (map[string]string, error)
+
+	// Update the node property.
+	UpdateNode(ns string, name, machineReg string) error
+
+	// Delete the node with delID from parentNs.
+	DelNode(parentNs, delID string) error
 }
