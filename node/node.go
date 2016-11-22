@@ -25,6 +25,7 @@ var (
 	ErrNilChildNode        = errors.New("get none child node")
 	ErrNodeAlreadyExist    = errors.New("node already exist")
 	ErrNoLeafChild         = errors.New("have no leaf child node")
+	ErrNotAllowDel         = errors.New("not allow to be delete")
 )
 
 type NodeProperty struct {
@@ -51,6 +52,44 @@ func (n *Node) Exist(ns string) bool {
 		return true
 	}
 	return false
+}
+
+// update node property, do not change children.
+func (n *Node) update(name, machineReg string) {
+	if name != "" {
+		n.Name = name
+	}
+	if machineReg != "" {
+		n.MachineReg = machineReg
+	}
+}
+
+// allowDel check if the node allow be delete.
+// only leaf or no child nonleaf allow to be delete.
+func (n *Node) allowDel() bool {
+	if n.Type == Leaf {
+		return true
+	}
+	if len(n.Children) == 0 {
+		return true
+	}
+	return false
+}
+
+// delChild delete one child node by ID.
+func (n *Node) delChild(childId string) error {
+	for index, child := range n.Children {
+		if child.ID != childId {
+			continue
+		}
+		if !child.allowDel() {
+			return ErrNotAllowDel
+		}
+		copy(n.Children[index:], n.Children[index+1:])
+		n.Children = n.Children[:len(n.Children)-1]
+		return nil
+	}
+	return ErrNodeNotFound
 }
 
 // AllowSetResource checks if the node could be set a resource.

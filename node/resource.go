@@ -100,6 +100,7 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 	if err != nil {
 		return nil, err
 	} else if len(leafIDs) == 0 {
+		t.logger.Errorf("SearchResourceByNs fail: node has none leaf")
 		return nil, ErrNilChildNode
 	}
 
@@ -108,6 +109,7 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 	for _, leafID := range leafIDs {
 		resByte, err := t.getByteFromStore(leafID, resType)
 		if err != nil {
+			t.logger.Errorf("SearchResourceByNs fail,id: %s, type: %s ,getByteFromStore error: %s", leafID, resType, err.Error())
 			return nil, err
 		}
 
@@ -117,6 +119,7 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 		} else if len(resOfOneNs) != 0 {
 			ns, err := t.getNsByID(leafID)
 			if err != nil {
+				t.logger.Errorf("SearchResourceByNs fail, getNsByID error: %s", err.Error())
 				return nil, err
 			}
 			result[ns] = &model.Resources{}

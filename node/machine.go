@@ -23,6 +23,7 @@ func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
 	}
 	resMap, err := t.SearchResourceByNs(rootNode, "machine", searchHostname)
 	if err != nil {
+		t.logger.Errorf("SearchResourceByNs fail, error:%s", err.Error())
 		return nil, err
 	}
 
@@ -76,11 +77,13 @@ func (t *Tree) MatchNs(hostname string) ([]string, error) {
 func (t *Tree) RegisterMachine(newMachine model.Resource) (map[string]string, error) {
 	hostname, ok := newMachine.ReadProperty(HostnameProp)
 	if !ok {
+		t.logger.Errorf("RegisterMachine fail: not provide hostname")
 		return nil, ErrInvalidMachine
 	}
 
 	nsList, err := t.MatchNs(hostname)
 	if err != nil {
+		t.logger.Errorf("RegisterMachine fail, MatchNs fail: %s", err.Error())
 		return nil, err
 	}
 

@@ -125,6 +125,10 @@ func (t *Tree) getByteFromStore(bucketId, resType string) ([]byte, error) {
 	return t.Cluster.View([]byte(bucketId), []byte(resType))
 }
 
+func (t *Tree) removeNodeFromStore(bucketId string) error {
+	return t.Cluster.RemoveBucket([]byte(bucketId))
+}
+
 // Get []byte of allnodes.
 func (t *Tree) allNodeByte() ([]byte, error) {
 	return t.getByteFromStore(rootNode, nodeDataKey)
@@ -320,11 +324,11 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	}
 	// Create a now bucket fot this node.
 	if err := t.createBucketForNode(nodeId); err != nil {
-		t.logger.Errorf("NewNode createNodeBucket fail, nodeid:%s\n", nodeId)
+		t.logger.Errorf("NewNode createNodeBucket fail, nodeid:%s, error: %s\n", nodeId, err.Error())
 		// Delete the new node in tree to rollback.
 		parent.Children = parent.Children[:len(parent.Children)-1]
 		if err := t.saveTree(); err != nil {
-			t.logger.Error("Rollback tree node fail!")
+			t.logger.Error("Rollback tree node fail: %s", err.Error())
 		}
 		return "", err
 	}
@@ -370,6 +374,58 @@ func (t *Tree) NewPool(parentId, offlineMatch string) (string, error) {
 	}
 	t.logger.Errorf("Create pool node fail:%s", ErrCreatePool.Error())
 	return "", ErrCreatePool
+}
+
+func (t *Tree) UpdateNode(ns, name, machineReg string) error {
+	allNodes, err := t.AllNodes()
+	if err != nil {
+		t.logger.Error("get all nodes error when GetNodesById")
+		return err
+	}
+	node, err := allNodes.GetByNs(ns)
+	if err != nil {
+		t.logger.Errorf("GetByNs fail, error: %s", err.Error())
+		return err
+	}
+	node.update(name, machineReg)
+
+	t.Nodes = allNodes
+	if err := t.saveTree(); err != nil {
+		t.logger.Error("NewNode save tree node fail,", err.Error())
+		return err
+	}
+	return nil
+}
+
+// TODO: remove bucket
+func (t *Tree) DelNode(parentNs, delID string) error {
+	allNodes, err := t.AllNodes()
+	if err != nil {
+		t.logger.Error("get all nodes error when GetNodesById")
+		return err
+	}
+	parentNode, err := allNodes.GetByNs(parentNs)
+	if err != nil {
+		t.logger.Errorf("GetByNs fail, error: %s", err.Error())
+		return err
+	}
+
+	if err := parentNode.delChild(delID); err != nil {
+		t.logger.Errorf("delete node fail, parent ns: %s, delete ID: %s, error: %s", parentNs, delID, err.Error())
+		return err
+	}
+
+	if err := t.removeNodeFromStore(delID); err != nil {
+		t.logger.Errorf("delete node from store fail, parent ns: %s, delete ID: %s, error: %s", parentNs, delID, err.Error())
+		return err
+	}
+	t.logger.Infof("remove node (ID: %s) behind ns %s from store success: %s", delID, parentNs)
+	t.Nodes = allNodes
+	if err := t.saveTree(); err != nil {
+		t.logger.Error("NewNode save tree node fail,", err.Error())
+		return err
+	}
+	return nil
 }
 
 // TODO
