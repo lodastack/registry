@@ -29,6 +29,7 @@ var (
 type Config struct {
 	CommonConf CommonConfig `toml:"common"`
 	DataConf   DataConfig   `toml:"data"`
+	LDAPConf   LDAPConfig   `toml:"ldap"`
 	LogConf    LogConfig    `toml:"log"`
 }
 
@@ -41,6 +42,15 @@ type DataConfig struct {
 	Dir           string `toml:"dir"`
 	ClusterBind   string `toml:"clusterbind"`
 	ClusterLeader string `toml:"clusterleader"`
+}
+
+// LDAPConfig is LDAP config struct
+type LDAPConfig struct {
+	Server   string `toml:"server"`
+	UID      string `toml:"uid"`
+	Binddn   string `toml:"binddn"`
+	Password string `toml:"password"`
+	Base     string `toml:"base"`
 }
 
 // LogConfig is log config struct

@@ -252,3 +252,37 @@ POST方法
     curl -X POST -d '{"hostname":"server2-machine1","ips":"10.10.10.11,127.0.0.1","status":"off"}' "http://127.0.0.1:9991/api/v1/agent/ns"
     # 返回
     {"service1.product.loda":"b7705b32-11f4-4bef-acb1-fdbd47d2c7c0","service2.product.loda":"606df412-b043-4f12-8878-7e03089cb36e"}
+
+### 4 用户登录接口
+---
+
+#### 4.1 登录接口
+POST方法
+
+提供参数：
+- username 用户名
+- password 密码
+
+结果返回：
+- `{"user":"libk","token":"39dfcfb7-5f2b-45dc-b99f-6f0011d9dcc7"}`
+
+例子：
+
+    curl -d "username=libk&password=test" "http://127.0.0.1:8004/api/v1/user/signin"
+
+
+
+#### 4.2 登出接口
+GET方法
+
+提供参数：
+- header中的AuthToken
+
+结果返回：
+- `{
+  "user": "libk",
+  "token": "39dfcfb7-5f2b-45dc-b99f-6f0011d9dcc7"
+}`
+
+例子：
+  curl "http://127.0.0.1:8004/api/v1/user/signout"
