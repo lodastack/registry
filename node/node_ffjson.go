@@ -7,7 +7,6 @@ package node
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	fflib "github.com/pquerna/ffjson/fflib/v1"
 )
@@ -811,305 +810,6 @@ done:
 	return nil
 }
 
-func (mj *Tree) MarshalJSON() ([]byte, error) {
-	var buf fflib.Buffer
-	if mj == nil {
-		buf.WriteString("null")
-		return buf.Bytes(), nil
-	}
-	err := mj.MarshalJSONBuf(&buf)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-func (mj *Tree) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
-	if mj == nil {
-		buf.WriteString("null")
-		return nil
-	}
-	var err error
-	var obj []byte
-	_ = obj
-	_ = err
-	if mj.Nodes != nil {
-		buf.WriteString(`{"Nodes":`)
-
-		{
-
-			err = mj.Nodes.MarshalJSONBuf(buf)
-			if err != nil {
-				return err
-			}
-
-		}
-	} else {
-		buf.WriteString(`{"Nodes":null`)
-	}
-	buf.WriteString(`,"Cluster":`)
-	/* Interface types must use runtime reflection. type=node.Cluster kind=interface */
-	err = buf.Encode(mj.Cluster)
-	if err != nil {
-		return err
-	}
-	if mj.RWsync != nil {
-		/* Struct fall back. type=sync.RWMutex kind=struct */
-		buf.WriteString(`,"RWsync":`)
-		err = buf.Encode(mj.RWsync)
-		if err != nil {
-			return err
-		}
-	} else {
-		buf.WriteString(`,"RWsync":null`)
-	}
-	buf.WriteByte('}')
-	return nil
-}
-
-const (
-	ffj_t_Treebase = iota
-	ffj_t_Treeno_such_key
-
-	ffj_t_Tree_Nodes
-
-	ffj_t_Tree_Cluster
-
-	ffj_t_Tree_RWsync
-)
-
-var ffj_key_Tree_Nodes = []byte("Nodes")
-
-var ffj_key_Tree_Cluster = []byte("Cluster")
-
-var ffj_key_Tree_RWsync = []byte("RWsync")
-
-func (uj *Tree) UnmarshalJSON(input []byte) error {
-	fs := fflib.NewFFLexer(input)
-	return uj.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
-}
-
-func (uj *Tree) UnmarshalJSONFFLexer(fs *fflib.FFLexer, state fflib.FFParseState) error {
-	var err error = nil
-	currentKey := ffj_t_Treebase
-	_ = currentKey
-	tok := fflib.FFTok_init
-	wantedTok := fflib.FFTok_init
-
-mainparse:
-	for {
-		tok = fs.Scan()
-		//	println(fmt.Sprintf("debug: tok: %v  state: %v", tok, state))
-		if tok == fflib.FFTok_error {
-			goto tokerror
-		}
-
-		switch state {
-
-		case fflib.FFParse_map_start:
-			if tok != fflib.FFTok_left_bracket {
-				wantedTok = fflib.FFTok_left_bracket
-				goto wrongtokenerror
-			}
-			state = fflib.FFParse_want_key
-			continue
-
-		case fflib.FFParse_after_value:
-			if tok == fflib.FFTok_comma {
-				state = fflib.FFParse_want_key
-			} else if tok == fflib.FFTok_right_bracket {
-				goto done
-			} else {
-				wantedTok = fflib.FFTok_comma
-				goto wrongtokenerror
-			}
-
-		case fflib.FFParse_want_key:
-			// json {} ended. goto exit. woo.
-			if tok == fflib.FFTok_right_bracket {
-				goto done
-			}
-			if tok != fflib.FFTok_string {
-				wantedTok = fflib.FFTok_string
-				goto wrongtokenerror
-			}
-
-			kn := fs.Output.Bytes()
-			if len(kn) <= 0 {
-				// "" case. hrm.
-				currentKey = ffj_t_Treeno_such_key
-				state = fflib.FFParse_want_colon
-				goto mainparse
-			} else {
-				switch kn[0] {
-
-				case 'C':
-
-					if bytes.Equal(ffj_key_Tree_Cluster, kn) {
-						currentKey = ffj_t_Tree_Cluster
-						state = fflib.FFParse_want_colon
-						goto mainparse
-					}
-
-				case 'N':
-
-					if bytes.Equal(ffj_key_Tree_Nodes, kn) {
-						currentKey = ffj_t_Tree_Nodes
-						state = fflib.FFParse_want_colon
-						goto mainparse
-					}
-
-				case 'R':
-
-					if bytes.Equal(ffj_key_Tree_RWsync, kn) {
-						currentKey = ffj_t_Tree_RWsync
-						state = fflib.FFParse_want_colon
-						goto mainparse
-					}
-
-				}
-
-				if fflib.EqualFoldRight(ffj_key_Tree_RWsync, kn) {
-					currentKey = ffj_t_Tree_RWsync
-					state = fflib.FFParse_want_colon
-					goto mainparse
-				}
-
-				if fflib.EqualFoldRight(ffj_key_Tree_Cluster, kn) {
-					currentKey = ffj_t_Tree_Cluster
-					state = fflib.FFParse_want_colon
-					goto mainparse
-				}
-
-				if fflib.EqualFoldRight(ffj_key_Tree_Nodes, kn) {
-					currentKey = ffj_t_Tree_Nodes
-					state = fflib.FFParse_want_colon
-					goto mainparse
-				}
-
-				currentKey = ffj_t_Treeno_such_key
-				state = fflib.FFParse_want_colon
-				goto mainparse
-			}
-
-		case fflib.FFParse_want_colon:
-			if tok != fflib.FFTok_colon {
-				wantedTok = fflib.FFTok_colon
-				goto wrongtokenerror
-			}
-			state = fflib.FFParse_want_value
-			continue
-		case fflib.FFParse_want_value:
-
-			if tok == fflib.FFTok_left_brace || tok == fflib.FFTok_left_bracket || tok == fflib.FFTok_integer || tok == fflib.FFTok_double || tok == fflib.FFTok_string || tok == fflib.FFTok_bool || tok == fflib.FFTok_null {
-				switch currentKey {
-
-				case ffj_t_Tree_Nodes:
-					goto handle_Nodes
-
-				case ffj_t_Tree_Cluster:
-					goto handle_Cluster
-
-				case ffj_t_Tree_RWsync:
-					goto handle_RWsync
-
-				case ffj_t_Treeno_such_key:
-					err = fs.SkipField(tok)
-					if err != nil {
-						return fs.WrapErr(err)
-					}
-					state = fflib.FFParse_after_value
-					goto mainparse
-				}
-			} else {
-				goto wantedvalue
-			}
-		}
-	}
-
-handle_Nodes:
-
-	/* handler: uj.Nodes type=node.Node kind=struct quoted=false*/
-
-	{
-		if tok == fflib.FFTok_null {
-
-			uj.Nodes = nil
-
-			state = fflib.FFParse_after_value
-			goto mainparse
-		}
-
-		if uj.Nodes == nil {
-			uj.Nodes = new(Node)
-		}
-
-		err = uj.Nodes.UnmarshalJSONFFLexer(fs, fflib.FFParse_want_key)
-		if err != nil {
-			return err
-		}
-		state = fflib.FFParse_after_value
-	}
-
-	state = fflib.FFParse_after_value
-	goto mainparse
-
-handle_Cluster:
-
-	/* handler: uj.Cluster type=node.Cluster kind=interface quoted=false*/
-
-	{
-		/* Falling back. type=node.Cluster kind=interface */
-		tbuf, err := fs.CaptureField(tok)
-		if err != nil {
-			return fs.WrapErr(err)
-		}
-
-		err = json.Unmarshal(tbuf, &uj.Cluster)
-		if err != nil {
-			return fs.WrapErr(err)
-		}
-	}
-
-	state = fflib.FFParse_after_value
-	goto mainparse
-
-handle_RWsync:
-
-	/* handler: uj.RWsync type=sync.RWMutex kind=struct quoted=false*/
-
-	{
-		/* Falling back. type=sync.RWMutex kind=struct */
-		tbuf, err := fs.CaptureField(tok)
-		if err != nil {
-			return fs.WrapErr(err)
-		}
-
-		err = json.Unmarshal(tbuf, &uj.RWsync)
-		if err != nil {
-			return fs.WrapErr(err)
-		}
-	}
-
-	state = fflib.FFParse_after_value
-	goto mainparse
-
-wantedvalue:
-	return fs.WrapErr(fmt.Errorf("wanted value token, but got token: %v", tok))
-wrongtokenerror:
-	return fs.WrapErr(fmt.Errorf("ffjson: wanted token: %v, but got token: %v output=%s", wantedTok, tok, fs.Output.String()))
-tokerror:
-	if fs.BigError != nil {
-		return fs.WrapErr(fs.BigError)
-	}
-	err = fs.Error.ToError()
-	if err != nil {
-		return fs.WrapErr(err)
-	}
-	panic("ffjson-generated: unreachable, please report bug.")
-done:
-	return nil
-}
-
 func (mj *nodeCache) MarshalJSON() ([]byte, error) {
 	var buf fflib.Buffer
 	if mj == nil {
@@ -1131,32 +831,18 @@ func (mj *nodeCache) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	var obj []byte
 	_ = obj
 	_ = err
-	if mj.Cache != nil {
-		if *mj.Cache == nil {
-			buf.WriteString(`{"Cache":null`)
-		} else {
-			buf.WriteString(`{"Cache":{ `)
-			for key, value := range *mj.Cache {
-				fflib.WriteJsonString(buf, key)
-				buf.WriteString(`:`)
-				fflib.WriteJsonString(buf, string(value))
-				buf.WriteByte(',')
-			}
-			buf.Rewind(1)
-			buf.WriteByte('}')
-		}
+	if mj.Data == nil {
+		buf.WriteString(`{"Data":null`)
 	} else {
-		buf.WriteString(`{"Cache":null`)
-	}
-	if mj.RWsync != nil {
-		/* Struct fall back. type=sync.RWMutex kind=struct */
-		buf.WriteString(`,"RWsync":`)
-		err = buf.Encode(mj.RWsync)
-		if err != nil {
-			return err
+		buf.WriteString(`{"Data":{ `)
+		for key, value := range mj.Data {
+			fflib.WriteJsonString(buf, key)
+			buf.WriteString(`:`)
+			fflib.WriteJsonString(buf, string(value))
+			buf.WriteByte(',')
 		}
-	} else {
-		buf.WriteString(`,"RWsync":null`)
+		buf.Rewind(1)
+		buf.WriteByte('}')
 	}
 	buf.WriteByte('}')
 	return nil
@@ -1166,14 +852,10 @@ const (
 	ffj_t_nodeCachebase = iota
 	ffj_t_nodeCacheno_such_key
 
-	ffj_t_nodeCache_Cache
-
-	ffj_t_nodeCache_RWsync
+	ffj_t_nodeCache_Data
 )
 
-var ffj_key_nodeCache_Cache = []byte("Cache")
-
-var ffj_key_nodeCache_RWsync = []byte("RWsync")
+var ffj_key_nodeCache_Data = []byte("Data")
 
 func (uj *nodeCache) UnmarshalJSON(input []byte) error {
 	fs := fflib.NewFFLexer(input)
@@ -1234,32 +916,18 @@ mainparse:
 			} else {
 				switch kn[0] {
 
-				case 'C':
+				case 'D':
 
-					if bytes.Equal(ffj_key_nodeCache_Cache, kn) {
-						currentKey = ffj_t_nodeCache_Cache
-						state = fflib.FFParse_want_colon
-						goto mainparse
-					}
-
-				case 'R':
-
-					if bytes.Equal(ffj_key_nodeCache_RWsync, kn) {
-						currentKey = ffj_t_nodeCache_RWsync
+					if bytes.Equal(ffj_key_nodeCache_Data, kn) {
+						currentKey = ffj_t_nodeCache_Data
 						state = fflib.FFParse_want_colon
 						goto mainparse
 					}
 
 				}
 
-				if fflib.EqualFoldRight(ffj_key_nodeCache_RWsync, kn) {
-					currentKey = ffj_t_nodeCache_RWsync
-					state = fflib.FFParse_want_colon
-					goto mainparse
-				}
-
-				if fflib.SimpleLetterEqualFold(ffj_key_nodeCache_Cache, kn) {
-					currentKey = ffj_t_nodeCache_Cache
+				if fflib.SimpleLetterEqualFold(ffj_key_nodeCache_Data, kn) {
+					currentKey = ffj_t_nodeCache_Data
 					state = fflib.FFParse_want_colon
 					goto mainparse
 				}
@@ -1281,11 +949,8 @@ mainparse:
 			if tok == fflib.FFTok_left_brace || tok == fflib.FFTok_left_bracket || tok == fflib.FFTok_integer || tok == fflib.FFTok_double || tok == fflib.FFTok_string || tok == fflib.FFTok_bool || tok == fflib.FFTok_null {
 				switch currentKey {
 
-				case ffj_t_nodeCache_Cache:
-					goto handle_Cache
-
-				case ffj_t_nodeCache_RWsync:
-					goto handle_RWsync
+				case ffj_t_nodeCache_Data:
+					goto handle_Data
 
 				case ffj_t_nodeCacheno_such_key:
 					err = fs.SkipField(tok)
@@ -1301,9 +966,9 @@ mainparse:
 		}
 	}
 
-handle_Cache:
+handle_Data:
 
-	/* handler: uj.Cache type=map[string]string kind=map quoted=false*/
+	/* handler: uj.Data type=map[string]string kind=map quoted=false*/
 
 	{
 
@@ -1314,10 +979,10 @@ handle_Cache:
 		}
 
 		if tok == fflib.FFTok_null {
-			uj.Cache = nil
+			uj.Data = nil
 		} else {
 
-			var tval = make(map[string]string, 0)
+			uj.Data = make(map[string]string, 0)
 
 			wantVal := true
 
@@ -1395,33 +1060,11 @@ handle_Cache:
 					}
 				}
 
-				tval[k] = v
+				uj.Data[k] = v
 
 				wantVal = false
 			}
 
-			uj.Cache = &tval
-
-		}
-	}
-
-	state = fflib.FFParse_after_value
-	goto mainparse
-
-handle_RWsync:
-
-	/* handler: uj.RWsync type=sync.RWMutex kind=struct quoted=false*/
-
-	{
-		/* Falling back. type=sync.RWMutex kind=struct */
-		tbuf, err := fs.CaptureField(tok)
-		if err != nil {
-			return fs.WrapErr(err)
-		}
-
-		err = json.Unmarshal(tbuf, &uj.RWsync)
-		if err != nil {
-			return fs.WrapErr(err)
 		}
 	}
 

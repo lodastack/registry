@@ -10,6 +10,8 @@ const (
 	Leaf    = iota // leaf type of node
 	NonLeaf        // non-leaf type of node
 	Root
+
+	childCachePrefix = "child_"
 )
 
 var (
@@ -258,27 +260,130 @@ func (n *Node) GetByNs(ns string) (*Node, error) {
 }
 
 type nodeCache struct {
-	Cache  *map[string]string
-	RWsync *sync.RWMutex
+	sync.RWMutex
+	Data map[string]string
 }
 
+func (i *nodeCache) Len() int {
+	return len(i.Data)
+}
 func (i *nodeCache) Get(name string) (string, bool) {
-	i.RWsync.RLock()
-	defer i.RWsync.RUnlock()
-	v, ok := (*i.Cache)[name]
+	i.RLock()
+	defer i.RUnlock()
+	v, ok := i.Data[name]
 	return v, ok
 }
 
 func (i *nodeCache) Set(name, v string) {
-	i.RWsync.Lock()
-	defer i.RWsync.Unlock()
-	(*i.Cache)[name] = v
+	i.Lock()
+	defer i.Unlock()
+	i.Data[name] = v
+}
+
+func (i *nodeCache) Del(keyList ...string) {
+	i.Lock()
+	defer i.Unlock()
+	for _, key := range keyList {
+		delete(i.Data, key)
+	}
 }
 
 func (i *nodeCache) Purge() {
-	i.RWsync.Lock()
-	defer i.RWsync.Unlock()
-	for k := range *i.Cache {
-		delete((*i.Cache), k)
+	i.Lock()
+	defer i.Unlock()
+	for k := range i.Data {
+		delete((i.Data), k)
 	}
+}
+
+// GetLeafID return leaf cheld IDs of a nodeID.
+func (i *nodeCache) GetLeafID(nodeId string) ([]string, bool) {
+	childIds, ok := i.Get(childCachePrefix + nodeId)
+	return strings.Split(childIds, ","), ok
+}
+
+// AddNode add a node to NS_ID and child cache.
+func (i *nodeCache) AddNode(parentId, parentNs string, newNode *Node) {
+	ns := newNode.Name + nodeDeli + parentNs
+	i.Set(newNode.ID, ns)
+	i.Set(ns, newNode.ID)
+
+	parentNewChilds := newNode.ID
+	ParentChildKey := childCachePrefix + parentId
+	if parentOldChilds, _ := i.Get(ParentChildKey); parentOldChilds != "" {
+		parentNewChilds = parentOldChilds + "," + parentNewChilds
+	}
+	i.Set(ParentChildKey, parentNewChilds)
+}
+
+// DelNode delete a node from cache.
+func (i *nodeCache) DelNode(parentId, delId string) {
+	delNs, _ := i.Get(delId)
+	i.Del(delNs, delId)
+	i.Del(delId, delNs)
+
+	parentChildKey := childCachePrefix + parentId
+	parentOldChilds, _ := i.Get(parentChildKey)
+	if parentOldChilds == "" {
+		return
+	}
+	newChild := strings.Replace(parentOldChilds, delId, "", -1)
+	newChild = strings.Replace(newChild, ",,", "", -1)
+	newChild = strings.Trim(newChild, ",")
+	i.Set(childCachePrefix+parentId, newChild)
+}
+
+// initCache return the cache of ID-NS/NS-ID ang ID-childIDs.
+func (n *Node) initNsCache() (*nodeCache, error) {
+	// get ns-id from walk return, and set all id-ns pairs to idCache.
+	idCache := map[string]string{}
+	nsCache, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
+		result := map[string]string{}
+		result[node.Name] = node.ID
+		idCache[node.ID] = node.Name
+		if node.Type == NonLeaf {
+			for relativeNs, NodeId := range childReturn {
+				result[relativeNs+nodeDeli+node.Name] = NodeId
+				idCache[NodeId] = relativeNs + nodeDeli + node.Name
+			}
+		}
+		return result, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for id, ns := range idCache {
+		nsCache[id] = ns
+	}
+
+	// set child cache
+	childMap, err := n.getChildMap()
+	if err != nil {
+		return nil, err
+	}
+	for id, childIDs := range childMap {
+		nsCache[childCachePrefix+id] = childIDs
+	}
+	return &nodeCache{Data: nsCache}, nil
+}
+
+// return nodeID-childIDs map of the node.
+func (n *Node) getChildMap() (map[string]string, error) {
+	leafCache := map[string]string{}
+	_, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
+		if node.Type == Leaf {
+			return map[string]string{node.ID: ""}, nil
+		}
+		childIDs := ""
+		for LeafId := range childReturn {
+			childIDs += LeafId + ","
+		}
+		leafCache[node.ID] = strings.TrimRight(childIDs, ",")
+		return childReturn, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return leafCache, nil
 }
