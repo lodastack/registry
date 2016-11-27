@@ -109,7 +109,7 @@ func TestSearchMachine(t *testing.T) {
 	if result, err := tree.SearchMachine("127.0.0.1"); err != nil {
 		t.Fatal("SearchMachine 127.0.0.1 fail", err.Error())
 	} else {
-		if _, ok := result["test1.loda"]; !ok {
+		if _, ok := result["test1."+rootNode]; !ok {
 			t.Fatalf("SearchMachine 127.0.0.1 not match with expect, result: %+v", result)
 		}
 	}
@@ -118,10 +118,10 @@ func TestSearchMachine(t *testing.T) {
 	if result, err := tree.SearchMachine("127.0.0.2"); err != nil {
 		t.Fatal("SearchMachine 127.0.0.2 fail", err.Error())
 	} else {
-		if _, ok := result["test1.loda"]; !ok {
+		if _, ok := result["test1."+rootNode]; !ok {
 			t.Fatalf("SearchMachine 127.0.0.1 not match with expect, result: %+v", result)
 		}
-		if _, ok := result["test2.loda"]; !ok {
+		if _, ok := result["test2."+rootNode]; !ok {
 			t.Fatalf("SearchMachine 127.0.0.1 not match with expect, result: %+v", result)
 		}
 	}

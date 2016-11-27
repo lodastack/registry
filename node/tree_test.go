@@ -121,7 +121,7 @@ func TestUpdateTemplate(t *testing.T) {
 	}
 }
 
-func TestCreatePoolNode(t *testing.T) {
+func TestInitPoolNode(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
 	if err := s.Open(true); err != nil {
@@ -136,7 +136,7 @@ func TestCreatePoolNode(t *testing.T) {
 
 	// Test root pool node.
 	if node, err := tree.GetNodeByNs(poolNode + nodeDeli + rootNode); err != nil || node.MachineReg != "^$" {
-		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", *node, err)
+		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 }
 
@@ -158,28 +158,22 @@ func TestTreeGetLeaf(t *testing.T) {
 	if err := tree.saveTree(); err != nil {
 		t.Fatal("saveTree error")
 	}
-
-	childNs, err := tree.Leaf(rootNode, NsFormat)
-	t.Log("result of NS GetLeafChild:", childNs)
-	if err != nil || len(childNs) != 4 {
-		t.Fatal("GetLeafChild not match with expect")
+	allNodes, err := tree.AllNodes()
+	if err != nil {
+		t.Fatal("AllNodes fail")
 	}
-	if !checkStringInList(childNs, "0-2-1.0-2.loda") ||
-		!checkStringInList(childNs, "0-2-2-1.0-2-2.0-2.loda") ||
-		!checkStringInList(childNs, "0-3-2-1.0-3-2.0-3.loda") ||
-		!checkStringInList(childNs, "0-4.loda") {
-		t.Fatal("GetLeafChild not match with expect")
+	if tree.Cache, err = allNodes.initNsCache(); err != nil {
+		t.Fatal("initNsCache fail")
 	}
-
-	childNs, err = tree.Leaf(rootNode, IDFormat)
-	t.Log("result of ID GetLeafChild:", childNs)
-	if err != nil || len(childNs) != 4 {
-		t.Fatal("GetLeafChild not match with expect")
+	childIDs, err := tree.LeafIDs(rootNode)
+	t.Log("result of ID LeafIDs:", childIDs)
+	if err != nil || len(childIDs) != 4 {
+		t.Fatalf("LeafIDs not match with expect, leaf: %+v, error: %v", childIDs, err)
 	}
-	if !checkStringInList(childNs, "0-2-1") ||
-		!checkStringInList(childNs, "0-2-2-1") ||
-		!checkStringInList(childNs, "0-3-2-1") ||
-		!checkStringInList(childNs, "0-4") {
+	if !checkStringInList(childIDs, "0-2-1") ||
+		!checkStringInList(childIDs, "0-2-2-1") ||
+		!checkStringInList(childIDs, "0-3-2-1") ||
+		!checkStringInList(childIDs, "0-4") {
 		t.Fatal("GetLeafChild not match with expect")
 	}
 }
