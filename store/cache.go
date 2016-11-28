@@ -92,15 +92,19 @@ func (c *Cache) Add(bucketName []byte, key []byte, value []byte) bool {
 		c.logger.Printf("cache new bucket %s", bucketKey)
 	}
 
+	// copy bytes
+	dst := make([]byte, len(value))
+	copy(dst, value)
+
 	// Check for existing item
 	if ent, ok := bucket[string(key)]; ok {
 		c.evictList.MoveToFront(ent)
-		ent.Value.(*entry).value = value
+		ent.Value.(*entry).value = dst
 		return false
 	}
 
 	// Add new item
-	ent := &entry{bucketName, key, value}
+	ent := &entry{bucketName, key, dst}
 	entry := c.evictList.PushFront(ent)
 	bucket[string(key)] = entry
 
@@ -128,7 +132,10 @@ func (c *Cache) Get(bucket, key []byte) (value []byte, ok bool) {
 		if ent, ok := b[string(key)]; ok {
 			c.evictList.MoveToFront(ent)
 			c.logger.Debugf("Hit cache, key: %s", string(key))
-			return ent.Value.(*entry).value, true
+			src := ent.Value.(*entry).value
+			dst := make([]byte, len(src))
+			copy(dst, src)
+			return dst, true
 		}
 	}
 	return
