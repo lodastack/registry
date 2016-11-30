@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
@@ -25,23 +25,8 @@ type Cluster interface {
 	// Remove removes a node from the store, specified by addr.
 	Remove(addr string) error
 
-	// Create a bucket, via distributed consensus.
-	CreateBucket(name []byte) error
-
-	// Create a bucket via distributed consensus if not exist.
-	CreateBucketIfNotExist(name []byte) error
-
-	// Remove a bucket, via distributed consensus.
-	RemoveBucket(name []byte) error
-
-	// Batch update values for given keys in given buckets, via distributed consensus.
-	Batch(rows []model.Row) error
-
 	// Backup database.
 	Backup() ([]byte, error)
-
-	// ViewPrefix returns the value for the keys has the keyPrefix.
-	ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error)
 
 	// Restore restores backup data file.
 	Restore(backupfile string) error
@@ -52,7 +37,8 @@ type Service struct {
 	addr string
 	ln   net.Listener
 
-	router *httprouter.Router
+	router  *httprouter.Router
+	session *LodaSession
 
 	cluster Cluster
 	tree    node.TreeMethod
@@ -67,6 +53,7 @@ func New(addr string, cluster Cluster, tree node.TreeMethod) *Service {
 		cluster: cluster,
 		tree:    tree,
 		router:  httprouter.New(),
+		session: NewSession(),
 		logger:  log.New("INFO", "http", model.LogBackend),
 	}
 }
@@ -76,7 +63,8 @@ func (s *Service) Start() error {
 	s.initHandler()
 
 	server := http.Server{
-		Handler: s.router,
+		//Handler: accessLog(cors(s.auth(s.router))),
+		Handler: accessLog(cors(s.router)),
 	}
 
 	ln, err := net.Listen("tcp", s.addr)
@@ -121,8 +109,6 @@ func (s *Service) FormRedirect(r *http.Request, host string) string {
 	return fmt.Sprintf("%s://%s%s", protocol, host, r.URL.Path)
 }
 
-// all handlers just for test
-
 func (s *Service) initHandler() {
 	s.router.POST("/api/v1/resource", s.handlerResourceSet)
 	s.router.GET("/api/v1/resource", s.handlerResourceGet)
@@ -135,16 +121,102 @@ func (s *Service) initHandler() {
 
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 
-	s.router.POST("/api/v1/batch", s.handlerBatch)
-
-	s.router.POST("/api/v1/bucket", s.handlerCreateBucket)
-	s.router.DELETE("/api/v1/bucket", s.handlerRemoveBucket)
-
 	s.router.POST("/api/v1/peer", s.handlerJoin)
 	s.router.DELETE("/api/v1/peer", s.handlerRemove)
-
 	s.router.GET("/api/v1/backup", s.handlerBackup)
 	s.router.GET("/api/v1/restore", s.handlerRestore)
+
+	s.router.POST("/api/v1/user/signin", s.HandlerSignin)
+	s.router.GET("/api/v1/user/signout", s.HandlerSignout)
+
+}
+
+func cors(inner http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); origin != "" {
+			w.Header().Set(`Access-Control-Allow-Origin`, origin)
+			w.Header().Set(`Access-Control-Allow-Methods`, strings.Join([]string{
+				`DELETE`,
+				`GET`,
+				`OPTIONS`,
+				`POST`,
+				`PUT`,
+			}, ", "))
+
+			w.Header().Set(`Access-Control-Allow-Headers`, strings.Join([]string{
+				`Accept`,
+				`Accept-Encoding`,
+				`Authorization`,
+				`Content-Length`,
+				`Content-Type`,
+				`X-CSRF-Token`,
+				`X-HTTP-Method-Override`,
+			}, ", "))
+		}
+
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		inner.ServeHTTP(w, r)
+	})
+}
+
+func accessLog(inner http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		stime := time.Now().UnixNano() / 1e3
+		inner.ServeHTTP(w, r)
+		dur := time.Now().UnixNano()/1e3 - stime
+		if dur <= 1e3 {
+			log.Infof("access path %s in %d us\n", r.URL.Path, dur)
+		} else {
+			log.Infof("access path %s in %d ms\n", r.URL.Path, dur/1e3)
+		}
+	})
+}
+
+func (s *Service) auth(inner http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !uriFilter(r) {
+			inner.ServeHTTP(w, r)
+			return
+		}
+		key := r.Header.Get("AuthToken")
+		v := s.session.Get(key)
+		log.Infof("Header AuthToken: %s - %s", key, v)
+		if v == nil {
+			ReturnJson(w, 403, "Not Authorized")
+			return
+		}
+		uid, ok := v.(string)
+		if !ok {
+			ReturnJson(w, 403, "Not Authorized")
+			return
+		}
+		// TODO: auth filter
+		if !permCheck(r.FormValue("ns"), uid, r.Method) {
+			ReturnJson(w, 403, "Not Authorized")
+			return
+		}
+		w.Header().Set(`UID`, uid)
+		r.Header.Set(`UID`, uid)
+		inner.ServeHTTP(w, r)
+	})
+}
+
+// pass agent or router backend requests, this API shuold be almost desinged in GET method.
+func uriFilter(r *http.Request) bool {
+	var UNAUTH_URI = []string{"/api/v1/user/signin", "/api/v1/agent", "/api/v1/router", "/api/v1/alarm"}
+	for _, uri := range UNAUTH_URI {
+		if strings.HasPrefix(r.RequestURI, uri) {
+			return false
+		}
+	}
+	return true
+}
+
+func permCheck(ns string, uid string, method string) bool {
+	return true
 }
 
 // Handle handlerRegister search hostname on the tree first,
@@ -332,115 +404,4 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 	ReturnJson(w, 200, res)
-}
-
-func (s *Service) handlerBatch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var rows []model.Row
-	rows = append(rows, model.Row{[]byte("k1"), []byte("v1"), []byte("bucket-test")})
-	rows = append(rows, model.Row{[]byte("k2"), []byte("v2"), []byte("bucket-test-no")})
-	if err := s.cluster.Batch(rows); err != nil {
-		ReturnServerError(w, err)
-		return
-	}
-	ReturnOK(w, "success")
-}
-
-func (s *Service) handlerCreateBucket(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	name := r.FormValue("name")
-
-	err := s.cluster.CreateBucket([]byte(name))
-	if err != nil {
-		ReturnServerError(w, err)
-	} else {
-		ReturnOK(w, "success")
-	}
-}
-
-func (s *Service) handlerRemoveBucket(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	name := r.FormValue("name")
-
-	err := s.cluster.RemoveBucket([]byte(name))
-	if err != nil {
-		ReturnServerError(w, err)
-	} else {
-		ReturnOK(w, "success")
-	}
-}
-
-func (s *Service) handlerJoin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	m := map[string]string{}
-	if err := json.Unmarshal(b, &m); err != nil {
-		ReturnBadRequest(w, fmt.Errorf("unmarshal fail"))
-		return
-	}
-
-	if len(m) != 1 {
-		ReturnBadRequest(w, fmt.Errorf("only allow 1 addr to join one time"))
-		return
-	}
-
-	remoteAddr, ok := m["addr"]
-	if !ok {
-		ReturnBadRequest(w, fmt.Errorf("ihave no addr to join"))
-		return
-	}
-
-	if err := s.cluster.Join(remoteAddr); err != nil {
-		ReturnServerError(w, err)
-		return
-	}
-}
-
-func (s *Service) handlerRemove(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		ReturnBadRequest(w, fmt.Errorf("read body fail"))
-		return
-	}
-	m := map[string]string{}
-	if err := json.Unmarshal(b, &m); err != nil {
-		ReturnBadRequest(w, fmt.Errorf("unmarshal fail"))
-		return
-	}
-
-	if len(m) != 1 {
-		ReturnBadRequest(w, fmt.Errorf("only allow 1 addr to remove one time"))
-		return
-	}
-
-	remoteAddr, ok := m["addr"]
-	if !ok {
-		ReturnBadRequest(w, fmt.Errorf("have no addr to join"))
-		return
-	}
-
-	if err := s.cluster.Remove(remoteAddr); err != nil {
-		ReturnServerError(w, err)
-		return
-	}
-}
-
-func (s *Service) handlerBackup(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var err error
-	var data []byte
-	if data, err = s.cluster.Backup(); err != nil {
-		ReturnServerError(w, err)
-	} else {
-		ReturnOK(w, string(data))
-	}
-}
-
-func (s *Service) handlerRestore(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	file := r.FormValue("file")
-	var err error
-	if err = s.cluster.Restore(file); err != nil {
-		ReturnServerError(w, err)
-	} else {
-		ReturnOK(w, "success")
-	}
 }

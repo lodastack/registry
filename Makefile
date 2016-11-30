@@ -12,6 +12,7 @@ dep:fmt
 	go get github.com/julienschmidt/httprouter
 	go get github.com/satori/go.uuid
 	go get github.com/pquerna/ffjson
+	go get github.com/go-ldap/ldap
 
 build: fmt 
 	cd cmd/registry && go build -v

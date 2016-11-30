@@ -8,3 +8,4 @@ github.com/julienschmidt/httprouter 6aacfd5ab513e34f7e64ea9627ab9670371b34e7
 github.com/lodastack/log b25a4d2e8c2235ee21a1663198a4b26c7f7b4aaa
 github.com/pquerna/ffjson 184f78649ba053f484de46921391e6d0c6f5172f
 github.com/satori/go.uuid 879c5887cd475cd7864858769793b2ceb0d44feb
+github.com/go-ldap/ldap e9a325d64989e2844be629682cb085d2c58eef8d
