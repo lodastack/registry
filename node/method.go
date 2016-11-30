@@ -78,4 +78,10 @@ type TreeMethod interface {
 
 	// Delete the node with delID from parentNs.
 	DelNode(parentNs, delID string) error
+
+	// Update Resource By ns and ResourceID.
+	UpdateResourceByNs(ns, resType, resID string, updateMap map[string]string) error
+
+	// Update hostname property of machine resource.
+	MachineRename(oldName, newName string) error
 }

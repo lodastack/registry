@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lodastack/log"
+	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/node"
 
@@ -113,6 +114,7 @@ func (s *Service) initHandler() {
 	s.router.POST("/api/v1/resource", s.handlerResourceSet)
 	s.router.GET("/api/v1/resource", s.handlerResourceGet)
 	s.router.GET("/api/v1/resource/search", s.handlerSearch)
+	s.router.PUT("/api/v1/resource", s.handleResourcePut)
 
 	s.router.POST("/api/v1/ns", s.handlerNsNew)
 	s.router.PUT("/api/v1/ns", s.handlerNsUpdate)
@@ -120,6 +122,7 @@ func (s *Service) initHandler() {
 	s.router.DELETE("/api/v1/ns", s.handlerNsDel)
 
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
+	s.router.PUT("/api/v1/agent/report", s.handlerAgentReport)
 
 	s.router.POST("/api/v1/peer", s.handlerJoin)
 	s.router.DELETE("/api/v1/peer", s.handlerRemove)
@@ -256,6 +259,28 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 	}
 }
 
+func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	report := m.Report{}
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(r.Body); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	if err := report.UnmarshalJSON(buf.Bytes()); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+
+	if report.NewHostname != "" && report.OldHostname != "" && report.NewHostname != report.OldHostname {
+		if err := s.tree.MachineRename(report.OldHostname, report.NewHostname); err != nil {
+			ReturnBadRequest(w, err)
+			return
+		}
+	}
+	// TODO: process the report time/version.
+	ReturnOK(w, "success")
+}
+
 func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	queryString := r.URL.Query()
 	res := queryString.Get("resource")
@@ -309,6 +334,31 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 	ReturnJson(w, 200, resource)
+}
+
+func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	queryString := r.URL.Query()
+	ns := queryString.Get("ns")
+	id := queryString.Get("id")
+	resType := queryString.Get("type")
+
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(r.Body); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	updateMap := map[string]string{}
+	if err := json.Unmarshal(buf.Bytes(), &updateMap); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+
+	if err := s.tree.UpdateResourceByNs(ns, resType, id, updateMap); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	} else {
+		ReturnOK(w, "success")
+	}
 }
 
 func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

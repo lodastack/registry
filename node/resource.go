@@ -51,6 +51,25 @@ func (t *Tree) getResFromStore(nodeId, resourceType string) (*model.Resources, e
 	return resources, nil
 }
 
+func (t *Tree) UpdateResourceByNs(ns, resType, resID string, updateMap map[string]string) error {
+	nodeId, err := t.getIDByNs(ns)
+	if err != nil {
+		t.logger.Errorf("getIDByNs fail: %s", err.Error())
+		return err
+	}
+	resOldByte, err := t.getByteFromStore(nodeId, resType)
+	if err != nil || len(resOldByte) == 0 {
+		t.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %v", nodeId, resType, err)
+		return errors.New("get resource fail")
+	}
+	resNewByte, err := model.UpdateResByID(resOldByte, resID, updateMap)
+	if err != nil {
+		t.logger.Errorf("UpdateResourceByNs fail becource update error: %s", err.Error())
+		return err
+	}
+	return t.setResourceByNodeID(nodeId, resType, resNewByte)
+}
+
 func (t *Tree) GetResourceFromNonLeaf(nonLeaf *Node, resourceType string) (*model.Resources, error) {
 	allRes := model.Resources{}
 	leafIDs, err := nonLeaf.leafID()
@@ -130,20 +149,23 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 	}()
 
 	// search ns and report the result.
+	if err := search.Init(); err != nil {
+		return nil, err
+	}
 	for _, leafID := range leafIDs {
 		limit.Take()
-		go func(leafID string) {
+		go func(leafID string, search model.ResourceSearch) {
 			nsResult := map[string]*model.Resources{}
 			resByte, err := t.getByteFromStore(leafID, resType)
 			// report error when getByteFromStore fail.
-			if err != nil {
-				t.logger.Errorf("getByteFromStore fail,id: %s, type: %s , error: %s", leafID, resType, err.Error())
+			if err != nil || len(resByte) == 0 {
+				t.logger.Errorf("getByteFromStore fail or none input, id: %s, type: %s, input length:%d, error: %v",
+					leafID, resType, len(resByte), err.Error())
 				limit.Error(err)
 				return
 			}
-			serchTmp := search
-			serchTmp.Init()
-			resOfOneNs, err := serchTmp.Process(resByte)
+
+			resOfOneNs, err := search.Process(resByte)
 			// report error when search fail.
 			if err != nil {
 				t.logger.Errorf("Search fail, getNsByID error: %s", err.Error())
@@ -164,7 +186,7 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 				limit.Release()
 			}
 
-		}(leafID)
+		}(leafID, search)
 	}
 	limit.Wait()
 	if fail {

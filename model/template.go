@@ -175,7 +175,22 @@ var (
 		"name":             "time.offset",
 		"interval":         "300",
 		"measurement_type": "TIME",
-	}}
+	}, Resource{
+		"connect_timeout":  "3",
+		"interval":         "10",
+		"measurement_type": "PORT",
+		"name":             "port.sshd.22",
+		"port":             "22",
+	},
+	/*
+	   {
+	     "git": "git@git.xxx.com:plugins/process.git",
+	     "interval": "10",
+	     "measurement_type": "PLUGIN",
+	     "name": "xxx",
+	     "parameters": "-x xxx"
+	   }
+	*/}
 	RootTemplate map[string]Resources = map[string]Resources{
 		TemplatePrefix + "doc":     docTemplate,
 		TemplatePrefix + "collect": collectTemplate,

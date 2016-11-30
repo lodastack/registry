@@ -200,3 +200,47 @@ func BenchmarkMarshal(b *testing.B) {
 		ressStruct.Marshal()
 	}
 }
+
+func TestUpdateResByID(t *testing.T) {
+	rs, err := NewResourcesMaps(resMaps)
+	if err != nil {
+		t.Fatalf("load map to  resources fail")
+	}
+
+	rsByte, err := rs.Marshal()
+	if err != nil {
+		t.Fatalf("marshal resources fail")
+	}
+
+	// case 1: update the second resource
+	newRsByte, err := UpdateResByID(rsByte, "uuid1", map[string]string{"res_key1": "new value"})
+	if err != nil {
+		t.Fatalf("UpdateResByID fail: %s", err.Error())
+	}
+	if err := rs.Unmarshal(newRsByte); err != nil || len(*rs) != 2 {
+		t.Fatalf("unmarshal fail")
+		return
+	}
+	if newProperty, _ := (*rs)[1].ReadProperty("res_key1"); newProperty != "new value" {
+		t.Fatalf("UpdateResByID not match with expect: %+v", *rs)
+	}
+	if newProperty, _ := (*rs)[0].ReadProperty("res_key1"); newProperty != "res1_v1" {
+		t.Fatalf("UpdateResByID not match with expect: %+v", *rs)
+	}
+
+	// case 2: update not exist ID
+	newRsByte, err = UpdateResByID(rsByte, "uuid2", map[string]string{"res_key1": "new value"})
+	if err != nil {
+		t.Fatalf("UpdateResByID fail: %s", err.Error())
+	}
+	if err := rs.Unmarshal(newRsByte); err != nil || len(*rs) != 2 {
+		t.Fatalf("unmarshal fail")
+		return
+	}
+	if newProperty, _ := (*rs)[0].ReadProperty("res_key1"); newProperty != "res1_v1" {
+		t.Fatalf("UpdateResByID not match with expect: %+v", *rs)
+	}
+	if newProperty, _ := (*rs)[1].ReadProperty("res_key1"); newProperty != "res2_v1" {
+		t.Fatalf("UpdateResByID not match with expect: %+v", *rs)
+	}
+}

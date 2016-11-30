@@ -76,14 +76,14 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
 
-	if res, err := tree.GetResourceByNs(rootNode, template+"collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResourceByNs(rootNode, template+"collect"); err != nil || len(*res) != 32 {
 		t.Fatalf("get root collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
-	if res, err := tree.GetResourceByNodeID(nonLeafID, template+"collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResourceByNodeID(nonLeafID, template+"collect"); err != nil || len(*res) != 32 {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	} else {
 	}
-	if res, err := tree.GetResourceByNodeID(leafID, "collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResourceByNodeID(leafID, "collect"); err != nil || len(*res) != 32 {
 		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
 }
