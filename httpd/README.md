@@ -227,6 +227,17 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
       ]
     }
 
+#### 2.4 修改资源
+
+PUT方法
+
+提供参数:
+- query参数 ns: 修改节点
+- query参数 type: 修改资源类型
+- query参数 id: 修改资源ID
+
+    curl -X PUT -d'{"comment":"new comment"}' "http://127.0.0.1:9991/api/v1/resource?ns=pool.loda&type=collect&id=bd64f882-db3e-4da3-b7ee-40ac7d966726"
+
 ### 3 注册接口
 ---
 
@@ -253,6 +264,7 @@ POST方法
     # 返回
     {"service1.product.loda":"b7705b32-11f4-4bef-acb1-fdbd47d2c7c0","service2.product.loda":"606df412-b043-4f12-8878-7e03089cb36e"}
 
+<<<<<<< Updated upstream
 ### 4 用户登录接口
 ---
 
@@ -286,3 +298,12 @@ GET方法
 
 例子：
   curl "http://127.0.0.1:8004/api/v1/user/signout"
+
+### 4 上报接口
+如果新旧机器名不符，则将全树上的旧机器名改为新机器名
+
+PUT方法
+提供参数:
+- body参数: lodastack/models.Report
+
+    curl -X PUT -d '{"newhostname":"pool-newname","oldhostname":"pool-machine"}' "http://127.0.0.1:9991/api/v1/agent/report"
