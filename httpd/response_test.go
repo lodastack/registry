@@ -15,16 +15,15 @@ func TestWriteJson(t *testing.T) {
 
 	handlerJson := func(w http.ResponseWriter, r *http.Request) {
 		result := testResponse{Msg: "test msg"}
-		respose := NewResponse(http.StatusOK, "", result)
-		respose.ReturnJson(w)
+		ReturnJson(w, http.StatusOK, result)
 	}
 	req := httptest.NewRequest("GET", "http://loda.com/test", nil)
 	w := httptest.NewRecorder()
 	handlerJson(w, req)
 
-	response := testResponse{}
+	response := Response{}
 	err := json.Unmarshal(w.Body.Bytes(), &response)
-	if w.Code != 200 || err != nil || response.Msg != "test msg" {
+	if w.Code != 200 || err != nil || response.Data.(map[string]interface{})["Msg"].(string) != "test msg" {
 		t.Fatalf("response of WriteJson not with expect, w: %+v, body struct: %+v, err:%v", *w, response, err)
 	}
 }
