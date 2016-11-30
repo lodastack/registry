@@ -35,7 +35,7 @@ type Cluster interface {
 	Backup() ([]byte, error)
 
 	// ViewPrefix returns the value for the keys has the keyPrefix.
-	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
+	ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error)
 }
 
 // TreeMethod is the interface tree must implement.
@@ -64,8 +64,8 @@ type TreeMethod interface {
 	// SearchResourceByNs return the map[ns]resources which match the search.
 	SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error)
 
-	// Return leaf child node of one ns.
-	Leaf(ns string, format string) ([]string, error)
+	// Return leaf child node of the ns.
+	LeafIDs(ns string) ([]string, error)
 
 	// Search Machine on tree.
 	SearchMachine(hostname string) (map[string]string, error)

@@ -403,8 +403,8 @@ func (s *Store) Update(bucket []byte, key []byte, value []byte) error {
 }
 
 // View bucket by keyPerfix.
-func (s *Store) ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error) {
-	var result map[string][]byte = make(map[string][]byte, 0)
+func (s *Store) ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error) {
+	var result map[string]string = make(map[string]string, 0)
 	tx, err := s.db.Begin(true)
 	if err != nil {
 		s.logger.Error("begin db fail: ", err.Error())
@@ -420,7 +420,7 @@ func (s *Store) ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error) 
 	c := b.Cursor()
 	for k, v := c.Seek(keyPrefix); len(k) != 0 && strings.HasPrefix(string(k), string(keyPrefix)); k, v = c.Next() {
 		if len(v) != 0 {
-			result[string(k)] = v
+			result[string(k)] = string(v)
 		}
 	}
 	return result, nil
@@ -830,9 +830,8 @@ func (f *fsm) applyUpdate(sub json.RawMessage) error {
 		}
 		err := b.Put(rows[0].Key, rows[0].Value)
 
-		// remove cache at last
-		// boltDB.Put will affect cache items, so clean all
-		f.cache.Purge()
+		// remove cache
+		f.cache.Remove(rows[0].Bucket, rows[0].Key)
 		return err
 	})
 }
@@ -856,9 +855,8 @@ func (f *fsm) applyBatch(sub json.RawMessage) error {
 			if err := b.Put(row.Key, row.Value); err != nil {
 				return err
 			}
-			// remove cache at last
-			// boltDB.Put will affect cache items, so clean all
-			f.cache.Purge()
+			// remove cache
+			f.cache.Remove(row.Bucket, row.Key)
 		}
 		return nil
 	})
@@ -874,9 +872,8 @@ func (f *fsm) applyCreateBucket(sub json.RawMessage) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	// remove cache at last
-	// boltDB.Put will affect cache items, so clean all
-	f.cache.Purge()
+	// remove cache at first
+	f.cache.RemoveBucket(name)
 
 	return f.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucket(name)
@@ -897,9 +894,8 @@ func (f *fsm) applyCreateBucketIfNotExist(sub json.RawMessage) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	// remove cache at last
-	// boltDB.Put will affect cache items, so clean all
-	f.cache.Purge()
+	// remove cache at first
+	f.cache.RemoveBucket(name)
 
 	return f.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists(name)

@@ -1,7 +1,13 @@
 package node
 
 import (
+	"errors"
+
 	"github.com/lodastack/registry/model"
+)
+
+var (
+	defaultResourceWorker = 100
 )
 
 // GetResource return the ResourceType resource belong to the node with NodeId.
@@ -95,36 +101,74 @@ func (t *Tree) SetResourceByNs(ns, resType string, ResByte []byte) error {
 	return t.setResourceByNodeID(node.ID, resType, resStore)
 }
 
+// TODO: remove time and debug log
 func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error) {
-	leafIDs, err := t.Leaf(ns, IDFormat)
-	if err != nil {
-		return nil, err
-	} else if len(leafIDs) == 0 {
-		t.logger.Errorf("SearchResourceByNs fail: node has none leaf")
+	result := map[string]*model.Resources{}
+	leafIDs, err := t.LeafIDs(ns)
+	if err != nil && len(leafIDs) == 0 {
+		t.logger.Errorf("node has none leaf, ns: %s, error: %v", ns, err)
 		return nil, ErrNilChildNode
 	}
 
-	result := map[string]*model.Resources{}
-
-	for _, leafID := range leafIDs {
-		resByte, err := t.getByteFromStore(leafID, resType)
-		if err != nil {
-			t.logger.Errorf("SearchResourceByNs fail,id: %s, type: %s ,getByteFromStore error: %s", leafID, resType, err.Error())
-			return nil, err
-		}
-
-		search.Init()
-		if resOfOneNs, err := search.Process(resByte); err != nil {
-			return nil, err
-		} else if len(resOfOneNs) != 0 {
-			ns, err := t.getNsByID(leafID)
-			if err != nil {
-				t.logger.Errorf("SearchResourceByNs fail, getNsByID error: %s", err.Error())
-				return nil, err
+	var fail bool
+	limit := NewFixed(defaultResourceWorker)
+	resultChan := make(chan map[string]*model.Resources, defaultResourceWorker/2)
+	// collect process result
+	go func() {
+		for {
+			select {
+			case nsResult := <-resultChan:
+				for k, v := range nsResult {
+					result[k] = v
+				}
+				limit.Release()
+			case <-limit.Err:
+				fail = true
+				limit.Release()
 			}
-			result[ns] = &model.Resources{}
-			result[ns].AppendResources(resOfOneNs)
 		}
+	}()
+
+	// search ns and report the result.
+	for _, leafID := range leafIDs {
+		limit.Take()
+		go func(leafID string) {
+			nsResult := map[string]*model.Resources{}
+			resByte, err := t.getByteFromStore(leafID, resType)
+			// report error when getByteFromStore fail.
+			if err != nil {
+				t.logger.Errorf("getByteFromStore fail,id: %s, type: %s , error: %s", leafID, resType, err.Error())
+				limit.Error(err)
+				return
+			}
+			serchTmp := search
+			serchTmp.Init()
+			resOfOneNs, err := serchTmp.Process(resByte)
+			// report error when search fail.
+			if err != nil {
+				t.logger.Errorf("Search fail, getNsByID error: %s", err.Error())
+				limit.Error(err)
+				return
+			}
+			if len(resOfOneNs) != 0 {
+				ns, err := t.getNsByID(leafID)
+				if err != nil {
+					t.logger.Errorf("getNsByID favil, getNsByID error: %s", err.Error())
+					limit.Error(err)
+				} else {
+					nsResult[ns] = &resOfOneNs
+					resultChan <- nsResult
+				}
+			} else {
+				// release the limit when search nothing.
+				limit.Release()
+			}
+
+		}(leafID)
+	}
+	limit.Wait()
+	if fail {
+		return nil, errors.New("SearchResourceByNs fail")
 	}
 
 	return result, nil

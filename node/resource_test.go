@@ -127,7 +127,7 @@ func TestSearchResource(t *testing.T) {
 	search1_2.Fuzzy = true
 	res, err := tree.SearchResourceByNs(rootNode, "machine", search1_1)
 	if resMachine, ok := res["test1."+rootNode]; err != nil || len(res) != 1 || !ok {
-		t.Fatalf("search host 127.0.0.1 by not fuzzy type not match with expect")
+		t.Fatalf("search host 127.0.0.1 by not fuzzy type not match with expect, error: %v", err)
 	} else {
 		if ip, ok := (*resMachine)[0].ReadProperty("host"); !ok || ip != "127.0.0.1" {
 			t.Fatalf("search host 127.0.0.1 by not fuzzy type not match with expect")

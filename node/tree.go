@@ -2,10 +2,13 @@ package node
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/common"
+	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 )
 
@@ -32,21 +35,19 @@ type Tree struct {
 	Nodes   *Node
 	Cluster Cluster
 
-	nsIDCache nodeCache
-	nsNSCache nodeCache
-	RWsync    *sync.RWMutex
+	Cache *nodeCache
+	Mu    sync.RWMutex
 
 	logger *log.Logger
 }
 
 func NewTree(cluster Cluster) (*Tree, error) {
 	t := Tree{
-		Nodes:     &Node{NodeProperty{ID: rootID, Name: rootNode, Type: NonLeaf, MachineReg: NoMachineMatch}, []*Node{}},
-		Cluster:   cluster,
-		RWsync:    &sync.RWMutex{},
-		nsIDCache: nodeCache{&map[string]string{}, &sync.RWMutex{}},
-		nsNSCache: nodeCache{&map[string]string{}, &sync.RWMutex{}},
-		logger:    log.New("INFO", "tree", model.LogBackend),
+		Nodes:   &Node{NodeProperty{ID: rootID, Name: rootNode, Type: NonLeaf, MachineReg: NoMachineMatch}, []*Node{}},
+		Cluster: cluster,
+		Mu:      sync.RWMutex{},
+		logger:  log.New(config.C.LogConf.Level, "tree", model.LogBackend),
+		Cache:   &nodeCache{Data: map[string]string{}},
 	}
 	err := t.init()
 	return &t, err
@@ -66,6 +67,28 @@ func (t *Tree) init() error {
 		t.logger.Error("init nodeidKey fail:", err.Error())
 		return err
 	}
+	go func() {
+		start := time.Now()
+		allNodes, err := t.AllNodes()
+		if err != nil {
+			panic(err)
+		}
+
+		initCache, err := allNodes.initNsCache()
+		if err != nil {
+			panic(err)
+		}
+		t.Cache.Lock()
+		for k, v := range t.Cache.Data {
+			initCache.Set(k, v)
+		}
+		t.Cache.Data = initCache.Data
+		t.Cache.Unlock()
+		finishCacheInit := time.Now()
+		t.logger.Debugf("cache have %d item, init cost :%v",
+			t.Cache.Len(),
+			finishCacheInit.Sub(start))
+	}()
 	return nil
 }
 
@@ -110,8 +133,7 @@ func (t *Tree) saveTree() error {
 		t.logger.Errorf("Tree save fail: %s\n", err.Error())
 		return err
 	}
-	t.nsIDCache.Purge()
-	t.nsNSCache.Purge()
+	// TODO: purge cache or not
 	return t.Cluster.Update([]byte(rootNode), []byte(nodeDataKey), treeByte)
 }
 
@@ -155,7 +177,7 @@ func (t *Tree) appendResourceByNodeID(nodeId, resType string, appendRes model.Re
 	return UUID, err
 }
 
-func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
+func (t *Tree) templateOfNode(nodeId string) (map[string]string, error) {
 	return t.Cluster.ViewPrefix([]byte(nodeId), []byte(template))
 }
 
@@ -163,7 +185,7 @@ func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
 func (t *Tree) AllNodes() (*Node, error) {
 	v, err := t.allNodeByte()
 	if err != nil || len(v) == 0 {
-		t.logger.Errorf("get allNode fail: %s", err.Error())
+		t.logger.Errorf("get allNode fail: %v", err)
 		return nil, ErrGetNode
 	}
 
@@ -179,7 +201,7 @@ func (t *Tree) AllNodes() (*Node, error) {
 func (t *Tree) GetNodeByID(id string) (*Node, string, error) {
 	// Return GetNodeByNs if read ns from cache, becasue GetNodeByNs donot need read the whole tree.
 	// Update tree will purge cache, so cache can be trust.
-	NodeNs, ok := t.nsIDCache.Get(id)
+	NodeNs, ok := t.Cache.Get(id)
 	if ok {
 		node, err := t.GetNodeByNs(NodeNs)
 		return node, NodeNs, err
@@ -193,8 +215,8 @@ func (t *Tree) GetNodeByID(id string) (*Node, string, error) {
 	if err != nil {
 		t.logger.Errorf("get node by ID fail: %s.", err.Error())
 	}
-	if _, ok := t.nsIDCache.Get(id); !ok {
-		t.nsIDCache.Set(id, ns)
+	if _, ok := t.Cache.Get(id); !ok {
+		t.Cache.Set(id, ns)
 	}
 
 	return node, ns, err
@@ -203,14 +225,12 @@ func (t *Tree) GetNodeByID(id string) (*Node, string, error) {
 // getNsByID return id of node with name nodeName.
 func (t *Tree) getNsByID(id string) (string, error) {
 	var err error
-	ns, ok := t.nsIDCache.Get(id)
-
-	if !ok {
+	ns, ok := t.Cache.Get(id)
+	if !ok || ns == "" {
 		if _, ns, err = t.GetNodeByID(id); err != nil {
 			t.logger.Errorf("GetNodeByID fail when get id:%s, error: %s\n", id, err.Error)
 			return "", err
 		}
-
 	}
 	return ns, nil
 }
@@ -227,39 +247,40 @@ func (t *Tree) GetNodeByNs(ns string) (*Node, error) {
 }
 
 func (t *Tree) getIDByNs(ns string) (string, error) {
-	id, ok := t.nsNSCache.Get(ns)
+	id, ok := t.Cache.Get(ns)
 	// If cannot get Node from cache, get from tree and set cache.
-	if !ok {
+	if !ok || id == "" {
 		node, err := t.GetNodeByNs(ns)
 		if err != nil {
 			t.logger.Errorf("GetNodeByNs fail when get ns:%s, error: %s\n", ns, err.Error)
 			return "", err
 		}
 		id = node.ID
-		t.nsNSCache.Set(ns, node.ID)
+		t.Cache.Set(ns, node.ID)
 	}
 	return id, nil
 }
 
 // Return leaf node of the ns.
-func (t *Tree) Leaf(ns string, format string) ([]string, error) {
-	var childNsList []string
-	nodes, err := t.GetNodeByNs(ns)
+func (t *Tree) LeafIDs(ns string) ([]string, error) {
+	nodeId, err := t.getIDByNs(ns)
+	if nodeId == "" || err != nil {
+		return nil, err
+	}
+
+	leafIDs, ok := t.Cache.GetLeafID(nodeId)
+	if ok && len(leafIDs) != 0 {
+		return leafIDs, nil
+	}
+
+	// read the tree if not get from cache.
+	node, err := t.GetNodeByNs(ns)
 	if err != nil {
 		return nil, err
 	}
-	switch format {
-	case IDFormat:
-		childNsList, err = nodes.leafID()
-	case NsFormat:
-		childNsList, err = nodes.leafNs()
-		if err != nil {
-			return nil, err
-		}
-	default:
-		err = ErrInvalidParam
-	}
-	return childNsList, err
+	leafIDs, err = node.leafID()
+	t.Cache.Set(childCachePrefix+nodeId, strings.Join(leafIDs, ","))
+	return leafIDs, err
 }
 
 // NewNode create a node, return a pointer which point to node, and it bucketId. Property is preserved.
@@ -284,10 +305,9 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	var nodes, parent *Node
 	var err error
 	// Create Pool node not lock the tree, because create leaf will lock the tree.
-	if name != poolNode {
-		t.RWsync.Lock()
-		defer t.RWsync.Unlock()
-	}
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
+
 	if parentId == "-" {
 		// use the node as root node.
 		nodes = &newNode
@@ -301,7 +321,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 		}
 		parent, parentNs, err = nodes.GetByID(parentId)
 		if err != nil {
-			t.logger.Error("get parent id error:", parentId)
+			t.logger.Errorf("get parent id error，id: %s, error: %v", parentId, err)
 			return "", ErrGetParent
 		}
 
@@ -313,8 +333,11 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 			t.logger.Error("cannot create node under leaf, leaf nodeid:", parentId)
 			return "", ErrCreateNodeUnderLeaf
 		}
-
 		parent.Children = append(parent.Children, &newNode)
+		// if not create root/pool node, add node to cache.
+		if newNode.Name != rootNode && newNode.Name != poolNode {
+			t.Cache.AddNode(parent.ID, parentNs, &newNode)
+		}
 	}
 	t.Nodes = nodes
 
@@ -324,6 +347,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	}
 	// Create a now bucket fot this node.
 	if err := t.createBucketForNode(nodeId); err != nil {
+		t.Cache.DelNode(parent.ID, newNode.ID)
 		t.logger.Errorf("NewNode createNodeBucket fail, nodeid:%s, error: %s\n", nodeId, err.Error())
 		// Delete the new node in tree to rollback.
 		parent.Children = parent.Children[:len(parent.Children)-1]
@@ -356,7 +380,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 			if nodeType == Leaf {
 				k = k[len(template):]
 			}
-			if err = t.setResourceByNodeID(nodeId, k, resStore); err != nil {
+			if err = t.setResourceByNodeID(nodeId, k, []byte(resStore)); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when newnode %s, error: %s", nodeId, err.Error())
 			}
 		}
@@ -377,6 +401,8 @@ func (t *Tree) NewPool(parentId, offlineMatch string) (string, error) {
 }
 
 func (t *Tree) UpdateNode(ns, name, machineReg string) error {
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
 	allNodes, err := t.AllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
@@ -399,6 +425,8 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 
 // TODO: remove bucket
 func (t *Tree) DelNode(parentNs, delID string) error {
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
 	allNodes, err := t.AllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
