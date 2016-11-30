@@ -42,6 +42,26 @@ func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
 	return machineRes, nil
 }
 
+func (t *Tree) MachineRename(oldName, newName string) error {
+	location, err := t.SearchMachine(oldName)
+	if err != nil {
+		t.logger.Error("SearchMachine fail: %s", err.Error())
+		return err
+	}
+	if len(location) == 0 {
+		return errors.New("machine not found")
+	}
+	updateMap := map[string]string{HostnameProp: newName}
+	for ns, resId := range location {
+		if err := t.UpdateResourceByNs(ns, "machine", resId, updateMap); err != nil {
+			t.logger.Error("MachineRename fail and skip, oldname: %s, newname: %s, fail ns: %s, error: %s",
+				oldName, newName, ns, err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
 // Return the ns which MachineReg match the hostname.
 // If there is not ns be match, return the pool ns.
 func (t *Tree) MatchNs(hostname string) ([]string, error) {

@@ -3,7 +3,6 @@ package model
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/lodastack/registry/common"
 )
@@ -52,7 +51,7 @@ func NewResources(byteData []byte) (*Resources, error) {
 	rs := &Resources{}
 	resMaps := []map[string]string{}
 	if err := json.Unmarshal(byteData, &resMaps); err != nil {
-		return rs, fmt.Errorf("marshal bytes to map fail: %s", err.Error())
+		return rs, errors.New("marshal bytes to map fail: " + err.Error())
 	}
 
 	*rs = make([]Resource, len(resMaps))
@@ -76,25 +75,30 @@ func NewResource(resMap map[string]string) Resource {
 	return addRes
 }
 
-// Unmarshal the byte format data and stores the result
-// in the value pointed to Resources.
-func (rs *Resources) Unmarshal(raw []byte) error {
+// walkResourceFunc is the type of the function for each resource byte  visited by WalkRsByte.
+// The rByte argument is the byte of a resource.
+// The rs argument is the pointer to the method caller.
+//
+// If an error was returned, processing stops.
+type walkResourceFunc func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error)
+
+// walk the resources byte, process every resource by handler.
+func (rs *Resources) WalkRsByte(rsByte []byte, handler walkResourceFunc) ([]byte, error) {
 	*rs = make([]Resource, 0)
 	startPos, endPos := 0, 0
 	deliLen := 0
+	output := make([]byte, 0)
+	var err error
 
-	for index, byt := range raw {
+	for index, byt := range rsByte {
 		switch byt {
 		case deliByte:
 			// Count length of deliByte.
 			deliLen++
 		case endByte:
 			//  End of resources.
-			r := Resource{}
-			if err := r.Unmarshal(raw[startPos:index]); err != nil {
-				return fmt.Errorf("unmarshal resources fail: %s", err.Error())
-			} else {
-				*rs = append(*rs, r)
+			if output, err = handler(rsByte[startPos:index], true, rs, output); err != nil {
+				return nil, errors.New("process resource fail: " + err.Error())
 			}
 			goto END
 		case nilByte:
@@ -106,11 +110,8 @@ func (rs *Resources) Unmarshal(raw []byte) error {
 				// TODO: length or another utf8 byte.
 				case len(deliRes):
 					endPos = index
-					r := Resource{}
-					if err := r.Unmarshal(raw[startPos : endPos-len(deliRes)+1]); err != nil {
-						return fmt.Errorf("unmarshal byte to resource fail")
-					} else {
-						*rs = append(*rs, r)
+					if output, err = handler(rsByte[startPos:endPos-len(deliRes)+1], false, rs, output); err != nil {
+						return nil, errors.New("process resource fail: " + err.Error())
 					}
 					startPos = index
 				}
@@ -119,7 +120,58 @@ func (rs *Resources) Unmarshal(raw []byte) error {
 		}
 	}
 END:
-	return nil
+	return output, nil
+}
+
+// Unmarshal the byte to the method caller rs.
+func (rs *Resources) Unmarshal(raw []byte) error {
+	_, err := rs.WalkRsByte(raw, func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error) {
+		r := Resource{}
+		if err := r.Unmarshal(rByte); err != nil {
+			return nil, errors.New("unmarshal resources fail: " + err.Error())
+		}
+		*rs = append(*rs, r)
+		return nil, nil
+	})
+	return err
+}
+
+// Update resource with resourceID by updateMap.
+// NOTE: will not change resource ID.
+func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byte, error) {
+	return (&Resources{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error) {
+		r := Resource{}
+		if len(rByte) == 0 {
+			return nil, errors.New("UpdateResByID fail: empty resource input")
+		}
+		err := r.Unmarshal(rByte)
+		if err != nil {
+			return nil, errors.New("UpdateResByID unmarshal resources fail: " + err.Error())
+		}
+
+		// update the resource if resource ID match with expect.
+		if resID, _ := r.ID(); resID == ID {
+			for k, v := range updateMap {
+				if k == idKey {
+					continue
+				}
+				r.SetProperty(k, v)
+			}
+		}
+
+		rByte, err = r.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		if last {
+			output = append(output, rByte...)
+			output = append(output, endByte)
+		} else {
+			output = append(output, rByte...)
+			output = append(output, deliRes...)
+		}
+		return output, nil
+	})
 }
 
 // Size returns marshed bytes size.
@@ -158,7 +210,7 @@ func (rs *Resources) Marshal() ([]byte, error) {
 func (rs *Resources) AppendResourceByte(resByte []byte) error {
 	r := Resource{}
 	if err := r.Unmarshal(resByte); err != nil {
-		return fmt.Errorf("unmarshal resource fail")
+		return errors.New("unmarshal resource fail")
 	}
 	(*rs) = append((*rs), r)
 	return nil
@@ -195,7 +247,7 @@ func (r *Resource) Unmarshal(raw []byte) error {
 					if kvFlag == propertyKey {
 						kvFlag = propertyValue
 					} else {
-						return fmt.Errorf("unmarshal resource fail")
+						return errors.New("unmarshal resource fail")
 					}
 				case len(deliProp):
 					kvFlag = propertyKey
@@ -274,6 +326,11 @@ func (r *Resource) Marshal() ([]byte, error) {
 func (r *Resource) ReadProperty(key string) (string, bool) {
 	v, ok := (*r)[key]
 	return v, ok
+}
+
+// SetProperty set the k-v to resource.
+func (r *Resource) SetProperty(k, v string) {
+	(*r)[k] = v
 }
 
 // InitID create ID for the resource if not have, and return ID.
