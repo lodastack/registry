@@ -158,8 +158,12 @@ func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearc
 			nsResult := map[string]*model.Resources{}
 			resByte, err := t.getByteFromStore(leafID, resType)
 			// report error when getByteFromStore fail.
-			if err != nil || len(resByte) == 0 {
-				t.logger.Errorf("getByteFromStore fail or none input, id: %s, type: %s, input length:%d, error: %v",
+			if len(resByte) == 0 {
+				limit.Release()
+				return
+			}
+			if err != nil {
+				t.logger.Errorf("getByteFromStore fail or none input, id: %s, type: %s, input length:%d, error: %s",
 					leafID, resType, len(resByte), err.Error())
 				limit.Error(err)
 				return

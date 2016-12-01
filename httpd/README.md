@@ -46,104 +46,122 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 #### 1.1 新建节点
 只能在非叶子节点下新建节点。
 新建节点会同时创建节点ID，并创建节点对用存储bucket。
-需要提供3个参数：
-- parent: 父节点的节点ID
-- type: 节点类型，0为叶子节点，1为非叶子节点
-- name：节点名称，用于组成节点ns
-- matchreg: 机器政策匹配规则，如果新机器匹配到规则，则注册到该节点下。默认不进行匹配
+`POST`方法，url: `/api/v1/ns/:parentID`
+参数：
+- URI参数 parentID: 父节点的节点ID
+- QUERY参数 type: 节点类型，0为叶子节点，1为非叶子节点
+- QUERY参数 name：节点名称，用于组成节点ns
+- QUERY参数 matchreg: 机器政策匹配规则，如果新机器匹配到规则，则注册到该节点下。默认不进行匹配
 
-成功返回：返回新建节点ID
+成功返回：JSON数据，httpstatus为返回的http状态码，data为返回数据（字符串或JSON） **如非特别说明，ns及资源接口返回格式相同**
 
 例子  （初始节点ID为`0`）
 
     # 新建非叶子节点
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=0&type=1&name=product1"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/0?type=1&name=product1"
     #返回
-    98a6586c-4f4f-475c-9c5c-8d4e31d14cd2
+    {"httpstatus":200,"data":"7d697a60-a730-45ae-a69e-e52bc5d31116"}
     
     #新建叶子节点
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=0&type=0&name=server1"
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=0&type=0&name=server2&machinereg=server2-machine"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/0?type=0&name=server1"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/0?&type=0&name=server2&machinereg=server2-machine"
     
     #在prodect1.loda下新建叶子节点
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns?parent=prodect1-loda-NodeID&type=0&name=server1"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/7d697a60-a730-45ae-a69e-e52bc5d31116?type=0&name=server1"
 
 #### 1.2 查询节点
 查询全部节点
+`GET`方法, url: `/api/v1/ns/:ID`
+参数：
+- URI参数 ID: 查询的节点ID，0则查询全部节点。
 
-    curl "http://127.0.0.1:9991/api/v1/ns"
+    curl "http://127.0.0.1:9991/api/v1/ns/0"
     #返回
     {
-      "ID": "0",
-      "Name": "loda",
-      "Type": 1,
-      "MachineReg": "^$",
-      "Children": [
-        {
-          "Children": [],
-          "ID": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx",
-          "Name": "pool",
-          "Type": 0,
-          "MachineReg": "^$",
-        },
-        {
-         "ID": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx",
-          "Name": "product1",
-          "Type": 1,
-          "MachineReg": "^$",
-          "Children": [
-            {
-              "Children": [],
-              "ID": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx",
-              "Name": "server1",
-              "Type": 0,
-              "MachineReg": "^$"
-            }
-          ]
-        },
-        {
-          "Children": [],
-          "ID": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx",
-          "Name": "server1",
-          "Type": 0,
-          "MachineReg": "server"
-        },
-        {
-          "Children": [],
-          "ID": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx",
-          "Name": "server2",
-          "Type": 0,
-          "MachineReg": "server2-machine"
-        }
-      ]
-}
+      "httpstatus": 200,
+      "data": {
+        "children": [
+          {
+            "children": [],
+            "id": "3b9da565-5deb-41b7-a954-48d95695765b",
+            "name": "pool",
+            "type": 0,
+            "machinereg": "^$"
+          },
+          {
+            "children": [
+              {
+                "children": [],
+                "id": "bc48398c-4270-4f62-9e02-bca2bc948582",
+                "name": "server1",
+                "type": 0,
+                "machinereg": "^$"
+              }
+            ],
+            "id": "ee15f627-6d28-48ac-bbcd-ab2aeaef71b7",
+            "name": "product1",
+            "type": 1,
+            "machinereg": "product1"
+          },
+          {
+            "children": [],
+            "id": "04cc1d33-e6ca-40fd-b4b4-dc0677bcb009",
+            "name": "server1",
+            "type": 0,
+            "machinereg": "^$"
+          }
+        ],
+        "id": "0",
+        "name": "loda",
+        "type": 1,
+        "machinereg": "^$"
+      }
+     }
 
 根据节点ID查询节点
 
-    curl "http://127.0.0.1:9991/api/v1/ns?nodeid=Node-ID"
+    curl "http://127.0.0.1:9991/api/v1/ns/3b9da565-5deb-41b7-a954-48d95695765b"
     # 返回
-    {"Children":[],"ID":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx","Name":"server","Type":0,"MachineReg":"-"}
+    {
+      "httpstatus": 200,
+      "data": {
+        "children": [],
+        "id": "3b9da565-5deb-41b7-a954-48d95695765b",
+        "name": "pool",
+        "type": 0,
+        "machinereg": "^$"
+      }
+    }
 
 
 #### 1.3 修改节点
 
 根据参数修改ns的Name/MachineReg属性。如果未提供则保持不变。
+
+`PUT`方法, url: `/api/v1/ns/:ns`
 需要提供3个参数：
-- ns: 节点ns
+- URI参数 ns: 带修改的节点ns
 - name（可选）: 节点新name **此参数会改变此节点及子节点的ns，请注意**
 - machinereg（可选）: 修改节点的机器匹配规则，请根据需求慎重修改
 
-    curl -X PUT "http://127.0.0.1:9991/api/v1/ns?ns=product1.loda&machinereg=product1"
-    curl -X PUT "http://127.0.0.1:9991/api/v1/ns?ns=product3.loda&name=product2&machinereg=product2"
+    curl -X PUT "http://127.0.0.1:9991/api/v1/ns/product1.loda?machinereg=product1"
+    # 返回
+    {"httpstatus":200,"data":"success"}
+
+    curl -X PUT "http://127.0.0.1:9991/api/v1/ns/product3.loda?name=product2&machinereg=product2"
 
 #### 1.4 节点删除
 
 从节点删除一个子节点。
-需要提供2个参数：
-- parentns：父节点ns，删除这个节点下的子节点。
-- delid：需要删除的节点ID
 
-    curl -X DELETE "http://127.0.0.1:9991/api/v1/ns?parentns=loda&delid=24d049f1-681b-4683-8005-235db6233aae"
+`DELETE`方法, url: `/api/v1/ns/:ns/:delID`
+需要提供2个参数：
+- URI参数 ns：父节点ns，删除这个节点下的子节点。
+- URI参数 delID：需要删除的节点ID
+
+    curl -X DELETE "http://127.0.0.1:9991/api/v1/ns/loda/24d049f1-681b-4683-8005-235db6233aae"
+    # 返回
+    {"httpstatus":200,"data":"success"}
 
 ### 2 资源接口
 ---
@@ -151,93 +169,109 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 #### 2.1 设置资源
 
 只能在叶子节点下设置资源，目前只能设置全量资源，不能追加资源。
+
+`POST`方法, url: `/api/v1/resource/:ns/:resource`
 提供参数：
-- query参数 ns：资源所在的叶子节点ns
-- query参数resouce：资源类型
-- body参数：资源内容格式为maplist，系统会给每个资源***添加资源ID***
+- URI参数 ns：资源所在的叶子节点ns
+- URI参数 resouce：资源类型
+- body参数：资源内容格式为maplist，系统会给每个资源 ***添加资源ID***
 
 例子：
 
-    curl -d '[{"hostname":"127.0.0.2"},{"hostname":"127.0.0.1"}]' "http://127.0.0.1:9991/api/v1/resource?ns=pool.loda&resource=machine"
-    curl -d '[{"hostname":"127.0.0.2"},{"hostname":"127.0.0.3"}]' "http://127.0.0.1:9991/api/v1/resource?ns=server1.product1.loda&resource=machine"
+    curl -d '[{"hostname":"127.0.0.2"},{"hostname":"127.0.0.1"}]' "http://127.0.0.1:9991/api/v1/resource/pool.loda/machine"
+    # 返回
+    {"httpstatus":200,"data":"success"}
+    
+    curl -d '[{"hostname":"127.0.0.2"},{"hostname":"127.0.0.3"}]' "http://127.0.0.1:9991/api/v1/resource/server1.product1.loda/machine"
 
 #### 2.2 查询资源
 
 如果查询非叶子节点的某种资源(非模板)，则对该节点下所有叶子节点进行查询。
 
-提供参数:
-- query参数 nodeid: 资源所在节点的ID
-- query参数 ns：资源所在的叶子节点ns(ID优先级较高)
-- query参数resouce：资源类型
+`GET`方法, url: `/api/v1/resource/:ns/:resource`
+提供参数：
+- URI参数 ns：资源所在的叶子节点ns
+- URI参数 resouce：资源类型
 
 例子:
 
-     curl "http://127.0.0.1:9991/api/v1/resource?ns=server1.product1.loda&resource=machine"
-     curl "http://127.0.0.1:9991/api/v1/resource?ns=pool.loda&resource=machine"
-     curl "http://127.0.0.1:9991/api/v1/resource?nodeid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx&resource=machine"
+     curl "http://127.0.0.1:9991/api/v1/resource/server1.product1.loda/machine"
+     # 返回
+     {"httpstatus":200,"data":[{"_id":"2d472e17-09cc-475c-a937-5f21f829c355","hostname":"127.0.0.2"},{"_id":"642944d9-34f3-499b-826e-0585b988b46f","hostname":"127.0.0.3"}]}
+
+     curl "http://127.0.0.1:9991/api/v1/resource/pool.loda/machine"
+     curl "http://127.0.0.1:9991/api/v1/resource/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx/machine"
 
 #### 2.3 搜索资源
 
-提供参数:
-- query参数 ns：资源所在的叶子节点ns
-- query参数resouce：资源类型
-- query参数type: 搜索类型，fuzzy为模糊搜索。功能上同strings.contain()进行搜索
-- query参数k/v： 搜索的属性k-v
+`GET`方法, url: `/api/v1/search/:ns/:resource`
+提供参数：
+- URI参数 ns：资源所在的叶子节点ns
+- URI参数 resouce：资源类型
+- query参数 mod: 搜索类型，fuzzy为模糊搜索。功能上同strings.contain()进行搜索
+- query参数 k/v： 搜索的属性k-v
 
 例子:
 
-    curl "http://127.0.0.1:9991/api/v1/resource/search?ns=loda&resource=machine&k=hostname&v=127.0.0.2&type=exact"|jq
+    curl "http://127.0.0.1:9991/api/v1/search/loda/machine?k=hostname&v=127.0.0.2&mod=exact"|jq
     #返回
     {
-      "pool.loda": [
-        {
-          "_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx"",
-          "host": "127.0.0.2"
-        }
-      ],
-      "server1.product1.loda": [
-        {
-          "_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx"",
-          "host": "127.0.0.2"
-        }
-      ]
+      "httpstatus": 200,
+      "data": {
+        "pool.loda": [
+          {
+            "_id": "9e324584-17ff-4a12-99d4-78841c62b0bd",
+            "hostname": "127.0.0.2"
+          }
+        ],
+        "server1.product1.loda": [
+          {
+            "_id": "2d472e17-09cc-475c-a937-5f21f829c355",
+            "hostname": "127.0.0.2"
+          }
+        ]
+      }
     }
-    curl "http://127.0.0.1:9991/api/v1/resource/search?ns=loda&resource=machine&k=hostname&v=127.0.0.&type=fuzzy"|jq
+    curl "http://127.0.0.1:9991/api/v1/search/loda/machine?k=hostname&v=127.0.0.&mod=fuzzy"|jq
     #返回
     {
-      "pool.loda": [
-        {
-          "_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx"",
-          "host": "127.0.0.2"
-        },
-        {
-          "_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx"",
-          "host": "127.0.0.1"
-        }
-      ],
-      "server1.product1.loda": [
-        {
-          "_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx"",
-          "host": "127.0.0.2"
-        },
-        {
-          "_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx",
-          "host": "127.0.0.3"
-        }
-      ]
+      "httpstatus": 200,
+      "data": {
+        "pool.loda": [
+          {
+            "_id": "9e324584-17ff-4a12-99d4-78841c62b0bd",
+            "hostname": "127.0.0.2"
+          },
+          {
+            "_id": "689d63c2-14db-422a-b60d-ca6f66ec5348",
+            "hostname": "127.0.0.1"
+          }
+        ],
+        "server1.product1.loda": [
+          {
+            "_id": "2d472e17-09cc-475c-a937-5f21f829c355",
+            "hostname": "127.0.0.2"
+          },
+          {
+            "_id": "642944d9-34f3-499b-826e-0585b988b46f",
+            "hostname": "127.0.0.3"
+          }
+        ]
+      }
     }
 
 #### 2.4 修改资源
 
-PUT方法
-
+`PUT`方法, url: `api/v1/resource/:ns/:resource/:ID`
 提供参数:
-- query参数 ns: 修改节点
-- query参数 type: 修改资源类型
-- query参数 id: 修改资源ID
+- URI参数 ns: 修改节点
+- URI参数 resource: 修改资源类型
+- URI参数 ID: 修改资源ID
 - body map[string]string: 需要修改的k-v。会忽略修改ID的请求，并修改提交的其他数据。
 
-    curl -X PUT -d'{"comment":"new comment"}' "http://127.0.0.1:9991/api/v1/resource?ns=pool.loda&type=collect&id=bd64f882-db3e-4da3-b7ee-40ac7d966726"
+    curl -X PUT -d'{"comment":"new comment"}' "http://127.0.0.1:9991/api/v1/resource/pool.loda/collect/bd64f882-db3e-4da3-b7ee-40ac7d966726"
+    # 返回
+    {"httpstatus":200,"data":"success"}
 
 ### 3 注册接口
 ---
