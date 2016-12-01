@@ -32,7 +32,7 @@ func (mj *Node) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	var obj []byte
 	_ = obj
 	_ = err
-	buf.WriteString(`{"Children":`)
+	buf.WriteString(`{"children":`)
 	if mj.Children != nil {
 		buf.WriteString(`[`)
 		for i, v := range mj.Children {
@@ -58,13 +58,13 @@ func (mj *Node) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	} else {
 		buf.WriteString(`null`)
 	}
-	buf.WriteString(`,"ID":`)
+	buf.WriteString(`,"id":`)
 	fflib.WriteJsonString(buf, string(mj.ID))
-	buf.WriteString(`,"Name":`)
+	buf.WriteString(`,"name":`)
 	fflib.WriteJsonString(buf, string(mj.Name))
-	buf.WriteString(`,"Type":`)
+	buf.WriteString(`,"type":`)
 	fflib.FormatBits2(buf, uint64(mj.Type), 10, mj.Type < 0)
-	buf.WriteString(`,"MachineReg":`)
+	buf.WriteString(`,"machinereg":`)
 	fflib.WriteJsonString(buf, string(mj.MachineReg))
 	buf.WriteByte('}')
 	return nil
@@ -85,15 +85,15 @@ const (
 	ffj_t_Node_MachineReg
 )
 
-var ffj_key_Node_Children = []byte("Children")
+var ffj_key_Node_Children = []byte("children")
 
-var ffj_key_Node_ID = []byte("ID")
+var ffj_key_Node_ID = []byte("id")
 
-var ffj_key_Node_Name = []byte("Name")
+var ffj_key_Node_Name = []byte("name")
 
-var ffj_key_Node_Type = []byte("Type")
+var ffj_key_Node_Type = []byte("type")
 
-var ffj_key_Node_MachineReg = []byte("MachineReg")
+var ffj_key_Node_MachineReg = []byte("machinereg")
 
 func (uj *Node) UnmarshalJSON(input []byte) error {
 	fs := fflib.NewFFLexer(input)
@@ -154,7 +154,7 @@ mainparse:
 			} else {
 				switch kn[0] {
 
-				case 'C':
+				case 'c':
 
 					if bytes.Equal(ffj_key_Node_Children, kn) {
 						currentKey = ffj_t_Node_Children
@@ -162,7 +162,7 @@ mainparse:
 						goto mainparse
 					}
 
-				case 'I':
+				case 'i':
 
 					if bytes.Equal(ffj_key_Node_ID, kn) {
 						currentKey = ffj_t_Node_ID
@@ -170,7 +170,7 @@ mainparse:
 						goto mainparse
 					}
 
-				case 'M':
+				case 'm':
 
 					if bytes.Equal(ffj_key_Node_MachineReg, kn) {
 						currentKey = ffj_t_Node_MachineReg
@@ -178,7 +178,7 @@ mainparse:
 						goto mainparse
 					}
 
-				case 'N':
+				case 'n':
 
 					if bytes.Equal(ffj_key_Node_Name, kn) {
 						currentKey = ffj_t_Node_Name
@@ -186,7 +186,7 @@ mainparse:
 						goto mainparse
 					}
 
-				case 'T':
+				case 't':
 
 					if bytes.Equal(ffj_key_Node_Type, kn) {
 						currentKey = ffj_t_Node_Type
@@ -492,13 +492,13 @@ func (mj *NodeProperty) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	var obj []byte
 	_ = obj
 	_ = err
-	buf.WriteString(`{"ID":`)
+	buf.WriteString(`{"id":`)
 	fflib.WriteJsonString(buf, string(mj.ID))
-	buf.WriteString(`,"Name":`)
+	buf.WriteString(`,"name":`)
 	fflib.WriteJsonString(buf, string(mj.Name))
-	buf.WriteString(`,"Type":`)
+	buf.WriteString(`,"type":`)
 	fflib.FormatBits2(buf, uint64(mj.Type), 10, mj.Type < 0)
-	buf.WriteString(`,"MachineReg":`)
+	buf.WriteString(`,"machinereg":`)
 	fflib.WriteJsonString(buf, string(mj.MachineReg))
 	buf.WriteByte('}')
 	return nil
@@ -517,13 +517,13 @@ const (
 	ffj_t_NodeProperty_MachineReg
 )
 
-var ffj_key_NodeProperty_ID = []byte("ID")
+var ffj_key_NodeProperty_ID = []byte("id")
 
-var ffj_key_NodeProperty_Name = []byte("Name")
+var ffj_key_NodeProperty_Name = []byte("name")
 
-var ffj_key_NodeProperty_Type = []byte("Type")
+var ffj_key_NodeProperty_Type = []byte("type")
 
-var ffj_key_NodeProperty_MachineReg = []byte("MachineReg")
+var ffj_key_NodeProperty_MachineReg = []byte("machinereg")
 
 func (uj *NodeProperty) UnmarshalJSON(input []byte) error {
 	fs := fflib.NewFFLexer(input)
@@ -584,7 +584,7 @@ mainparse:
 			} else {
 				switch kn[0] {
 
-				case 'I':
+				case 'i':
 
 					if bytes.Equal(ffj_key_NodeProperty_ID, kn) {
 						currentKey = ffj_t_NodeProperty_ID
@@ -592,7 +592,7 @@ mainparse:
 						goto mainparse
 					}
 
-				case 'M':
+				case 'm':
 
 					if bytes.Equal(ffj_key_NodeProperty_MachineReg, kn) {
 						currentKey = ffj_t_NodeProperty_MachineReg
@@ -600,7 +600,7 @@ mainparse:
 						goto mainparse
 					}
 
-				case 'N':
+				case 'n':
 
 					if bytes.Equal(ffj_key_NodeProperty_Name, kn) {
 						currentKey = ffj_t_NodeProperty_Name
@@ -608,7 +608,7 @@ mainparse:
 						goto mainparse
 					}
 
-				case 'T':
+				case 't':
 
 					if bytes.Equal(ffj_key_NodeProperty_Type, kn) {
 						currentKey = ffj_t_NodeProperty_Type

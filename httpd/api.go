@@ -111,15 +111,15 @@ func (s *Service) FormRedirect(r *http.Request, host string) string {
 }
 
 func (s *Service) initHandler() {
-	s.router.POST("/api/v1/resource", s.handlerResourceSet)
-	s.router.GET("/api/v1/resource", s.handlerResourceGet)
-	s.router.GET("/api/v1/resource/search", s.handlerSearch)
-	s.router.PUT("/api/v1/resource", s.handleResourcePut)
+	s.router.POST("/api/v1/resource/:ns/:resource", s.handlerResourceSet)
+	s.router.GET("/api/v1/resource/:ns/:resource", s.handlerResourceGet)
+	s.router.GET("/api/v1/search/:ns/:resource", s.handlerSearch)
+	s.router.PUT("/api/v1/resource/:ns/:resource/:ID", s.handleResourcePut)
 
-	s.router.POST("/api/v1/ns", s.handlerNsNew)
-	s.router.PUT("/api/v1/ns", s.handlerNsUpdate)
-	s.router.GET("/api/v1/ns", s.handlerNsGet)
-	s.router.DELETE("/api/v1/ns", s.handlerNsDel)
+	s.router.POST("/api/v1/ns/:parentID", s.handlerNsNew)
+	s.router.PUT("/api/v1/ns/:ns", s.handlerNsUpdate)
+	s.router.GET("/api/v1/ns/:ID", s.handlerNsGet)
+	s.router.DELETE("/api/v1/ns/:ns/:delID", s.handlerNsDel)
 
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 	s.router.PUT("/api/v1/agent/report", s.handlerAgentReport)
@@ -281,23 +281,18 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 	ReturnOK(w, "success")
 }
 
-func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	queryString := r.URL.Query()
-	res := queryString.Get("resource")
-	id := queryString.Get("nodeid")
-	ns := queryString.Get("ns")
+func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ns := ps.ByName("ns")
+	resType := ps.ByName("resource")
 
+	var err error
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r.Body); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	}
-
-	var err error
-	if id != "" {
-		err = s.tree.SetResourceByNodeID(id, res, buf.Bytes())
-	} else if ns != "" {
-		err = s.tree.SetResourceByNs(ns, res, buf.Bytes())
+	if ns != "" {
+		err = s.tree.SetResourceByNs(ns, resType, buf.Bytes())
 	} else {
 		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
 		return
@@ -310,17 +305,14 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 	}
 }
 
-func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	var resource *model.Resources
-	res := r.FormValue("resource")
-	id := r.FormValue("nodeid")
-	ns := r.FormValue("ns")
+	ns := ps.ByName("ns")
+	resType := ps.ByName("resource")
 
-	if id != "" {
-		resource, err = s.tree.GetResourceByNodeID(id, res)
-	} else if ns != "" {
-		resource, err = s.tree.GetResourceByNs(ns, res)
+	if ns != "" {
+		resource, err = s.tree.GetResourceByNs(ns, resType)
 	} else {
 		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
 		return
@@ -336,11 +328,10 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 	ReturnJson(w, 200, resource)
 }
 
-func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	queryString := r.URL.Query()
-	ns := queryString.Get("ns")
-	id := queryString.Get("id")
-	resType := queryString.Get("type")
+func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ns := ps.ByName("ns")
+	resType := ps.ByName("resource")
+	id := ps.ByName("ID")
 
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r.Body); err != nil {
@@ -361,16 +352,20 @@ func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ htt
 	}
 }
 
-func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var nodes *node.Node
 	var err error
-	nodeid := r.FormValue("nodeid")
+	nodeID := ps.ByName("ID")
 	// nodename := r.FormValue("nodename")
 
-	if nodeid == "" {
+	if nodeID == "" {
 		nodes, err = s.tree.AllNodes()
+		if err != nil {
+			ReturnServerError(w, err)
+			return
+		}
 	} else {
-		nodes, _, err = s.tree.GetNodeByID(nodeid)
+		nodes, _, err = s.tree.GetNodeByID(nodeID)
 	}
 	if err != nil && err != node.ErrNodeNotFound {
 		ReturnServerError(w, err)
@@ -384,30 +379,30 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 	ReturnJson(w, 200, nodes)
 }
 
-func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	var id string
+	parentID := ps.ByName("parentID")
 	queryString := r.URL.Query()
 	name := queryString.Get("name")
-	parent := queryString.Get("parent")
 	nodeType := queryString.Get("type")
 	machineMatch := queryString.Get("machinereg")
 
 	nodeT, err := strconv.Atoi(nodeType)
-	if name == "" || parent == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
+	if name == "" || parentID == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
 		ReturnServerError(w, fmt.Errorf("invalid information"))
 		return
 	}
 
-	if id, err = s.tree.NewNode(name, parent, nodeT, machineMatch); err != nil {
+	if id, err = s.tree.NewNode(name, parentID, nodeT, machineMatch); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
 	ReturnOK(w, id)
 }
 
-func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ns := r.FormValue("ns")
+func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ns := ps.ByName("ns")
 	name := r.FormValue("name")
 	machinereg := r.FormValue("machinereg")
 
@@ -418,10 +413,9 @@ func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, _ http
 	ReturnOK(w, "success")
 }
 
-func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	parentNs := r.FormValue("parentns")
-	delID := r.FormValue("delid")
-
+func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	parentNs := ps.ByName("ns")
+	delID := ps.ByName("delID")
 	if err := s.tree.DelNode(parentNs, delID); err != nil {
 		ReturnServerError(w, err)
 		return
@@ -431,18 +425,18 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 
 // search bucket by nodes/key(resource)/resource_property
 // TODO: return only or preperty ns or some property of resource from res.
-func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ns := r.FormValue("ns")
-	resource := r.FormValue("resource")
+func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ns := ps.ByName("ns")
+	resType := ps.ByName("resource")
 	k := r.FormValue("k")
 	v := r.FormValue("v")
-	searchType := r.FormValue("type")
+	searchMod := r.FormValue("mod")
 	search := model.ResourceSearch{
 		Key:   k,
 		Value: []byte(v),
-		Fuzzy: searchType == "fuzzy",
+		Fuzzy: searchMod == "fuzzy",
 	}
-	res, err := s.tree.SearchResourceByNs(ns, resource, search)
+	res, err := s.tree.SearchResourceByNs(ns, resType, search)
 	if err != nil {
 		s.logger.Errorf("handlerSearch SearchResourceByNs fail: %s", err.Error())
 		ReturnServerError(w, err)

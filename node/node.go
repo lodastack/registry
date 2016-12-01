@@ -31,18 +31,18 @@ var (
 )
 
 type NodeProperty struct {
-	ID   string
-	Name string
-	Type int
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Type int    `json:"type"`
 
 	// regexp of machine in one node,
 	// used to auto add a machine into nodes
-	MachineReg string
+	MachineReg string `json:"machinereg"`
 }
 
 type Node struct {
 	NodeProperty
-	Children []*Node
+	Children []*Node `json:"children"`
 }
 
 func (n *Node) IsLeaf() bool {
