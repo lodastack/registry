@@ -154,6 +154,8 @@ func cors(inner http.Handler) http.Handler {
 				`Content-Type`,
 				`X-CSRF-Token`,
 				`X-HTTP-Method-Override`,
+				`Authtoken`,
+				`X-Requested-With`,
 			}, ", "))
 		}
 
