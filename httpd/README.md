@@ -46,9 +46,9 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 #### 1.1 新建节点
 只能在非叶子节点下新建节点。
 新建节点会同时创建节点ID，并创建节点对用存储bucket。
-`POST`方法，url: `/api/v1/ns/:parentID`
+`POST`方法，url: `/api/v1/ns/:parentNs`
 参数：
-- URI参数 parentID: 父节点的节点ID
+- URI参数 parentNs: 父节点的节点Ns
 - QUERY参数 type: 节点类型，0为叶子节点，1为非叶子节点
 - QUERY参数 name：节点名称，用于组成节点ns
 - QUERY参数 matchreg: 机器政策匹配规则，如果新机器匹配到规则，则注册到该节点下。默认不进行匹配
@@ -58,24 +58,24 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 例子  （初始节点ID为`0`）
 
     # 新建非叶子节点
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns/0?type=1&name=product1"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/loda?type=1&name=product1"
     #返回
-    {"httpstatus":200,"data":"7d697a60-a730-45ae-a69e-e52bc5d31116"}
+    {"httpstatus":200,"data":null,"msg":"816442ae-5c9d-44fe-b03c-6bd6a4df7fc7"}
     
     #新建叶子节点
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns/0?type=0&name=server1"
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns/0?&type=0&name=server2&machinereg=server2-machine"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/loda?type=0&name=server1"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/loda?&type=0&name=server2&machinereg=server2-machine"
     
     #在prodect1.loda下新建叶子节点
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns/7d697a60-a730-45ae-a69e-e52bc5d31116?type=0&name=server1"
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns/product1.loda?type=0&name=server1"
 
 #### 1.2 查询节点
 查询全部节点
-`GET`方法, url: `/api/v1/ns/:ID`
+`GET`方法, url: `/api/v1/ns/:ns`
 参数：
-- URI参数 ID: 查询的节点ID，0则查询全部节点。
+- URI参数 ns: 查询的ns，`/loda`则查询全部节点。
 
-    curl "http://127.0.0.1:9991/api/v1/ns/0"
+    curl "http://127.0.0.1:9991/api/v1/ns/loda"
     #返回
     {
       "httpstatus": 200,
@@ -115,12 +115,13 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
         "name": "loda",
         "type": 1,
         "machinereg": "^$"
-      }
+      },
+      "msg": ""
      }
 
 根据节点ID查询节点
 
-    curl "http://127.0.0.1:9991/api/v1/ns/3b9da565-5deb-41b7-a954-48d95695765b"
+    curl "http://127.0.0.1:9991/api/v1/ns/product1.loda"
     # 返回
     {
       "httpstatus": 200,
@@ -130,7 +131,8 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
         "name": "pool",
         "type": 0,
         "machinereg": "^$"
-      }
+      },
+      "msg": ""
     }
 
 
@@ -146,7 +148,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
     curl -X PUT "http://127.0.0.1:9991/api/v1/ns/product1.loda?machinereg=product1"
     # 返回
-    {"httpstatus":200,"data":"success"}
+    {"httpstatus": 200, "data": "", "msg": "success"}
 
     curl -X PUT "http://127.0.0.1:9991/api/v1/ns/product3.loda?name=product2&machinereg=product2"
 
@@ -154,14 +156,13 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 从节点删除一个子节点。
 
-`DELETE`方法, url: `/api/v1/ns/:ns/:delID`
-需要提供2个参数：
-- URI参数 ns：父节点ns，删除这个节点下的子节点。
-- URI参数 delID：需要删除的节点ID
+`DELETE`方法, url: `/api/v1/ns/:ns`
+需要参数：
+- URI参数 ns：需要删除的ns
 
-    curl -X DELETE "http://127.0.0.1:9991/api/v1/ns/loda/24d049f1-681b-4683-8005-235db6233aae"
+    curl -X DELETE "http://127.0.0.1:9991/api/v1/ns/server2.loda"
     # 返回
-    {"httpstatus":200,"data":"success"}
+    {"httpstatus": 200, "data": "", "msg":"success"}
 
 ### 2 资源接口
 ---

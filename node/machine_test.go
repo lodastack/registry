@@ -75,11 +75,11 @@ func TestSearchMachine(t *testing.T) {
 		t.Fatal("NewTree error")
 	}
 
-	_, err = tree.NewNode("test1", rootID, Leaf, "test1")
+	_, err = tree.NewNode("test1", rootNode, Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", rootID, Leaf, "test2")
+	_, err = tree.NewNode("test2", rootNode, Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -140,19 +140,19 @@ func TestRegisterMachine(t *testing.T) {
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
-	_, err = tree.NewNode("test1", rootID, Leaf, "test1")
+	_, err = tree.NewNode("test1", rootNode, Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", rootID, Leaf, "test2")
+	_, err = tree.NewNode("test2", rootNode, Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test3", rootID, Leaf, "test-mu")
+	_, err = tree.NewNode("test3", rootNode, Leaf, "test-mu")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test4", rootID, Leaf, "test-multi")
+	_, err = tree.NewNode("test4", rootNode, Leaf, "test-multi")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -271,7 +271,7 @@ func BenchmarkRegisterNewMachine(b *testing.B) {
 	cnt := 100
 	for i := 0; i < cnt; i++ {
 		nodeName := fmt.Sprintf("test-%d", i)
-		_, err = tree.NewNode(nodeName, rootID, Leaf, nodeName)
+		_, err = tree.NewNode(nodeName, rootNode, Leaf, nodeName)
 		if err != nil {
 			b.Fatalf("create leaf fail: %s", err.Error())
 		}

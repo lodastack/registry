@@ -110,7 +110,7 @@ func (t *Tree) initKey(key string) error {
 			panic("create root node fail: " + err.Error())
 		}
 		// Create root pool node.
-		if _, err := t.NewNode(poolNode, rootID, Leaf, NoMachineMatch); err != nil {
+		if _, err := t.NewNode(poolNode, rootNode, Leaf, NoMachineMatch); err != nil {
 			panic("create root pool node fail: " + err.Error())
 		}
 	case nodeIdKey:
@@ -286,12 +286,12 @@ func (t *Tree) LeafIDs(ns string) ([]string, error) {
 // NewNode create a node, return a pointer which point to node, and it bucketId. Property is preserved.
 // First property argument is used as the machineReg.
 // TODO: Permission Check
-func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) (string, error) {
+func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) (string, error) {
 	var nodeId, matchReg string
 	var newNode Node
 	if nodeType == Root {
 		nodeId, name, nodeType, matchReg = rootID, rootNode, NonLeaf, NoMachineMatch
-		parentId = "-"
+		parentNs = "-"
 	} else {
 		if len(property) > 0 && property[0] != "" {
 			matchReg = property[0]
@@ -308,20 +308,19 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 
-	if parentId == "-" {
+	if parentNs == "-" {
 		// use the node as root node.
 		nodes = &newNode
 	} else {
-		var parentNs string
 		// append the node to the child node of its parent node.
 		nodes, err = t.AllNodes()
 		if err != nil {
-			t.logger.Errorf("get all nodes error, parent id: %s, error: %s", parentId, err.Error())
+			t.logger.Errorf("get all nodes error, parent ns: %s, error: %s", parentNs, err.Error())
 			return "", err
 		}
-		parent, parentNs, err = nodes.GetByID(parentId)
+		parent, err = nodes.GetByNs(parentNs)
 		if err != nil {
-			t.logger.Errorf("get parent id error，id: %s, error: %v", parentId, err)
+			t.logger.Errorf("get parent id ns: %s, error: %v", parentNs, err)
 			return "", ErrGetParent
 		}
 
@@ -330,7 +329,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 			return "", ErrNodeAlreadyExist
 		}
 		if parent.IsLeaf() {
-			t.logger.Error("cannot create node under leaf, leaf nodeid:", parentId)
+			t.logger.Error("cannot create node under leaf, leaf node:", parentNs)
 			return "", ErrCreateNodeUnderLeaf
 		}
 		parent.Children = append(parent.Children, &newNode)
@@ -358,7 +357,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 	}
 
 	// TODO: rollback if copy template fail
-	if parentId == "-" {
+	if parentNs == "-" {
 		for k, res := range model.RootTemplate {
 			resByte := []byte{}
 			if res != nil {
@@ -372,7 +371,7 @@ func (t *Tree) NewNode(name, parentId string, nodeType int, property ...string) 
 		}
 	} else {
 		// Read the template of parent node.
-		templateRes, err := t.templateOfNode(parentId)
+		templateRes, err := t.templateOfNode(parent.ID)
 		if err != nil {
 			return "nil", err
 		}
@@ -423,8 +422,20 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 	return nil
 }
 
-// TODO: remove bucket
-func (t *Tree) DelNode(parentNs, delID string) error {
+// DelNode delete node from tree, remove bucket.
+// TOOD: clear cache.
+func (t *Tree) DelNode(ns string) error {
+	nsSplit := strings.Split(ns, nodeDeli)
+	if len(nsSplit) < 2 {
+		return ErrInvalidParam
+	}
+	parentNs := strings.Join(nsSplit[1:], nodeDeli)
+	delID, err := t.getIDByNs(ns)
+	if err != nil {
+		t.logger.Error("get all nodes error when GetNodesById")
+		return err
+	}
+
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 	allNodes, err := t.AllNodes()
