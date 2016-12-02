@@ -41,22 +41,32 @@ func TestWriteStatus(t *testing.T) {
 		ReturnServerError(w, fmt.Errorf("test server error"))
 	}
 
+	var resp Response
 	req := httptest.NewRequest("GET", "http://loda.com/test", nil)
 	w := httptest.NewRecorder()
 	handlerOK(w, req)
-	if w.Code != 200 {
-		t.Fatal("WriteOK return http code not 200")
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response fail: %s", err.Error())
+	}
+	if w.Code != 200 || resp.Msg != "test pass" {
+		t.Fatal("ReturnOK return not match with expect,code: %d, resp: %+v", w.Code, resp)
 	}
 
 	w = httptest.NewRecorder()
 	handlerBadRequest(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatal("WriteBadRequest return http code not 400")
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response fail: %s", err.Error())
+	}
+	if w.Code != http.StatusBadRequest || resp.Msg != "test bad request" {
+		t.Fatal("ReturnBadRequest return not match with expect,code: %d, resp: %+v", w.Code, resp)
 	}
 
 	w = httptest.NewRecorder()
 	handlerServerError(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatal("WriteServerError return http code not 500")
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response fail: %s", err.Error())
+	}
+	if w.Code != http.StatusInternalServerError || resp.Msg != "test server error" {
+		t.Fatal("ReturnServerError return not match with expect,code: %d, resp: %+v", w.Code, resp)
 	}
 }

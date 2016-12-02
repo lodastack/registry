@@ -53,7 +53,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 - QUERY参数 name：节点名称，用于组成节点ns
 - QUERY参数 matchreg: 机器政策匹配规则，如果新机器匹配到规则，则注册到该节点下。默认不进行匹配
 
-成功返回：JSON数据，httpstatus为返回的http状态码，data为返回数据（字符串或JSON） **如非特别说明，ns及资源接口返回格式相同**
+成功返回：JSON数据`{"httpstatus": 200/400/404/500, "data":JSON, "msg":"error msg"}`，httpstatus为返回的http状态码，data为Json, msg为string **如非特别说明，ns及资源接口返回格式相同**
 
 例子  （初始节点ID为`0`）
 
