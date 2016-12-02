@@ -44,10 +44,10 @@ type TreeMethod interface {
 	AllNodes() (*Node, error)
 
 	// GetNodesById return exact node by nodeid.
-	GetNodeByID(id string) (*Node, string, error)
+	GetNodeByNs(id string) (*Node, error)
 
 	// NewNode create node.
-	NewNode(name, parentId string, nodeType int, property ...string) (string, error)
+	NewNode(name, parentNs string, nodeType int, property ...string) (string, error)
 
 	// Get resource by NodeID and resour type
 	GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error)
@@ -77,7 +77,7 @@ type TreeMethod interface {
 	UpdateNode(ns string, name, machineReg string) error
 
 	// Delete the node with delID from parentNs.
-	DelNode(parentNs, delID string) error
+	DelNode(ns string) error
 
 	// Update Resource By ns and ResourceID.
 	UpdateResourceByNs(ns, resType, resID string, updateMap map[string]string) error

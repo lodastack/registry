@@ -116,10 +116,10 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/search/:ns/:resource", s.handlerSearch)
 	s.router.PUT("/api/v1/resource/:ns/:resource/:ID", s.handleResourcePut)
 
-	s.router.POST("/api/v1/ns/:parentID", s.handlerNsNew)
+	s.router.POST("/api/v1/ns/:ns", s.handlerNsNew)
 	s.router.PUT("/api/v1/ns/:ns", s.handlerNsUpdate)
-	s.router.GET("/api/v1/ns/:ID", s.handlerNsGet)
-	s.router.DELETE("/api/v1/ns/:ns/:delID", s.handlerNsDel)
+	s.router.GET("/api/v1/ns/:ns", s.handlerNsGet)
+	s.router.DELETE("/api/v1/ns/:ns", s.handlerNsDel)
 
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 	s.router.PUT("/api/v1/agent/report", s.handlerAgentReport)
@@ -355,17 +355,17 @@ func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, ps ht
 func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var nodes *node.Node
 	var err error
-	nodeID := ps.ByName("ID")
+	ns := ps.ByName("ns")
 	// nodename := r.FormValue("nodename")
 
-	if nodeID == "" {
+	if ns == "" {
 		nodes, err = s.tree.AllNodes()
 		if err != nil {
 			ReturnServerError(w, err)
 			return
 		}
 	} else {
-		nodes, _, err = s.tree.GetNodeByID(nodeID)
+		nodes, err = s.tree.GetNodeByNs(ns)
 	}
 	if err != nil && err != node.ErrNodeNotFound {
 		ReturnServerError(w, err)
@@ -382,19 +382,19 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, ps httpro
 func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	var id string
-	parentID := ps.ByName("parentID")
+	parentNs := ps.ByName("ns")
 	queryString := r.URL.Query()
 	name := queryString.Get("name")
 	nodeType := queryString.Get("type")
 	machineMatch := queryString.Get("machinereg")
 
 	nodeT, err := strconv.Atoi(nodeType)
-	if name == "" || parentID == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
+	if name == "" || parentNs == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
 		ReturnServerError(w, fmt.Errorf("invalid information"))
 		return
 	}
 
-	if id, err = s.tree.NewNode(name, parentID, nodeT, machineMatch); err != nil {
+	if id, err = s.tree.NewNode(name, parentNs, nodeT, machineMatch); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
@@ -414,9 +414,8 @@ func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	parentNs := ps.ByName("ns")
-	delID := ps.ByName("delID")
-	if err := s.tree.DelNode(parentNs, delID); err != nil {
+	ns := ps.ByName("ns")
+	if err := s.tree.DelNode(ns); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
