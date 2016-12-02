@@ -11,6 +11,7 @@ var errMarshalOutput = errors.New("Marshal JSON output fail.")
 type Response struct {
 	Code int         `json:"httpstatus"`
 	Data interface{} `json:"data"`
+	Msg  string      `json:"msg"`
 }
 
 func (r *Response) Write(w http.ResponseWriter) {
@@ -28,22 +29,22 @@ func (r *Response) Write(w http.ResponseWriter) {
 
 // Return 200 http status.
 func ReturnOK(w http.ResponseWriter, msg string) {
-	(&Response{Code: http.StatusOK, Data: msg}).Write(w)
+	(&Response{Code: http.StatusOK, Msg: msg}).Write(w)
 }
 
 // Return 404 http status.
 func ReturnNotFound(w http.ResponseWriter, msg string) {
-	(&Response{Code: http.StatusNotFound, Data: msg}).Write(w)
+	(&Response{Code: http.StatusNotFound, Msg: msg}).Write(w)
 }
 
 // Return 400 http status.
 func ReturnBadRequest(w http.ResponseWriter, err error) {
-	(&Response{Code: http.StatusBadRequest, Data: err.Error()}).Write(w)
+	(&Response{Code: http.StatusBadRequest, Msg: err.Error()}).Write(w)
 }
 
 // Return 500 http status.
 func ReturnServerError(w http.ResponseWriter, err error) {
-	(&Response{Code: http.StatusInternalServerError, Data: err.Error()}).Write(w)
+	(&Response{Code: http.StatusInternalServerError, Msg: err.Error()}).Write(w)
 }
 
 func ReturnJson(w http.ResponseWriter, httpStatus int, returnJson interface{}) {
