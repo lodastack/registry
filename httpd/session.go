@@ -36,9 +36,10 @@ func (ls *LodaSession) Get(i interface{}) interface{} {
 
 // Set sets the session value associated to the given key.
 func (ls *LodaSession) Set(k, v interface{}) {
+	ls.clean(v)
 	ls.Mux.Lock()
-	defer ls.Mux.Unlock()
 	ls.SessionMap[k] = v
+	ls.Mux.Unlock()
 }
 
 // Delete removes the session value associated to the given key.
@@ -46,4 +47,24 @@ func (ls *LodaSession) Delete(k interface{}) {
 	ls.Mux.Lock()
 	defer ls.Mux.Unlock()
 	ls.SessionMap[k] = nil
+	delete(ls.SessionMap, k)
+}
+
+// Clean dirty data in session
+func (ls *LodaSession) clean(uid interface{}) {
+	uidStr, ok := uid.(string)
+	if !ok {
+		return
+	}
+	ls.Mux.Lock()
+	defer ls.Mux.Unlock()
+	for k, v := range ls.SessionMap {
+		if valueStr, ok := v.(string); ok {
+			if valueStr == uidStr {
+				ls.SessionMap[k] = nil
+				delete(ls.SessionMap, k)
+				break
+			}
+		}
+	}
 }
