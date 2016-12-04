@@ -43,50 +43,50 @@ var (
 		"interval":         "10",
 		"measurement_type": "CPU",
 	}, Resource{
-		"comment":          "机器磁盘 inode 使用率",
-		"name":             "disk.inodes.used.percent",
+		"comment":          "文件系统 inode 使用率",
+		"name":             "fs.inodes.used.percent",
 		"interval":         "120",
-		"measurement_type": "DISK",
+		"measurement_type": "FS",
 	}, Resource{
-		"comment":          "机器磁盘使用率",
-		"name":             "disk.used.percent",
+		"comment":          "文件系统空间使用率",
+		"name":             "fs.space.used.percent",
 		"interval":         "120",
-		"measurement_type": "DISK",
+		"measurement_type": "FS",
 	}, Resource{
-		"comment":          "检测文件系统故障. 0 表示文件系统为只读, 1表示文件系统正常",
-		"name":             "fs.disk.rw",
+		"comment":          "检测文件系统故障. 0 表示文件系统读写故障, 1表示文件系统正常",
+		"name":             "fs.files.rw",
 		"interval":         "300",
 		"measurement_type": "FS",
 	}, Resource{
 		"comment":          "整个系统被分配的file handles",
-		"name":             "fs.files.allocated",
+		"name":             "kernel.files.allocated",
 		"interval":         "300",
-		"measurement_type": "FS",
+		"measurement_type": "KERNEL",
 	}, Resource{
 		"comment":          "整个系统剩余可以分配的 file handles",
-		"name":             "fs.files.left",
+		"name":             "kernel.files.left",
 		"interval":         "300",
-		"measurement_type": "FS",
+		"measurement_type": "KERNEL",
 	}, Resource{
 		"comment":          "整个系统所有进程能够打开的最多文件数",
-		"name":             "fs.files.max",
+		"name":             "kernel.files.max",
 		"interval":         "300",
-		"measurement_type": "FS",
+		"measurement_type": "KERNEL",
 	}, Resource{
 		"comment":          "整个系统的file handles 的使用率",
-		"name":             "fs.files.used.percent",
+		"name":             "kernel.files.used.percent",
 		"interval":         "300",
-		"measurement_type": "FS",
+		"measurement_type": "KERNEL",
 	}, Resource{
 		"comment":          "CPU等待 IO 操作时间",
-		"name":             "io.await",
+		"name":             "disk.io.await",
 		"interval":         "10",
-		"measurement_type": "IO",
+		"measurement_type": "DISK",
 	}, Resource{
 		"comment":          "io使用率",
-		"name":             "io.util",
+		"name":             "disk.io.util",
 		"interval":         "10",
-		"measurement_type": "IO",
+		"measurement_type": "DISK",
 	}, Resource{
 		"collect_type":     "FLOW",
 		"degree":           "0",
@@ -106,7 +106,7 @@ var (
 		"measurement_type": "KERNEL",
 	}, Resource{
 		"comment":          "服务器心跳",
-		"name":             "machine.heartbeat",
+		"name":             "agent.alive",
 		"interval":         "10",
 		"measurement_type": "HEALTH",
 	}, Resource{
@@ -157,7 +157,7 @@ var (
 		"measurement_type": "NET",
 	}, Resource{
 		"comment":          "正在使用（正在侦听）的TCP socket 数量",
-		"name":             "net.sockets.tcp.inuse",
+		"name":             "net.tcp.inuse",
 		"interval":         "10",
 		"measurement_type": "NET",
 	}, Resource{
@@ -189,10 +189,10 @@ var (
 		"parameters":       "-x loda",
 	}, Resource{
 		"bin_path":         "/usr/local/registry/bin/registry",
-		"comment":          "registry",
+		"comment":          "registry service",
 		"interval":         "10",
 		"measurement_type": "PROC",
-		"name":             "bin.registry",
+		"name":             "registry",
 	},*/
 	}
 	RootTemplate map[string]Resources = map[string]Resources{
