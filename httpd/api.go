@@ -294,7 +294,7 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, ps 
 		return
 	}
 	if ns != "" {
-		err = s.tree.SetResourceByNs(ns, resType, buf.Bytes())
+		err = s.tree.SetResource(ns, resType, buf.Bytes())
 	} else {
 		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
 		return
@@ -314,7 +314,7 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, ps 
 	resType := ps.ByName("resource")
 
 	if ns != "" {
-		resource, err = s.tree.GetResourceByNs(ns, resType)
+		resource, err = s.tree.GetResource(ns, resType)
 	} else {
 		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
 		return
@@ -346,7 +346,7 @@ func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
-	if err := s.tree.UpdateResourceByNs(ns, resType, id, updateMap); err != nil {
+	if err := s.tree.UpdateResource(ns, resType, id, updateMap); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	} else {
@@ -367,7 +367,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, ps httpro
 			return
 		}
 	} else {
-		nodes, err = s.tree.GetNodeByNs(ns)
+		nodes, err = s.tree.GetNode(ns)
 	}
 	if err != nil && err != node.ErrNodeNotFound {
 		ReturnServerError(w, err)
@@ -437,7 +437,7 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, ps httpr
 		Value: []byte(v),
 		Fuzzy: searchMod == "fuzzy",
 	}
-	res, err := s.tree.SearchResourceByNs(ns, resType, search)
+	res, err := s.tree.SearchResource(ns, resType, search)
 	if err != nil {
 		s.logger.Errorf("handlerSearch SearchResourceByNs fail: %s", err.Error())
 		ReturnServerError(w, err)

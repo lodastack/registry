@@ -44,7 +44,7 @@ type TreeMethod interface {
 	AllNodes() (*Node, error)
 
 	// GetNodesById return exact node by nodeid.
-	GetNodeByNs(id string) (*Node, error)
+	GetNode(id string) (*Node, error)
 
 	// NewNode create node.
 	NewNode(name, parentNs string, nodeType int, property ...string) (string, error)
@@ -53,16 +53,16 @@ type TreeMethod interface {
 	GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error)
 
 	// Get resource by NodeName and resour type
-	GetResourceByNs(NodeName string, ResourceType string) (*model.Resources, error)
+	GetResource(NodeName string, ResourceType string) (*model.Resources, error)
 
 	// Set Resource to node with nodeid.
 	SetResourceByNodeID(nodeId, resType string, ResByte []byte) error
 
 	// Set resource to node with nodename.
-	SetResourceByNs(nodeName, resType string, ResByte []byte) error
+	SetResource(nodeName, resType string, ResByte []byte) error
 
 	// SearchResourceByNs return the map[ns]resources which match the search.
-	SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error)
+	SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error)
 
 	// Return leaf child node of the ns.
 	LeafIDs(ns string) ([]string, error)
@@ -80,7 +80,7 @@ type TreeMethod interface {
 	DelNode(ns string) error
 
 	// Update Resource By ns and ResourceID.
-	UpdateResourceByNs(ns, resType, resID string, updateMap map[string]string) error
+	UpdateResource(ns, resType, resID string, updateMap map[string]string) error
 
 	// Update hostname property of machine resource.
 	MachineRename(oldName, newName string) error

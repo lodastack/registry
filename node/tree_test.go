@@ -30,14 +30,14 @@ func TestCreateNode(t *testing.T) {
 	if leafID, err = tree.NewNode("l1", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	if err := tree.setResourceByNodeID(leafID, "test", []byte("test")); err != nil {
+	if err := tree.setByteToStore(leafID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to leafID fail: %s", err.Error())
 	}
 	// Test reate NonLeaf node and create bucket.
 	if nonLeafID, err = tree.NewNode("n1", rootNode, NonLeaf); err != nil {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
-	if err := tree.setResourceByNodeID(nonLeafID, "test", []byte("test")); err != nil {
+	if err := tree.setByteToStore(nonLeafID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to nonLeafID fail: %s", err.Error())
 	}
 	// Test reate node under leaf node and create bucket.
@@ -51,7 +51,7 @@ func TestCreateNode(t *testing.T) {
 	if childID, err = tree.NewNode("n1", "n1."+rootNode, NonLeaf); err != nil {
 		t.Fatalf("create node behind nonLeaf node fail: %s\n", err.Error())
 	}
-	if err := tree.setResourceByNodeID(childID, "test", []byte("test")); err != nil {
+	if err := tree.setByteToStore(childID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to childID fail: %s", err.Error())
 	}
 }
@@ -76,7 +76,7 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
 
-	if res, err := tree.GetResourceByNs(rootNode, template+"collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResource(rootNode, template+"collect"); err != nil || len(*res) != 31 {
 		t.Fatalf("get root collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
 	if res, err := tree.GetResourceByNodeID(nonLeafID, template+"collect"); err != nil || len(*res) != 31 {
@@ -102,7 +102,7 @@ func TestUpdateTemplate(t *testing.T) {
 	}
 
 	resourceByte, _ := json.Marshal(resMap1)
-	err = tree.SetResourceByNs(rootNode, template+"collect", resourceByte)
+	err = tree.SetResource(rootNode, template+"collect", resourceByte)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -135,7 +135,7 @@ func TestInitPoolNode(t *testing.T) {
 	}
 
 	// Test root pool node.
-	if node, err := tree.GetNodeByNs(poolNode + nodeDeli + rootNode); err != nil || node.MachineReg != "^$" {
+	if node, err := tree.GetNode(poolNode + nodeDeli + rootNode); err != nil || node.MachineReg != "^$" {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 }
