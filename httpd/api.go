@@ -190,17 +190,23 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		v := s.session.Get(key)
 		log.Infof("Header AuthToken: %s - %s", key, v)
 		if v == nil {
-			ReturnJson(w, 403, "Not Authorized")
+			ReturnJson(w, 401, "Not Authorized")
 			return
 		}
 		uid, ok := v.(string)
 		if !ok {
-			ReturnJson(w, 403, "Not Authorized")
+			ReturnJson(w, 401, "Not Authorized")
+			return
+		}
+
+		list := strings.Split(r.URL.Path, "/")
+		if len(list) < 5 {
+			ReturnJson(w, 401, "Not Authorized")
 			return
 		}
 		// TODO: auth filter
-		if !permCheck(r.FormValue("ns"), uid, r.Method) {
-			ReturnJson(w, 403, "Not Authorized")
+		if !permCheck(list[4], uid, r.Method) {
+			ReturnJson(w, 401, "Not Authorized")
 			return
 		}
 		w.Header().Set(`UID`, uid)
