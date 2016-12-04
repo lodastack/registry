@@ -10,33 +10,6 @@ var (
 	defaultResourceWorker = 100
 )
 
-// GetResource return the ResourceType resource belong to the node with NodeId.
-// TODO: Permission Check
-func (t *Tree) GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error) {
-	ns, err := t.getNsByID(NodeId)
-	if err != nil {
-		t.logger.Errorf("get ns error when get resource: %s", err.Error())
-		return nil, err
-	}
-	return t.GetResourceByNs(ns, ResourceType)
-}
-
-// GetResource return the ResourceType resource belong to the node with NodeName.
-// TODO: Permission Check
-func (t *Tree) GetResourceByNs(ns string, resourceType string) (*model.Resources, error) {
-	node, err := t.GetNodeByNs(ns)
-	if err != nil {
-		t.logger.Errorf("get resource fail because get node by ns fail, ns: %s, resource: %s", ns, resourceType)
-		return nil, err
-	}
-
-	// If get resource of NonLeaf, get resource at its leaf child node.
-	if !node.AllowResource(resourceType) {
-		return t.GetResourceFromNonLeaf(node, resourceType)
-	}
-	return t.getResFromStore(node.ID, resourceType)
-}
-
 func (t *Tree) getResFromStore(nodeId, resourceType string) (*model.Resources, error) {
 	resByte, err := t.getByteFromStore(nodeId, resourceType)
 	if err != nil {
@@ -45,34 +18,28 @@ func (t *Tree) getResFromStore(nodeId, resourceType string) (*model.Resources, e
 	resources := new(model.Resources)
 	err = resources.Unmarshal(resByte)
 	if err != nil && err != ErrEmptyRes {
-		t.logger.Error("GetResourceByNodeID fail:", err, string(resByte))
+		t.logger.Errorf("unmarshal resource fail, error: %s, data: %s:", err, string(resByte))
 		return nil, err
 	}
 	return resources, nil
 }
 
-func (t *Tree) UpdateResourceByNs(ns, resType, resID string, updateMap map[string]string) error {
-	nodeId, err := t.getIDByNs(ns)
+// GetResource return the ResourceType resource belong to the node with NodeName.
+// TODO: Permission Check
+func (t *Tree) GetResource(ns string, resourceType string) (*model.Resources, error) {
+	node, err := t.GetNode(ns)
 	if err != nil {
-		t.logger.Errorf("getIDByNs fail: %s", err.Error())
-		return err
+		t.logger.Errorf("get resource fail because get node by ns fail, ns: %s, resource: %s", ns, resourceType)
+		return nil, err
 	}
-	resOldByte, err := t.getByteFromStore(nodeId, resType)
-	if err != nil || len(resOldByte) == 0 {
-		t.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %v", nodeId, resType, err)
-		return errors.New("get resource fail")
-	}
-	resNewByte, err := model.UpdateResByID(resOldByte, resID, updateMap)
-	if err != nil {
-		t.logger.Errorf("UpdateResourceByNs fail becource update error: %s", err.Error())
-		return err
-	}
-	return t.setResourceByNodeID(nodeId, resType, resNewByte)
-}
 
-func (t *Tree) GetResourceFromNonLeaf(nonLeaf *Node, resourceType string) (*model.Resources, error) {
+	if node.AllowResource(resourceType) {
+		return t.getResFromStore(node.ID, resourceType)
+	}
+
+	// Return all resource of the node's child leaf if get resource from NonLeaf.
 	allRes := model.Resources{}
-	leafIDs, err := nonLeaf.leafID()
+	leafIDs, err := node.leafID()
 	if err != nil {
 		return nil, err
 	}
@@ -87,16 +54,62 @@ func (t *Tree) GetResourceFromNonLeaf(nonLeaf *Node, resourceType string) (*mode
 	return &allRes, nil
 }
 
+// GetResource return the ResourceType resource belong to the node with NodeId.
+// TODO: Permission Check
+func (t *Tree) GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error) {
+	ns, err := t.getNsByID(NodeId)
+	if err != nil {
+		t.logger.Errorf("get ns error when get resource: %s", err.Error())
+		return nil, err
+	}
+	return t.GetResource(ns, ResourceType)
+}
+
+func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
+	nodeId, err := t.getIDByNs(ns)
+	if err != nil {
+		t.logger.Errorf("getIDByNs fail: %s", err.Error())
+		return err
+	}
+	resOldByte, err := t.getByteFromStore(nodeId, resType)
+	if err != nil || len(resOldByte) == 0 {
+		t.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %v", nodeId, resType, err)
+		return errors.New("get resource fail")
+	}
+	resNewByte, err := model.UpdateResByID(resOldByte, resID, updateMap)
+	if err != nil {
+		t.logger.Errorf("UpdateResource fail becource update error: %s", err.Error())
+		return err
+	}
+	return t.setByteToStore(nodeId, resType, resNewByte)
+}
+
+// Append one resource to ns.
+func (t *Tree) appendResourceByNodeID(nodeId, resType string, appendRes model.Resource) (string, error) {
+	resOldByte, err := t.getByteFromStore(nodeId, resType)
+	if err != nil {
+		t.logger.Errorf("resByteOfNode error, length of resOldByte: %d, error: %s", len(resOldByte), err.Error())
+		return "", err
+	}
+	resByte, UUID, err := model.AppendResources(resOldByte, appendRes)
+	if err != nil {
+		t.logger.Errorf("AppendResources error, length of resOld: %d, appendRes: %+v, error: %s", len(resOldByte), appendRes, err.Error())
+		return "", err
+	}
+	err = t.setByteToStore(nodeId, resType, resByte)
+	return UUID, err
+}
+
 func (t *Tree) SetResourceByNodeID(nodeId, resType string, ResByte []byte) error {
 	ns, err := t.getNsByID(nodeId)
 	if err != nil {
 		return err
 	}
-	return t.SetResourceByNs(ns, resType, ResByte)
+	return t.SetResource(ns, resType, ResByte)
 }
 
-func (t *Tree) SetResourceByNs(ns, resType string, ResByte []byte) error {
-	node, err := t.GetNodeByNs(ns)
+func (t *Tree) SetResource(ns, resType string, ResByte []byte) error {
+	node, err := t.GetNode(ns)
 	if err != nil || node.ID == "" {
 		t.logger.Error("Get node by ns(%s) fail\n", ns)
 		return ErrGetNode
@@ -117,11 +130,11 @@ func (t *Tree) SetResourceByNs(ns, resType string, ResByte []byte) error {
 		return err
 	}
 
-	return t.setResourceByNodeID(node.ID, resType, resStore)
+	return t.setByteToStore(node.ID, resType, resStore)
 }
 
 // TODO: remove time and debug log
-func (t *Tree) SearchResourceByNs(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error) {
+func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error) {
 	result := map[string]*model.Resources{}
 	leafIDs, err := t.LeafIDs(ns)
 	if err != nil && len(leafIDs) == 0 {

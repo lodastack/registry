@@ -157,24 +157,8 @@ func (t *Tree) allNodeByte() ([]byte, error) {
 }
 
 // Set resource to node bucket.
-func (t *Tree) setResourceByNodeID(nodeId, resType string, resByte []byte) error {
+func (t *Tree) setByteToStore(nodeId, resType string, resByte []byte) error {
 	return t.Cluster.Update([]byte(nodeId), []byte(resType), resByte)
-}
-
-// Append one resource to ns.
-func (t *Tree) appendResourceByNodeID(nodeId, resType string, appendRes model.Resource) (string, error) {
-	resOld, err := t.getByteFromStore(nodeId, resType)
-	if err != nil {
-		t.logger.Error("resByteOfNode error, resOld: ", resOld, resOld, ", error:", err.Error())
-		return "", err
-	}
-	resByte, UUID, err := model.AppendResources(resOld, appendRes)
-	if err != nil {
-		t.logger.Errorf("AppendResources error, resOld: %s, appendRes: %+v, error: %s", resOld, appendRes, err.Error())
-		return "", err
-	}
-	err = t.setResourceByNodeID(nodeId, resType, resByte)
-	return UUID, err
 }
 
 func (t *Tree) templateOfNode(nodeId string) (map[string]string, error) {
@@ -203,7 +187,7 @@ func (t *Tree) GetNodeByID(id string) (*Node, string, error) {
 	// Update tree will purge cache, so cache can be trust.
 	NodeNs, ok := t.Cache.Get(id)
 	if ok {
-		node, err := t.GetNodeByNs(NodeNs)
+		node, err := t.GetNode(NodeNs)
 		return node, NodeNs, err
 	}
 	nodes, err := t.AllNodes()
@@ -236,7 +220,7 @@ func (t *Tree) getNsByID(id string) (string, error) {
 }
 
 // GetNodesById return exact node with name.
-func (t *Tree) GetNodeByNs(ns string) (*Node, error) {
+func (t *Tree) GetNode(ns string) (*Node, error) {
 	// TODO: use nodeidKey as cache
 	nodes, err := t.AllNodes()
 	if err != nil {
@@ -250,7 +234,7 @@ func (t *Tree) getIDByNs(ns string) (string, error) {
 	id, ok := t.Cache.Get(ns)
 	// If cannot get Node from cache, get from tree and set cache.
 	if !ok || id == "" {
-		node, err := t.GetNodeByNs(ns)
+		node, err := t.GetNode(ns)
 		if err != nil {
 			t.logger.Errorf("GetNodeByNs fail when get ns:%s, error: %s\n", ns, err.Error)
 			return "", err
@@ -274,7 +258,7 @@ func (t *Tree) LeafIDs(ns string) ([]string, error) {
 	}
 
 	// read the tree if not get from cache.
-	node, err := t.GetNodeByNs(ns)
+	node, err := t.GetNode(ns)
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +349,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 					panic("create root template fail: " + err.Error())
 				}
 			}
-			if err := t.SetResourceByNs(rootNode, k, resByte); err != nil {
+			if err := t.SetResource(rootNode, k, resByte); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when create rootNode, error: %s", err.Error())
 			}
 		}
@@ -379,7 +363,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			if nodeType == Leaf {
 				k = k[len(template):]
 			}
-			if err = t.setResourceByNodeID(nodeId, k, []byte(resStore)); err != nil {
+			if err = t.setByteToStore(nodeId, k, []byte(resStore)); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when newnode %s, error: %s", nodeId, err.Error())
 			}
 		}

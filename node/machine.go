@@ -21,9 +21,9 @@ func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
 		Value: []byte(hostname),
 		Fuzzy: false,
 	}
-	resMap, err := t.SearchResourceByNs(rootNode, "machine", searchHostname)
+	resMap, err := t.SearchResource(rootNode, "machine", searchHostname)
 	if err != nil {
-		t.logger.Errorf("SearchResourceByNs fail, error:%s", err.Error())
+		t.logger.Errorf("SearchResource fail, error:%s", err.Error())
 		return nil, err
 	}
 
@@ -53,7 +53,7 @@ func (t *Tree) MachineRename(oldName, newName string) error {
 	}
 	updateMap := map[string]string{HostnameProp: newName}
 	for ns, resId := range location {
-		if err := t.UpdateResourceByNs(ns, "machine", resId, updateMap); err != nil {
+		if err := t.UpdateResource(ns, "machine", resId, updateMap); err != nil {
 			t.logger.Error("MachineRename fail and skip, oldname: %s, newname: %s, fail ns: %s, error: %s",
 				oldName, newName, ns, err.Error())
 			return err
