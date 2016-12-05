@@ -85,8 +85,13 @@ func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]st
 }
 
 // Append one resource to ns.
-func (t *Tree) appendResourceByNodeID(nodeId, resType string, appendRes model.Resource) (string, error) {
-	resOldByte, err := t.getByteFromStore(nodeId, resType)
+func (t *Tree) AppendResource(ns, resType string, appendRes model.Resource) (string, error) {
+	nodeID, err := t.getIDByNs(ns)
+	if err != nil {
+		t.logger.Errorf("getID of ns %s fail when appendResource, error: %+v", ns, err)
+		return "", err
+	}
+	resOldByte, err := t.getByteFromStore(nodeID, resType)
 	if err != nil {
 		t.logger.Errorf("resByteOfNode error, length of resOldByte: %d, error: %s", len(resOldByte), err.Error())
 		return "", err
@@ -96,7 +101,7 @@ func (t *Tree) appendResourceByNodeID(nodeId, resType string, appendRes model.Re
 		t.logger.Errorf("AppendResources error, length of resOld: %d, appendRes: %+v, error: %s", len(resOldByte), appendRes, err.Error())
 		return "", err
 	}
-	err = t.setByteToStore(nodeId, resType, resByte)
+	err = t.setByteToStore(nodeID, resType, resByte)
 	return UUID, err
 }
 
@@ -131,6 +136,25 @@ func (t *Tree) SetResource(ns, resType string, ResByte []byte) error {
 	}
 
 	return t.setByteToStore(node.ID, resType, resStore)
+}
+
+func (t *Tree) DeleteResource(ns, resType, resId string) error {
+	nodeId, err := t.getIDByNs(ns)
+	if err != nil {
+		t.logger.Errorf("getIDByNs fail: %s", err.Error())
+		return err
+	}
+	resOldByte, err := t.getByteFromStore(nodeId, resType)
+	if err != nil || len(resOldByte) == 0 {
+		t.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %v", nodeId, resType, err)
+		return errors.New("get resource fail")
+	}
+
+	resNewByte, err := model.DeleteResource(resOldByte, resId)
+	if err != nil {
+		return err
+	}
+	return t.setByteToStore(nodeId, resType, resNewByte)
 }
 
 // TODO: remove time and debug log

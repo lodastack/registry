@@ -111,10 +111,12 @@ func (s *Service) FormRedirect(r *http.Request, host string) string {
 }
 
 func (s *Service) initHandler() {
-	s.router.POST("/api/v1/resource/:ns/:resource", s.handlerResourceSet)
-	s.router.GET("/api/v1/resource/:ns/:resource", s.handlerResourceGet)
-	s.router.GET("/api/v1/search/:ns/:resource", s.handlerSearch)
-	s.router.PUT("/api/v1/resource/:ns/:resource/:ID", s.handleResourcePut)
+	s.router.POST("/api/v1/resource/:ns/:type", s.handlerResourceSet)
+	s.router.POST("/api/v1/addresource/:ns/:type", s.handlerResourceAdd)
+	s.router.GET("/api/v1/resource/:ns/:type", s.handlerResourceGet)
+	s.router.GET("/api/v1/search/:ns/:type", s.handlerSearch)
+	s.router.PUT("/api/v1/resource/:ns/:type/:ID", s.handleResourcePut)
+	s.router.DELETE("/api/v1/resource/:ns/:type/:ID", s.handleResourceDel)
 
 	s.router.POST("/api/v1/ns/:ns", s.handlerNsNew)
 	s.router.PUT("/api/v1/ns/:ns", s.handlerNsUpdate)
@@ -131,7 +133,6 @@ func (s *Service) initHandler() {
 
 	s.router.POST("/api/v1/user/signin", s.HandlerSignin)
 	s.router.GET("/api/v1/user/signout", s.HandlerSignout)
-
 }
 
 func cors(inner http.Handler) http.Handler {
@@ -291,7 +292,7 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 
 func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ns := ps.ByName("ns")
-	resType := ps.ByName("resource")
+	resType := ps.ByName("type")
 
 	var err error
 	buf := new(bytes.Buffer)
@@ -317,7 +318,7 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, ps 
 	var err error
 	var resource *model.Resources
 	ns := ps.ByName("ns")
-	resType := ps.ByName("resource")
+	resType := ps.ByName("type")
 
 	if ns != "" {
 		resource, err = s.tree.GetResource(ns, resType)
@@ -336,9 +337,9 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, ps 
 	ReturnJson(w, 200, resource)
 }
 
-func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ns := ps.ByName("ns")
-	resType := ps.ByName("resource")
+	resType := ps.ByName("type")
 	id := ps.ByName("ID")
 
 	buf := new(bytes.Buffer)
@@ -355,6 +356,40 @@ func (s Service) handleResourcePut(w http.ResponseWriter, r *http.Request, ps ht
 	if err := s.tree.UpdateResource(ns, resType, id, updateMap); err != nil {
 		ReturnBadRequest(w, err)
 		return
+	} else {
+		ReturnOK(w, "success")
+	}
+}
+
+func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ns := ps.ByName("ns")
+	resType := ps.ByName("type")
+
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(r.Body); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	addResource := model.Resource{}
+	if err := json.Unmarshal(buf.Bytes(), &addResource); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+
+	delete(addResource, "_id")
+	if uuid, err := s.tree.AppendResource(ns, resType, addResource); err != nil {
+		ReturnServerError(w, err)
+	} else {
+		ReturnOK(w, uuid)
+	}
+}
+
+func (s *Service) handleResourceDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ns := ps.ByName("ns")
+	resType := ps.ByName("type")
+	resID := ps.ByName("ID")
+	if err := s.tree.DeleteResource(ns, resType, resID); err != nil {
+		ReturnServerError(w, err)
 	} else {
 		ReturnOK(w, "success")
 	}
@@ -434,7 +469,7 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, ps httpro
 // TODO: return only or preperty ns or some property of resource from res.
 func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ns := ps.ByName("ns")
-	resType := ps.ByName("resource")
+	resType := ps.ByName("type")
 	k := r.FormValue("k")
 	v := r.FormValue("v")
 	searchMod := r.FormValue("mod")

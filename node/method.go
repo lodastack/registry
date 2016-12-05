@@ -84,4 +84,10 @@ type TreeMethod interface {
 
 	// Update hostname property of machine resource.
 	MachineRename(oldName, newName string) error
+
+	// Append resource to ns.
+	AppendResource(ns, resType string, appendRes model.Resource) (string, error)
+
+	// Delete resource from ns.
+	DeleteResource(ns, resType, resId string) error
 }
