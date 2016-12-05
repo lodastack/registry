@@ -389,12 +389,10 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, ps httpro
 
 func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
-	var id string
 	parentNs := ps.ByName("ns")
-	queryString := r.URL.Query()
-	name := queryString.Get("name")
-	nodeType := queryString.Get("type")
-	machineMatch := queryString.Get("machinereg")
+	name := r.FormValue("name")
+	nodeType := r.FormValue("type")
+	machineMatch := r.FormValue("machinereg")
 
 	nodeT, err := strconv.Atoi(nodeType)
 	if name == "" || parentNs == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
@@ -402,11 +400,11 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 
-	if id, err = s.tree.NewNode(name, parentNs, nodeT, machineMatch); err != nil {
+	if _, err = s.tree.NewNode(name, parentNs, nodeT, machineMatch); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
-	ReturnOK(w, id)
+	ReturnOK(w, "success")
 }
 
 func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
