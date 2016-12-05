@@ -244,3 +244,22 @@ func TestUpdateResByID(t *testing.T) {
 		t.Fatalf("UpdateResByID not match with expect: %+v", *rs)
 	}
 }
+
+func TestDeleteResource(t *testing.T) {
+	rs := &Resources{}
+	newResByte, err := DeleteResource(boltByte, "H")
+	if err != nil {
+		t.Fatalf("DeleteResource error: %s", err.Error())
+	}
+	if err := rs.Unmarshal(newResByte); err != nil || len(*rs) != 1 || (*rs)[0][idKey] != "I" {
+		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rs)
+	}
+
+	newResByte, err = DeleteResource(boltByte, "I")
+	if err != nil {
+		t.Fatalf("DeleteResource error: %s", err.Error())
+	}
+	if err := rs.Unmarshal(newResByte); err != nil || len(*rs) != 1 || (*rs)[0][idKey] != "H" {
+		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rs)
+	}
+}

@@ -171,10 +171,11 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 只能在叶子节点下设置资源，目前只能设置全量资源，不能追加资源。
 
-`POST`方法, url: `/api/v1/resource/:ns/:resource`
+`POST`方法, url: `/api/v1/resource/:ns/:type`
+sss
 提供参数：
 - URI参数 ns：资源所在的叶子节点ns
-- URI参数 resouce：资源类型
+- URI参数 type：资源类型
 - body参数：资源内容格式为maplist，系统会给每个资源 ***添加资源ID***
 
 例子：
@@ -185,11 +186,27 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
     
     curl -d '[{"hostname":"127.0.0.2"},{"hostname":"127.0.0.3"}]' "http://127.0.0.1:9991/api/v1/resource/server1.product1.loda/machine"
 
-#### 2.2 查询资源
+#### 2.2 添加资源
+
+在节点下添加一个资源项
+
+`POST`方法, url: `/api/v1/addresource/:ns/:type`
+
+提供参数：
+- URI参数 ns：资源所在的叶子节点ns
+- URI参数 type： 需要添加的资源类型
+- body参数：需要添加的资源数据`map[string]string`, 自动生成ID
+
+    curl -X POST -d '{"comment": "loda", "action": "add resource"}' "http://127.0.0.1:9991/api/v1/addresource/pool.loda/doc"
+    # 返回
+    {"httpstatus":200,"data":null,"msg":"bebf14c6-d5ad-48df-9cfb-0c75f7d3a505"}
+
+#### 2.3 查询资源
 
 如果查询非叶子节点的某种资源(非模板)，则对该节点下所有叶子节点进行查询。
 
-`GET`方法, url: `/api/v1/resource/:ns/:resource`
+`GET`方法, url: `/api/v1/resource/:ns/:type`
+
 提供参数：
 - URI参数 ns：资源所在的叶子节点ns
 - URI参数 resouce：资源类型
@@ -203,12 +220,12 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
      curl "http://127.0.0.1:9991/api/v1/resource/pool.loda/machine"
      curl "http://127.0.0.1:9991/api/v1/resource/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxx/machine"
 
-#### 2.3 搜索资源
+#### 2.4 搜索资源
 
-`GET`方法, url: `/api/v1/search/:ns/:resource`
+`GET`方法, url: `/api/v1/search/:ns/:type`
 提供参数：
 - URI参数 ns：资源所在的叶子节点ns
-- URI参数 resouce：资源类型
+- URI参数 type：资源类型
 - query参数 mod: 搜索类型，fuzzy为模糊搜索。功能上同strings.contain()进行搜索
 - query参数 k/v： 搜索的属性k-v
 
@@ -261,18 +278,34 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
       }
     }
 
-#### 2.4 修改资源
+#### 2.5 修改资源
 
-`PUT`方法, url: `api/v1/resource/:ns/:resource/:ID`
+`PUT`方法, url: `api/v1/resource/:ns/:type/:ID`
+
 提供参数:
 - URI参数 ns: 修改节点
-- URI参数 resource: 修改资源类型
+- URI参数 type: 修改资源类型
 - URI参数 ID: 修改资源ID
 - body map[string]string: 需要修改的k-v。会忽略修改ID的请求，并修改提交的其他数据。
 
     curl -X PUT -d'{"comment":"new comment"}' "http://127.0.0.1:9991/api/v1/resource/pool.loda/collect/bd64f882-db3e-4da3-b7ee-40ac7d966726"
     # 返回
     {"httpstatus":200,"data":"success"}
+
+#### 2.6 删除资源
+
+在节点下删除一个资源项
+
+`DELETE`方法, url: `/api/v1/resource/:ns/:type/:ID`
+
+提供参数：
+- URI参数 ns：资源所在的叶子节点ns
+- URI参数 type： 需要删除的资源类型
+- URI参数 ID: 需要删除的资源ID
+
+    curl -X DELETE "http://127.0.0.1:9991/api/v1/resource/pool.loda/doc/xxxx-xxx-xxx-xxxxxxxxxxxxx"
+    # 返回
+    {"httpstatus":200,"data":null,"msg":"success"}
 
 ### 3 注册接口
 ---

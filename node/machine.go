@@ -109,15 +109,10 @@ func (t *Tree) RegisterMachine(newMachine model.Resource) (map[string]string, er
 
 	NsIDMap := map[string]string{}
 	for _, ns := range nsList {
-		nodeID, err := t.getIDByNs(ns)
+		UUID, err := t.AppendResource(ns, "machine", newMachine)
 		if err != nil {
-			t.logger.Errorf("getID of ns %s fail when register machine, the whole ns is: %+v, error: %+v", ns, nsList, err)
-			// TODO: rollback by RmResByMap(NsIDMap, "machine")
-			return nil, err
-		}
-		UUID, err := t.appendResourceByNodeID(nodeID, "machine", newMachine)
-		if err != nil {
-			t.logger.Errorf("append machine %+v to ns %s fail, ns list: %+v error: %+v", newMachine, ns, nsList, err)
+			t.logger.Errorf("append machine %+v to ns %s fail when register, the whole ns list: %+v error: %+v",
+				newMachine, ns, nsList, err)
 			// TODO: rollback by RmResByMap(NsIDMap, "machine")
 			return nil, err
 		}

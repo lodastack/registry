@@ -174,6 +174,40 @@ func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byt
 	})
 }
 
+// Delete resource by resourceID..
+func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
+	return (&Resources{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error) {
+		r := Resource{}
+		if len(rByte) == 0 {
+			return nil, errors.New("UpdateResByID fail: empty resource input")
+		}
+		err := r.Unmarshal(rByte)
+		if err != nil {
+			return nil, errors.New("UpdateResByID unmarshal resources fail: " + err.Error())
+		}
+
+		// skip append the the ID matched resource to ouput.
+		if resID, _ := r.ID(); resID == ID {
+			if last {
+				output = append(output, endByte)
+			}
+			return output, nil
+		}
+		rByte, err = r.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		if last {
+			output = append(output, rByte...)
+			output = append(output, endByte)
+		} else {
+			output = append(output, rByte...)
+			output = append(output, deliRes...)
+		}
+		return output, nil
+	})
+}
+
 // Size returns marshed bytes size.
 func (rs *Resources) Size() int {
 	var totalSize int
