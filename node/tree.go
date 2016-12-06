@@ -227,7 +227,7 @@ func (t *Tree) GetNode(ns string) (*Node, error) {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return nil, err
 	}
-	return nodes.GetByNs(ns)
+	return nodes.Get(ns)
 }
 
 func (t *Tree) getIDByNs(ns string) (string, error) {
@@ -302,7 +302,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			t.logger.Errorf("get all nodes error, parent ns: %s, error: %s", parentNs, err.Error())
 			return "", err
 		}
-		parent, err = nodes.GetByNs(parentNs)
+		parent, err = nodes.Get(parentNs)
 		if err != nil {
 			t.logger.Errorf("get parent id ns: %s, error: %v", parentNs, err)
 			return "", ErrGetParent
@@ -319,7 +319,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 		parent.Children = append(parent.Children, &newNode)
 		// if not create root/pool node, add node to cache.
 		if newNode.Name != rootNode && newNode.Name != poolNode {
-			t.Cache.AddNode(parent.ID, parentNs, &newNode)
+			t.Cache.Add(parent.ID, parentNs, &newNode)
 		}
 	}
 	t.Nodes = nodes
@@ -330,7 +330,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 	}
 	// Create a now bucket fot this node.
 	if err := t.createBucketForNode(nodeId); err != nil {
-		t.Cache.DelNode(parent.ID, newNode.ID)
+		t.Cache.Delete(parent.ID, newNode.ID)
 		t.logger.Errorf("NewNode createNodeBucket fail, nodeid:%s, error: %s\n", nodeId, err.Error())
 		// Delete the new node in tree to rollback.
 		parent.Children = parent.Children[:len(parent.Children)-1]
@@ -396,7 +396,7 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 		return ErrNodeAlreadyExist
 	}
 
-	node, err := allNodes.GetByNs(ns)
+	node, err := allNodes.Get(ns)
 	if err != nil {
 		t.logger.Errorf("GetByNs fail, error: %s", err.Error())
 		return err
@@ -438,7 +438,7 @@ func (t *Tree) DelNode(ns string) error {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return err
 	}
-	parentNode, err := allNodes.GetByNs(parentNs)
+	parentNode, err := allNodes.Get(parentNs)
 	if err != nil {
 		t.logger.Errorf("GetByNs fail, error: %s", err.Error())
 		return err

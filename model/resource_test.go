@@ -265,14 +265,14 @@ func TestDeleteResource(t *testing.T) {
 	}
 }
 
-func TestGetOneResource(t *testing.T) {
+func TestGetResource(t *testing.T) {
 	rl := ResourceList{}
 	if err := rl.Unmarshal(boltByte); err != nil {
 		t.Fatalf("unmarshal fail")
 		return
 	}
 	r := Resource{}
-	r, err := rl.GetOneResource("H")
+	r, err := rl.GetResource("H")
 	if err != nil {
 		t.Fatalf("get resource fail: %s", err.Error())
 	} else if r[idKey] != "H" || len(r) != 3 {
@@ -280,7 +280,7 @@ func TestGetOneResource(t *testing.T) {
 	}
 
 	r = Resource{}
-	r, err = rl.GetOneResource("I")
+	r, err = rl.GetResource("I")
 	if err != nil {
 		t.Fatalf("get resource fail: %s", err.Error())
 	} else if r[idKey] != "I" || len(r) != 3 {
@@ -288,7 +288,7 @@ func TestGetOneResource(t *testing.T) {
 	}
 
 	r = Resource{}
-	r, err = rl.GetOneResource("not exist")
+	r, err = rl.GetResource("not exist")
 	if err == nil {
 		t.Fatalf("get resource success not match expect")
 	}

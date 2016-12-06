@@ -50,7 +50,7 @@ func (n *Node) IsLeaf() bool {
 }
 
 func (n *Node) Exist(ns string) bool {
-	if _, err := n.GetByNs(ns); err == nil {
+	if _, err := n.Get(ns); err == nil {
 		return true
 	}
 	return false
@@ -216,7 +216,7 @@ func (n *Node) GetByID(nodeId string) (*Node, string, error) {
 }
 
 // GetByName return exact node by nodename.
-func (n *Node) GetByNs(ns string) (*Node, error) {
+func (n *Node) Get(ns string) (*Node, error) {
 	nsSplit := strings.Split(ns, nodeDeli)
 	if len(nsSplit) == 1 && ns == rootNode {
 		// return tree if get root.
@@ -303,7 +303,7 @@ func (i *nodeCache) GetLeafID(nodeId string) ([]string, bool) {
 }
 
 // AddNode add a node to NS_ID and child cache.
-func (i *nodeCache) AddNode(parentId, parentNs string, newNode *Node) {
+func (i *nodeCache) Add(parentId, parentNs string, newNode *Node) {
 	ns := newNode.Name + nodeDeli + parentNs
 	i.Set(newNode.ID, ns)
 	i.Set(ns, newNode.ID)
@@ -317,7 +317,7 @@ func (i *nodeCache) AddNode(parentId, parentNs string, newNode *Node) {
 }
 
 // DelNode delete a node from cache.
-func (i *nodeCache) DelNode(parentId, delId string) {
+func (i *nodeCache) Delete(parentId, delId string) {
 	delNs, _ := i.Get(delId)
 	i.Del(delNs, delId)
 	i.Del(delId, delNs)
