@@ -116,6 +116,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/resource/:ns/:type", s.handlerResourceGet)
 	s.router.GET("/api/v1/search/:ns/:type", s.handlerSearch)
 	s.router.PUT("/api/v1/resource/:ns/:type/:ID", s.handleResourcePut)
+	s.router.PUT("/api/v1/moveresource", s.handleResourceMove)
 	s.router.DELETE("/api/v1/resource/:ns/:type/:ID", s.handleResourceDel)
 
 	s.router.POST("/api/v1/ns/:ns", s.handlerNsNew)
@@ -290,6 +291,18 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 	ReturnOK(w, "success")
 }
 
+func (s *Service) handleResourceMove(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fromNs := r.FormValue("from")
+	toNs := r.FormValue("to")
+	resType := r.FormValue("type")
+	resId := r.FormValue("resid")
+	if err := s.tree.MoveResource(fromNs, toNs, resType, resId); err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnOK(w, "success")
+}
+
 func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ns := ps.ByName("ns")
 	resType := ps.ByName("type")
@@ -316,12 +329,12 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, ps 
 
 func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
-	var resource *model.Resources
+	var resList *model.ResourceList
 	ns := ps.ByName("ns")
 	resType := ps.ByName("type")
 
 	if ns != "" {
-		resource, err = s.tree.GetResource(ns, resType)
+		resList, err = s.tree.GetResourceList(ns, resType)
 	} else {
 		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
 		return
@@ -330,11 +343,11 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, ps 
 		ReturnServerError(w, err)
 		return
 	}
-	if len(*resource) == 0 {
+	if len(*resList) == 0 {
 		ReturnNotFound(w, "No resources found.")
 		return
 	}
-	ReturnJson(w, 200, resource)
+	ReturnJson(w, 200, resList)
 }
 
 func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

@@ -307,6 +307,18 @@ sss
     # 返回
     {"httpstatus":200,"data":null,"msg":"success"}
 
+#### 2.7 移动资源
+
+`PUT`方法, url: `/api/v1/moveresource`
+
+提供参数：
+- Query参数 from：资源当前所在的ns
+- Query参数 to： 需要移动到的目的ns
+- Query参数 type: 资源类型
+- Query参数 resid: 资源ID
+
+     curl -X PUT "http://127.0.0.1:9991/api/v1/moveresource?from=pool.loda&to=server1.product1.loda&type=machine&resid=5df7bf4f-abf8-4236-8834-ed01c0493b70"
+
 ### 3 注册接口
 ---
 

@@ -7,26 +7,27 @@ import (
 )
 
 var (
+	ErrNotFound           = errors.New("not found")
 	defaultResourceWorker = 100
 )
 
-func (t *Tree) getResFromStore(nodeId, resourceType string) (*model.Resources, error) {
+func (t *Tree) getResFromStore(nodeId, resourceType string) (*model.ResourceList, error) {
 	resByte, err := t.getByteFromStore(nodeId, resourceType)
 	if err != nil {
 		return nil, err
 	}
-	resources := new(model.Resources)
-	err = resources.Unmarshal(resByte)
+	rl := new(model.ResourceList)
+	err = rl.Unmarshal(resByte)
 	if err != nil && err != ErrEmptyRes {
 		t.logger.Errorf("unmarshal resource fail, error: %s, data: %s:", err, string(resByte))
 		return nil, err
 	}
-	return resources, nil
+	return rl, nil
 }
 
 // GetResource return the ResourceType resource belong to the node with NodeName.
 // TODO: Permission Check
-func (t *Tree) GetResource(ns string, resourceType string) (*model.Resources, error) {
+func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceList, error) {
 	node, err := t.GetNode(ns)
 	if err != nil {
 		t.logger.Errorf("get resource fail because get node by ns fail, ns: %s, resource: %s", ns, resourceType)
@@ -38,7 +39,7 @@ func (t *Tree) GetResource(ns string, resourceType string) (*model.Resources, er
 	}
 
 	// Return all resource of the node's child leaf if get resource from NonLeaf.
-	allRes := model.Resources{}
+	allRes := model.ResourceList{}
 	leafIDs, err := node.leafID()
 	if err != nil {
 		return nil, err
@@ -54,15 +55,13 @@ func (t *Tree) GetResource(ns string, resourceType string) (*model.Resources, er
 	return &allRes, nil
 }
 
-// GetResource return the ResourceType resource belong to the node with NodeId.
-// TODO: Permission Check
-func (t *Tree) GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error) {
-	ns, err := t.getNsByID(NodeId)
-	if err != nil {
-		t.logger.Errorf("get ns error when get resource: %s", err.Error())
+func (t *Tree) GetOneResource(ns, resType, resID string) (model.Resource, error) {
+	rl, err := t.GetResourceList(ns, resType)
+	if err != nil || len(*rl) == 0 {
+		t.logger.Errorf("GetResourceList fail, result: %v, error: %v", *rl, err.Error())
 		return nil, err
 	}
-	return t.GetResource(ns, ResourceType)
+	return rl.GetOneResource(resID)
 }
 
 func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
@@ -103,14 +102,6 @@ func (t *Tree) AppendResource(ns, resType string, appendRes model.Resource) (str
 	}
 	err = t.setByteToStore(nodeID, resType, resByte)
 	return UUID, err
-}
-
-func (t *Tree) SetResourceByNodeID(nodeId, resType string, ResByte []byte) error {
-	ns, err := t.getNsByID(nodeId)
-	if err != nil {
-		return err
-	}
-	return t.SetResource(ns, resType, ResByte)
 }
 
 func (t *Tree) SetResource(ns, resType string, ResByte []byte) error {
@@ -157,9 +148,35 @@ func (t *Tree) DeleteResource(ns, resType, resId string) error {
 	return t.setByteToStore(nodeId, resType, resNewByte)
 }
 
+// TODO: check resource name
+func (t *Tree) MoveResource(oldNs, newNs, resType, resourceID string) error {
+	resource, err := t.GetOneResource(oldNs, resType, resourceID)
+	if err != nil {
+		t.logger.Errorf("GetOneResource fail: %s", newNs, err.Error())
+		return err
+	}
+	_, err = t.GetOneResource(newNs, resType, resourceID)
+	if err != ErrNotFound {
+		t.logger.Errorf("connot move resource from ns %s to ns: %s, resource type: %s,resourceID: %s",
+			oldNs, newNs, resType, resourceID)
+		return err
+	}
+	if _, err := t.AppendResource(newNs, resType, resource); err != nil {
+		t.logger.Errorf("AppendResource resource fail, ns %s, resource type: %s, resourceID: %v, error: %s",
+			newNs, resType, resource, err.Error())
+		return err
+	}
+	if err := t.DeleteResource(oldNs, resType, resourceID); err != nil {
+		t.logger.Errorf("DeleteResource resource fail, ns %s, resource type: %s, resourceID: %s, error: %s",
+			newNs, resType, resourceID, err.Error())
+		return err
+	}
+	return nil
+}
+
 // TODO: remove time and debug log
-func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error) {
-	result := map[string]*model.Resources{}
+func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error) {
+	result := map[string]*model.ResourceList{}
 	leafIDs, err := t.LeafIDs(ns)
 	if err != nil && len(leafIDs) == 0 {
 		t.logger.Errorf("node has none leaf, ns: %s, error: %v", ns, err)
@@ -168,7 +185,7 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 
 	var fail bool
 	limit := NewFixed(defaultResourceWorker)
-	resultChan := make(chan map[string]*model.Resources, defaultResourceWorker/2)
+	resultChan := make(chan map[string]*model.ResourceList, defaultResourceWorker/2)
 	// collect process result
 	go func() {
 		for {
@@ -192,7 +209,7 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 	for _, leafID := range leafIDs {
 		limit.Take()
 		go func(leafID string, search model.ResourceSearch) {
-			nsResult := map[string]*model.Resources{}
+			nsResult := map[string]*model.ResourceList{}
 			resByte, err := t.getByteFromStore(leafID, resType)
 			// report error when getByteFromStore fail.
 			if len(resByte) == 0 {

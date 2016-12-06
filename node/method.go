@@ -49,20 +49,14 @@ type TreeMethod interface {
 	// NewNode create node.
 	NewNode(name, parentNs string, nodeType int, property ...string) (string, error)
 
-	// Get resource by NodeID and resour type
-	GetResourceByNodeID(NodeId string, ResourceType string) (*model.Resources, error)
-
 	// Get resource by NodeName and resour type
-	GetResource(NodeName string, ResourceType string) (*model.Resources, error)
-
-	// Set Resource to node with nodeid.
-	SetResourceByNodeID(nodeId, resType string, ResByte []byte) error
+	GetResourceList(NodeName string, ResourceType string) (*model.ResourceList, error)
 
 	// Set resource to node with nodename.
 	SetResource(nodeName, resType string, ResByte []byte) error
 
 	// SearchResourceByNs return the map[ns]resources which match the search.
-	SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.Resources, error)
+	SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error)
 
 	// Return leaf child node of the ns.
 	LeafIDs(ns string) ([]string, error)
@@ -90,4 +84,7 @@ type TreeMethod interface {
 
 	// Delete resource from ns.
 	DeleteResource(ns, resType, resId string) error
+
+	// Remove resource from one ns to another.
+	MoveResource(oldNs, newNs, resType, resourceID string) error
 }

@@ -21,28 +21,29 @@ var resByte = []byte{91, 123, 34, 114, 101, 115, 95, 107, 101, 121, 49, 34, 58, 
 var emptyResRes []map[string]string = []map[string]string{{"res_key1": "", "res_key2": ""}, {"res_key1": "res2_v1", "res_key2": "", "_id": ""}}
 
 func TestEmptyValueResource(t *testing.T) {
-	res, err := NewResourcesMaps(emptyResRes)
+	rl, err := NewResourcesMaps(emptyResRes)
 	if err != nil {
 		t.Fatalf("new resource from a map with empty value fail: %s", err.Error())
 	}
-	ressByte, err := res.Marshal()
+	ressByte, err := rl.Marshal()
 	if err != nil {
 		t.Fatalf("marshal a resource with empty property value fail: %s", err.Error())
 	}
-	*res = Resources{}
-	err = res.Unmarshal(ressByte)
+	*rl = ResourceList{}
+	err = rl.Unmarshal(ressByte)
 	if err != nil ||
-		len(*res) != 2 ||
-		len((*res)[0]) != 3 ||
-		len((*res)[1]) != 3 ||
-		(*res)[0]["res_key2"] != "" {
-		t.Fatalf("unmarshal a resource byte with empty property value fail, len of resources: %d, len of rsource: %d %d, res_key2:%s, resources: %v, unmarshal error:%v", len(*res), len((*res)[0]), len((*res)[1]), (*res)[0]["res_key2"], *res, err)
+		len(*rl) != 2 ||
+		len((*rl)[0]) != 3 ||
+		len((*rl)[1]) != 3 ||
+		(*rl)[0]["res_key2"] != "" {
+		t.Fatalf("unmarshal a resource byte with empty property value fail, len of resources: %d, len of rsource: %d %d, res_key2:%s, resources: %v, unmarshal error:%v",
+			len(*rl), len((*rl)[0]), len((*rl)[1]), (*rl)[0]["res_key2"], *rl, err)
 	}
 
 }
 
 func TestRsUnmarshal(t *testing.T) {
-	boltv := Resources{}
+	boltv := ResourceList{}
 	if err := boltv.Unmarshal(boltByte); err != nil {
 		t.Fatalf("unmarshal fail")
 		return
@@ -86,15 +87,15 @@ func TestAppendResource(t *testing.T) {
 		t.Fatalf("AppendResource fail: %s", err.Error())
 	}
 
-	newRs := Resources{}
-	if err = newRs.Unmarshal(newRsByte); err != nil {
+	newRl := ResourceList{}
+	if err = newRl.Unmarshal(newRsByte); err != nil {
 		t.Fatalf("unmarshal fail: %s", err.Error())
 		return
 	}
-	if len(newRs) != 3 {
+	if len(newRl) != 3 {
 		t.Fatalf("unmarshal fail, expect result of unmarshal have length: 2")
 	}
-	for _, resouce := range newRs {
+	for _, resouce := range newRl {
 		if _, ok := resouce["_id"]; !ok || len(resouce) != 3 {
 			t.Fatalf("unmarshal fail, resource should have _id")
 		}
@@ -121,7 +122,7 @@ func TestAppendResource(t *testing.T) {
 			}
 		}
 	}
-	if newRs[0]["_id"] == newRs[1]["_id"] {
+	if newRl[0]["_id"] == newRl[1]["_id"] {
 		t.Fatalf("unmarshal fail, resource have same resource")
 	}
 }
@@ -136,7 +137,7 @@ func TestRsMarshal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal resources fail")
 	}
-	*ressStruct = Resources{}
+	*ressStruct = ResourceList{}
 	if err := ressStruct.Unmarshal(ressByte); err != nil {
 		t.Fatalf("unmarshal fail")
 		return
@@ -188,7 +189,7 @@ func TestNewResources(t *testing.T) {
 func BenchmarkUnmarshal(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		boltv := Resources{}
+		boltv := ResourceList{}
 		boltv.Unmarshal(boltByte)
 	}
 }
@@ -246,20 +247,49 @@ func TestUpdateResByID(t *testing.T) {
 }
 
 func TestDeleteResource(t *testing.T) {
-	rs := &Resources{}
+	rl := &ResourceList{}
 	newResByte, err := DeleteResource(boltByte, "H")
 	if err != nil {
 		t.Fatalf("DeleteResource error: %s", err.Error())
 	}
-	if err := rs.Unmarshal(newResByte); err != nil || len(*rs) != 1 || (*rs)[0][idKey] != "I" {
-		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rs)
+	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][idKey] != "I" {
+		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rl)
 	}
 
 	newResByte, err = DeleteResource(boltByte, "I")
 	if err != nil {
 		t.Fatalf("DeleteResource error: %s", err.Error())
 	}
-	if err := rs.Unmarshal(newResByte); err != nil || len(*rs) != 1 || (*rs)[0][idKey] != "H" {
-		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rs)
+	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][idKey] != "H" {
+		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rl)
+	}
+}
+
+func TestGetOneResource(t *testing.T) {
+	rl := ResourceList{}
+	if err := rl.Unmarshal(boltByte); err != nil {
+		t.Fatalf("unmarshal fail")
+		return
+	}
+	r := Resource{}
+	r, err := rl.GetOneResource("H")
+	if err != nil {
+		t.Fatalf("get resource fail: %s", err.Error())
+	} else if r[idKey] != "H" || len(r) != 3 {
+		t.Fatalf("unmarshal r fail: not match with expec: %v", r)
+	}
+
+	r = Resource{}
+	r, err = rl.GetOneResource("I")
+	if err != nil {
+		t.Fatalf("get resource fail: %s", err.Error())
+	} else if r[idKey] != "I" || len(r) != 3 {
+		t.Fatalf("unmarshal r fail: not match with expect: %v", r)
+	}
+
+	r = Resource{}
+	r, err = rl.GetOneResource("not exist")
+	if err == nil {
+		t.Fatalf("get resource success not match expect")
 	}
 }
