@@ -58,29 +58,29 @@ func TestNodeMarshalJSON(t *testing.T) {
 }
 
 // Test get node by ns.
-func TestGetByNs(t *testing.T) {
-	if node, err := nodes.GetByNs(rootNode); err != nil || node == nil {
-		t.Fatalf("nodes GetByNs \"root\" is valid, not match with expect\n")
+func TestGet(t *testing.T) {
+	if node, err := nodes.Get(rootNode); err != nil || node == nil {
+		t.Fatalf("nodes Get \"root\" is valid, not match with expect\n")
 	}
-	if node, err := nodes.GetByNs("0-1." + rootNode); err != nil || node.ID != "0-1" {
-		t.Fatalf("nodes GetByNs \"0-1.root\" not match with expect %+v, error: %s\n", node, err)
+	if node, err := nodes.Get("0-1." + rootNode); err != nil || node.ID != "0-1" {
+		t.Fatalf("nodes Get \"0-1.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
-		t.Logf("get GetByNs \"0-1.root\" return right: %+v\n", node)
+		t.Logf("get Get \"0-1.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.GetByNs("0-2." + rootNode); err != nil || node.ID != "0-2" || len(node.Children) != 2 {
-		t.Fatalf("nodes GetByNs \"0-2.root\" not match with expect %+v, error: %s\n", node, err)
+	if node, err := nodes.Get("0-2." + rootNode); err != nil || node.ID != "0-2" || len(node.Children) != 2 {
+		t.Fatalf("nodes Get \"0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get GetByNs \"0-2.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.GetByNs("0-2-1.0-2." + rootNode); err != nil || node.ID != "0-2-1" {
-		t.Fatalf("nodes GetByNs \"0-2-1.0-2.root\" not match with expect %+v, error: %s\n", node, err)
+	if node, err := nodes.Get("0-2-1.0-2." + rootNode); err != nil || node.ID != "0-2-1" {
+		t.Fatalf("nodes Get \"0-2-1.0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
-		t.Logf("get GetByNs \"0-2-1.0-2.root\" return right: %+v\n", node)
+		t.Logf("get Get \"0-2-1.0-2.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.GetByNs("0-2-2-2.0-2-2.0-2." + rootNode); err != nil || node.ID != "0-2-2-2" {
-		t.Fatalf("nodes GetByNs \"0-2-2-2.0-2-2.0-2.root\" not match with expect %+v, error: %s\n", node, err)
+	if node, err := nodes.Get("0-2-2-2.0-2-2.0-2." + rootNode); err != nil || node.ID != "0-2-2-2" {
+		t.Fatalf("nodes Get \"0-2-2-2.0-2-2.0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
-		t.Logf("get GetByNs \"0-2-2-2.0-2-2.0-2.root\" return right: %+v\n", node)
+		t.Logf("get Get \"0-2-2-2.0-2-2.0-2.root\" return right: %+v\n", node)
 	}
 }
 
@@ -141,7 +141,7 @@ func checkNodeForUnmarshal(allNode Node, nodeMap map[string]int, t *testing.T) b
 	}
 	for name, childNum := range nodeNsMap {
 		t.Log("GetByName", name, childNum)
-		n, err := allNode.GetByNs(name)
+		n, err := allNode.Get(name)
 		if err != nil || n == nil || len(n.Children) != childNum {
 			t.Log("unmarshal result not match witch expect", name, childNum)
 			return false
@@ -219,7 +219,7 @@ func TestDeleteNode(t *testing.T) {
 		t.Fatal("node delChild success, not match with expect")
 	}
 
-	nodeParent, err := nodeTest.GetByNs("haveChild." + rootNode)
+	nodeParent, err := nodeTest.Get("haveChild." + rootNode)
 	if err != nil || nodeParent == nil {
 		t.Fatalf("get node haveChild fail, error: %v", err)
 	}

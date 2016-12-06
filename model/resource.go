@@ -208,7 +208,7 @@ func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
 	})
 }
 
-func (rl *ResourceList) GetOneResource(resID string) (Resource, error) {
+func (rl *ResourceList) GetResource(resID string) (Resource, error) {
 	if len(*rl) == 0 {
 		return nil, errors.New("cannoe get resource from empty list")
 	}

@@ -55,13 +55,13 @@ func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceL
 	return &allRes, nil
 }
 
-func (t *Tree) GetOneResource(ns, resType, resID string) (model.Resource, error) {
+func (t *Tree) GetResource(ns, resType, resID string) (model.Resource, error) {
 	rl, err := t.GetResourceList(ns, resType)
 	if err != nil || len(*rl) == 0 {
 		t.logger.Errorf("GetResourceList fail, result: %v, error: %v", *rl, err.Error())
 		return nil, err
 	}
-	return rl.GetOneResource(resID)
+	return rl.GetResource(resID)
 }
 
 func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
@@ -150,12 +150,12 @@ func (t *Tree) DeleteResource(ns, resType, resId string) error {
 
 // TODO: check resource name
 func (t *Tree) MoveResource(oldNs, newNs, resType, resourceID string) error {
-	resource, err := t.GetOneResource(oldNs, resType, resourceID)
+	resource, err := t.GetResource(oldNs, resType, resourceID)
 	if err != nil {
 		t.logger.Errorf("GetOneResource fail: %s", newNs, err.Error())
 		return err
 	}
-	_, err = t.GetOneResource(newNs, resType, resourceID)
+	_, err = t.GetResource(newNs, resType, resourceID)
 	if err != ErrNotFound {
 		t.logger.Errorf("connot move resource from ns %s to ns: %s, resource type: %s,resourceID: %s",
 			oldNs, newNs, resType, resourceID)
