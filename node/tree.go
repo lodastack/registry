@@ -391,6 +391,11 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return err
 	}
+	newNs := strings.Join(append([]string{name}, strings.Split(ns, nodeDeli)[1:]...), nodeDeli)
+	if exist := allNodes.Exist(newNs); exist {
+		return ErrNodeAlreadyExist
+	}
+
 	node, err := allNodes.GetByNs(ns)
 	if err != nil {
 		t.logger.Errorf("GetByNs fail, error: %s", err.Error())
@@ -418,6 +423,12 @@ func (t *Tree) DelNode(ns string) error {
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return err
+	}
+
+	// Not allow delete node which still have machine resource.
+	if rl, err := t.GetResourceList(ns, "machine"); err != nil || len(*rl) != 0 {
+		t.logger.Errorf("not allow delete ns %s, get Machine result: %v, error: %v", ns, *rl, err)
+		return ErrNotAllowDel
 	}
 
 	t.Mu.Lock()

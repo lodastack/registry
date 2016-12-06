@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type HandleFunc func(raw []byte) (Resources, error)
+type HandleFunc func(raw []byte) (ResourceList, error)
 
 type ResourceSearch struct {
 	Id    string // key of resource property
@@ -29,8 +29,8 @@ func (s *ResourceSearch) Init() error {
 	return nil
 }
 
-func (s *ResourceSearch) IdSearch(raw []byte) (Resources, error) {
-	matchReses := Resources{}
+func (s *ResourceSearch) IdSearch(raw []byte) (ResourceList, error) {
+	matchRl := ResourceList{}
 	kvFlag, deliLen := propertyKey, 0
 	startPos, endPos := 0, 0
 	matchFlag := false
@@ -49,8 +49,8 @@ func (s *ResourceSearch) IdSearch(raw []byte) (Resources, error) {
 		case endByte:
 			//  End of resources.
 			if matchFlag {
-				if err := matchReses.AppendResourceByte(raw[startPos:]); err != nil {
-					return matchReses, fmt.Errorf("unmarshal resource fail")
+				if err := matchRl.AppendResourceByte(raw[startPos:]); err != nil {
+					return matchRl, fmt.Errorf("unmarshal resource fail")
 				}
 			}
 			goto END
@@ -60,8 +60,8 @@ func (s *ResourceSearch) IdSearch(raw []byte) (Resources, error) {
 				case len(deliRes):
 					if matchFlag {
 						endPos = index - 3
-						if err := matchReses.AppendResourceByte(raw[startPos : endPos+1]); err != nil {
-							return matchReses, fmt.Errorf("unmarshal resource fail")
+						if err := matchRl.AppendResourceByte(raw[startPos : endPos+1]); err != nil {
+							return matchRl, fmt.Errorf("unmarshal resource fail")
 						}
 					}
 					tmpk = make([]byte, 0)
@@ -77,11 +77,11 @@ func (s *ResourceSearch) IdSearch(raw []byte) (Resources, error) {
 		}
 	}
 END:
-	return matchReses, nil
+	return matchRl, nil
 }
 
-func (s *ResourceSearch) ValueSearch(raw []byte) (Resources, error) {
-	matchReses := Resources{}
+func (s *ResourceSearch) ValueSearch(raw []byte) (ResourceList, error) {
+	matchRl := ResourceList{}
 	tmpk := make([]byte, 0)
 	kvFlag, deliLen := propertyKey, 0 // kvFlag is flag of byte readed is k or v.
 	startPos, vPos := 0, 0            // startPos is position where resource start. vPos is position where value start.
@@ -96,7 +96,7 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (Resources, error) {
 		}
 		// If the resource is matched, append it to result.
 		if matchFlag {
-			if err := matchReses.AppendResourceByte(raw[resStartPos:end]); err != nil {
+			if err := matchRl.AppendResourceByte(raw[resStartPos:end]); err != nil {
 				return fmt.Errorf("unmarshal resource fail")
 			}
 		}
@@ -162,7 +162,7 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (Resources, error) {
 		}
 	}
 END:
-	return matchReses, nil
+	return matchRl, nil
 }
 
 func search(ori, dest []byte, fuzzy bool) bool {

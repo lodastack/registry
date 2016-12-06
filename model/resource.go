@@ -43,31 +43,31 @@ type ResAction interface {
 	Unmarshal(raw []byte) error
 }
 
-type Resources []Resource
+type ResourceList []Resource
 
 type Resource map[string]string
 
-func NewResources(byteData []byte) (*Resources, error) {
-	rs := &Resources{}
+func NewResources(byteData []byte) (*ResourceList, error) {
+	rl := &ResourceList{}
 	resMaps := []map[string]string{}
 	if err := json.Unmarshal(byteData, &resMaps); err != nil {
-		return rs, errors.New("marshal bytes to map fail: " + err.Error())
+		return rl, errors.New("marshal bytes to map fail: " + err.Error())
 	}
 
-	*rs = make([]Resource, len(resMaps))
+	*rl = make([]Resource, len(resMaps))
 	for i := 0; i < len(resMaps); i++ {
-		(*rs)[i] = Resource(resMaps[i])
+		(*rl)[i] = Resource(resMaps[i])
 	}
-	return rs, nil
+	return rl, nil
 }
 
-func NewResourcesMaps(resMaps []map[string]string) (*Resources, error) {
-	rs := &Resources{}
-	*rs = make([]Resource, len(resMaps))
+func NewResourcesMaps(resMaps []map[string]string) (*ResourceList, error) {
+	rl := &ResourceList{}
+	*rl = make([]Resource, len(resMaps))
 	for i := 0; i < len(resMaps); i++ {
-		(*rs)[i] = Resource(resMaps[i])
+		(*rl)[i] = Resource(resMaps[i])
 	}
-	return rs, nil
+	return rl, nil
 }
 
 func NewResource(resMap map[string]string) Resource {
@@ -80,11 +80,11 @@ func NewResource(resMap map[string]string) Resource {
 // The rs argument is the pointer to the method caller.
 //
 // If an error was returned, processing stops.
-type walkResourceFunc func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error)
+type walkResourceFunc func(rByte []byte, last bool, rl *ResourceList, output []byte) ([]byte, error)
 
 // walk the resources byte, process every resource by handler.
-func (rs *Resources) WalkRsByte(rsByte []byte, handler walkResourceFunc) ([]byte, error) {
-	*rs = make([]Resource, 0)
+func (rl *ResourceList) WalkRsByte(rsByte []byte, handler walkResourceFunc) ([]byte, error) {
+	*rl = make([]Resource, 0)
 	startPos, endPos := 0, 0
 	deliLen := 0
 	output := make([]byte, 0)
@@ -97,7 +97,7 @@ func (rs *Resources) WalkRsByte(rsByte []byte, handler walkResourceFunc) ([]byte
 			deliLen++
 		case endByte:
 			//  End of resources.
-			if output, err = handler(rsByte[startPos:index], true, rs, output); err != nil {
+			if output, err = handler(rsByte[startPos:index], true, rl, output); err != nil {
 				return nil, errors.New("process resource fail: " + err.Error())
 			}
 			goto END
@@ -110,7 +110,7 @@ func (rs *Resources) WalkRsByte(rsByte []byte, handler walkResourceFunc) ([]byte
 				// TODO: length or another utf8 byte.
 				case len(deliRes):
 					endPos = index
-					if output, err = handler(rsByte[startPos:endPos-len(deliRes)+1], false, rs, output); err != nil {
+					if output, err = handler(rsByte[startPos:endPos-len(deliRes)+1], false, rl, output); err != nil {
 						return nil, errors.New("process resource fail: " + err.Error())
 					}
 					startPos = index
@@ -124,13 +124,13 @@ END:
 }
 
 // Unmarshal the byte to the method caller rs.
-func (rs *Resources) Unmarshal(raw []byte) error {
-	_, err := rs.WalkRsByte(raw, func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error) {
+func (rl *ResourceList) Unmarshal(raw []byte) error {
+	_, err := rl.WalkRsByte(raw, func(rByte []byte, last bool, rlWalk *ResourceList, output []byte) ([]byte, error) {
 		r := Resource{}
 		if err := r.Unmarshal(rByte); err != nil {
 			return nil, errors.New("unmarshal resources fail: " + err.Error())
 		}
-		*rs = append(*rs, r)
+		*rlWalk = append(*rlWalk, r)
 		return nil, nil
 	})
 	return err
@@ -139,7 +139,7 @@ func (rs *Resources) Unmarshal(raw []byte) error {
 // Update resource with resourceID by updateMap.
 // NOTE: will not change resource ID.
 func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byte, error) {
-	return (&Resources{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error) {
+	return (&ResourceList{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rlWalk *ResourceList, output []byte) ([]byte, error) {
 		r := Resource{}
 		if len(rByte) == 0 {
 			return nil, errors.New("UpdateResByID fail: empty resource input")
@@ -176,7 +176,7 @@ func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byt
 
 // Delete resource by resourceID..
 func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
-	return (&Resources{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rs *Resources, output []byte) ([]byte, error) {
+	return (&ResourceList{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rlWalk *ResourceList, output []byte) ([]byte, error) {
 		r := Resource{}
 		if len(rByte) == 0 {
 			return nil, errors.New("UpdateResByID fail: empty resource input")
@@ -208,10 +208,22 @@ func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
 	})
 }
 
+func (rl *ResourceList) GetOneResource(resID string) (Resource, error) {
+	if len(*rl) == 0 {
+		return nil, errors.New("cannoe get resource from empty list")
+	}
+	for _, r := range *rl {
+		if Id, _ := r.ID(); Id == resID {
+			return r, nil
+		}
+	}
+	return nil, errors.New("not found")
+}
+
 // Size returns marshed bytes size.
-func (rs *Resources) Size() int {
+func (rl *ResourceList) Size() int {
 	var totalSize int
-	for _, resource := range *rs {
+	for _, resource := range *rl {
 		totalSize += resource.Size()
 		totalSize += len(deliRes)
 	}
@@ -219,17 +231,17 @@ func (rs *Resources) Size() int {
 }
 
 // Marshal returns the byte format data of Resources.
-func (rs *Resources) Marshal() ([]byte, error) {
+func (rl *ResourceList) Marshal() ([]byte, error) {
 	// return error when resource is empty.
-	if len(*rs) == 0 {
+	if len(*rl) == 0 {
 		return nil, ErrEmptyRes
 	}
 
-	totalSize := rs.Size()
+	totalSize := rl.Size()
 	raw := make([]byte, totalSize)
 
 	var n int
-	for _, resource := range *rs {
+	for _, resource := range *rl {
 		resourceByte, err := resource.Marshal()
 		if err != nil {
 			return raw, err
@@ -241,21 +253,21 @@ func (rs *Resources) Marshal() ([]byte, error) {
 	return raw[0 : n-len(deliRes)+1], nil
 }
 
-func (rs *Resources) AppendResourceByte(resByte []byte) error {
+func (rl *ResourceList) AppendResourceByte(resByte []byte) error {
 	r := Resource{}
 	if err := r.Unmarshal(resByte); err != nil {
 		return errors.New("unmarshal resource fail")
 	}
-	(*rs) = append((*rs), r)
+	(*rl) = append((*rl), r)
 	return nil
 }
 
-func (rs *Resources) AppendResource(r Resource) {
-	(*rs) = append((*rs), r)
+func (rl *ResourceList) AppendResource(r Resource) {
+	(*rl) = append((*rl), r)
 }
 
-func (rs *Resources) AppendResources(res Resources) {
-	(*rs) = append((*rs), res...)
+func (rl *ResourceList) AppendResources(res ResourceList) {
+	(*rl) = append((*rl), res...)
 }
 
 func (r *Resource) Unmarshal(raw []byte) error {
@@ -393,9 +405,9 @@ func AppendResources(rsByte []byte, resource Resource) ([]byte, string, error) {
 
 	// If append res to nil, new resources.
 	if len(rsByte) == 0 {
-		rs := Resources{}
-		rs.AppendResource(resource)
-		rsByte, err := rs.Marshal()
+		rl := ResourceList{}
+		rl.AppendResource(resource)
+		rsByte, err := rl.Marshal()
 		return rsByte, UUID, err
 	}
 

@@ -38,11 +38,11 @@ func TestIdSearch(t *testing.T) {
 		Fuzzy: true,
 	}
 	search.Init()
-	ressStruct := Resources{}
-	if err := ressStruct.Unmarshal(searchByte); err != nil {
+	rl := ResourceList{}
+	if err := rl.Unmarshal(searchByte); err != nil {
 		t.Fatalf("Resources load byte fail: %s", err.Error())
 	}
-	t.Log(ressStruct)
+	t.Log(rl)
 	result, err := search.Process(searchByte)
 	t.Log("search id uuid2 result:", result)
 	if err != nil || len(result) == 0 || result[0]["_id"] != "uuid2" {
@@ -56,11 +56,11 @@ func TestValueSearchEmptyKey(t *testing.T) {
 		Fuzzy: true,
 	}
 	search.Init()
-	ressStruct := Resources{}
-	if err := ressStruct.Unmarshal(searchByte); err != nil {
+	rl := ResourceList{}
+	if err := rl.Unmarshal(searchByte); err != nil {
 		t.Fatalf("Resources load byte fail: %s", err.Error())
 	}
-	t.Log(ressStruct)
+	t.Log(rl)
 	result, err := search.Process(searchByte)
 	t.Log("result of search empty res1_v2 without key:", result)
 	if err != nil || len(result) == 0 || result[0]["_id"] != "uuid1" || result[0]["res_k2"] == "res1_v2" {
@@ -69,11 +69,11 @@ func TestValueSearchEmptyKey(t *testing.T) {
 }
 
 func TestValueSearchHasKey(t *testing.T) {
-	ressStruct := Resources{}
-	if err := ressStruct.Unmarshal(searchByte); err != nil {
+	rl := ResourceList{}
+	if err := rl.Unmarshal(searchByte); err != nil {
 		t.Fatalf("Resources load byte fail: %s", err.Error())
 	}
-	t.Log(ressStruct)
+	t.Log(rl)
 
 	// case 1-1
 	search := ResourceSearch{

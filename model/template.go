@@ -10,8 +10,8 @@ var (
 )
 
 var (
-	docTemplate     Resources = Resources{Resource{"describe": "loda"}}
-	collectTemplate Resources = Resources{Resource{
+	docTemplate     ResourceList = ResourceList{Resource{"describe": "loda"}}
+	collectTemplate ResourceList = ResourceList{Resource{
 		"name":             "app.service.coredump",
 		"interval":         "60",
 		"measurement_type": "COREDUMP",
@@ -195,7 +195,7 @@ var (
 		"name":             "registry",
 	},*/
 	}
-	RootTemplate map[string]Resources = map[string]Resources{
+	RootTemplate map[string]ResourceList = map[string]ResourceList{
 		TemplatePrefix + "doc":     docTemplate,
 		TemplatePrefix + "collect": collectTemplate,
 		TemplatePrefix + "alarm":   nil,

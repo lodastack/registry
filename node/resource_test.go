@@ -23,15 +23,15 @@ func TestSetResourceByID(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	leafID, err := tree.NewNode("test", rootNode, Leaf)
+	_, err = tree.NewNode("test", rootNode, Leaf)
 	if err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	err = tree.SetResourceByNodeID(leafID, "machine", resourceByte)
+	err = tree.SetResource("test.loda", "machine", resourceByte)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
-	if res, err := tree.GetResourceByNodeID(leafID, "machine"); err != nil || len(*res) != 2 {
+	if res, err := tree.GetResourceList("test.loda", "machine"); err != nil || len(*res) != 2 {
 		t.Fatalf("get resource fail after set: %s\n", err.Error())
 	} else {
 		if (*res)[0]["host"] != "127.0.0.1" || (*res)[1]["host"] != "127.0.0.2" {
@@ -40,12 +40,12 @@ func TestSetResourceByID(t *testing.T) {
 	}
 
 	// Set resource to nonLeaf.
-	nonLeafID, err := tree.NewNode("testNonLeaf", rootNode, NonLeaf)
+	_, err = tree.NewNode("testNonLeaf", rootNode, NonLeaf)
 	if err != nil {
 		t.Fatalf("create nonLeaf behind root fail: %s", err.Error())
 	}
-	if err = tree.SetResourceByNodeID(nonLeafID, "machine", resourceByte); err == nil {
-		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
+	if err = tree.SetResource("testNonLeaf.loda", "machine", resourceByte); err == nil {
+		t.Fatalf("set resource fail: %v, not match with expect\n", err)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestSetResourceByNs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
-	if res, err := tree.GetResource("test."+rootNode, "machine"); err != nil || len(*res) != 2 {
+	if res, err := tree.GetResourceList("test."+rootNode, "machine"); err != nil || len(*res) != 2 {
 		t.Fatalf("get resource fail after set: %s\n", err.Error())
 	} else {
 		if (*res)[0]["host"] != "127.0.0.1" || (*res)[1]["host"] != "127.0.0.2" {
@@ -201,7 +201,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
-	if res, err := tree.GetResource("leaf1."+rootNode, "machine"); err != nil || len(*res) != 2 {
+	if res, err := tree.GetResourceList("leaf1."+rootNode, "machine"); err != nil || len(*res) != 2 {
 		t.Fatalf("get resource fail after set: %s\n", err.Error())
 	} else {
 		if (*res)[0]["host"] != "127.0.0.1" || (*res)[1]["host"] != "127.0.0.2" {
@@ -217,7 +217,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
-	if res, err := tree.GetResource("leaf2."+rootNode, "machine"); err != nil || len(*res) != 2 {
+	if res, err := tree.GetResourceList("leaf2."+rootNode, "machine"); err != nil || len(*res) != 2 {
 		t.Fatalf("get resource fail after set: %s\n", err.Error())
 	} else {
 		if (*res)[0]["host"] != "127.0.0.2" || (*res)[1]["host"] != "127.0.0.3" {
@@ -226,17 +226,17 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	}
 
 	// case 3: get resource from NonLeaf
-	if res, err := tree.GetResource(rootNode, "machine"); err != nil || len(*res) != 4 {
+	if res, err := tree.GetResourceList(rootNode, "machine"); err != nil || len(*res) != 4 {
 		t.Fatalf("get root resource fail, length of return: %d, error: %v\n", len(*res), err)
 	}
 
 	// case 4: get template from NonLeaf
-	if res, err := tree.GetResource(rootNode, model.TemplatePrefix+"collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResourceList(rootNode, model.TemplatePrefix+"collect"); err != nil || len(*res) != 31 {
 		t.Fatalf("get template from NonLeaf fail, length of return: %d, error: %v\n", len(*res), err)
 	}
 
 	// case 5: get not exist resourct from NonLeaf
-	if res, err := tree.GetResource(rootNode, "not_exist"); err != nil || len(*res) != 0 {
+	if res, err := tree.GetResourceList(rootNode, "not_exist"); err != nil || len(*res) != 0 {
 		t.Fatalf("get not exist resource from NonLeaf not expect with expect,return: %+v, error: %v\n", *res, err)
 	}
 }
