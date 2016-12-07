@@ -343,13 +343,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 	// TODO: rollback if copy template fail
 	if parentNs == "-" {
 		for k, res := range model.RootTemplate {
-			resByte := []byte{}
-			if res != nil {
-				if resByte, err = json.Marshal(res); err != nil {
-					panic("create root template fail: " + err.Error())
-				}
-			}
-			if err := t.SetResource(rootNode, k, resByte); err != nil {
+			if err := t.SetResource(rootNode, k, res); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when create rootNode, error: %s", err.Error())
 			}
 		}

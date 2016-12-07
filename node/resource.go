@@ -3,6 +3,7 @@ package node
 import (
 	"errors"
 
+	"github.com/lodastack/registry/limit"
 	"github.com/lodastack/registry/model"
 )
 
@@ -57,9 +58,12 @@ func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceL
 
 func (t *Tree) GetResource(ns, resType, resID string) (model.Resource, error) {
 	rl, err := t.GetResourceList(ns, resType)
-	if err != nil || len(*rl) == 0 {
-		t.logger.Errorf("GetResourceList fail, result: %v, error: %v", *rl, err.Error())
+	if err != nil {
+		t.logger.Errorf("GetResourceList fail, result: %v, error: %v", *rl, err)
 		return nil, err
+	}
+	if len(*rl) == 0 {
+		return nil, nil
 	}
 	return rl.GetResource(resID)
 }
@@ -104,7 +108,7 @@ func (t *Tree) AppendResource(ns, resType string, appendRes model.Resource) (str
 	return UUID, err
 }
 
-func (t *Tree) SetResource(ns, resType string, ResByte []byte) error {
+func (t *Tree) SetResource(ns, resType string, rl model.ResourceList) error {
 	node, err := t.GetNode(ns)
 	if err != nil || node.ID == "" {
 		t.logger.Error("Get node by ns(%s) fail\n", ns)
@@ -114,13 +118,8 @@ func (t *Tree) SetResource(ns, resType string, ResByte []byte) error {
 		return ErrSetResourceToLeaf
 	}
 
-	resesStruct, err := model.NewResources(ResByte)
-	if err != nil {
-		t.logger.Errorf("set resource to node fail, unmarshal resource fail: %s\n", err)
-		return err
-	}
 	var resStore []byte
-	resStore, err = resesStruct.Marshal()
+	resStore, err = rl.Marshal()
 	if err != nil {
 		t.logger.Errorf("set resource to node fail, marshal resource to byte fail: %s\n", err)
 		return err
@@ -151,12 +150,13 @@ func (t *Tree) DeleteResource(ns, resType, resId string) error {
 // TODO: check resource name
 func (t *Tree) MoveResource(oldNs, newNs, resType, resourceID string) error {
 	resource, err := t.GetResource(oldNs, resType, resourceID)
-	if err != nil {
-		t.logger.Errorf("GetOneResource fail: %s", newNs, err.Error())
+	if err != nil || resource == nil {
+		t.logger.Errorf("GetOneResource fail: %v", newNs, err)
 		return err
 	}
-	_, err = t.GetResource(newNs, resType, resourceID)
-	if err != ErrNotFound {
+	resourceInNewNs, _ := t.GetResource(newNs, resType, resourceID)
+	// return error if resourceList is empty or not found.
+	if resourceInNewNs != nil {
 		t.logger.Errorf("connot move resource from ns %s to ns: %s, resource type: %s,resourceID: %s",
 			oldNs, newNs, resType, resourceID)
 		return err
@@ -184,7 +184,7 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 	}
 
 	var fail bool
-	limit := NewFixed(defaultResourceWorker)
+	limit := limit.NewLimit(defaultResourceWorker)
 	resultChan := make(chan map[string]*model.ResourceList, defaultResourceWorker/2)
 	// collect process result
 	go func() {

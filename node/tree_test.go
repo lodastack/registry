@@ -1,7 +1,6 @@
 package node
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net"
 	"os"
@@ -101,8 +100,8 @@ func TestUpdateTemplate(t *testing.T) {
 		t.Fatalf("NewTree fail: %s\n", err.Error())
 	}
 
-	resourceByte, _ := json.Marshal(resMap1)
-	err = tree.SetResource(rootNode, template+"collect", resourceByte)
+	resource1, _ := model.NewResourceList(resMap1)
+	err = tree.SetResource(rootNode, template+"collect", *resource1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -242,10 +241,10 @@ func TestDelNode(t *testing.T) {
 	}
 
 	// 127.0.0.1 and 127.0.0.2
-	resourceByte1, _ := json.Marshal(resMap1)
+	resource1, _ := model.NewResourceList(resMap1)
 
 	// test1.loda have 127.0.0.1 and 127.0.0.2
-	err = tree.SetResource("test1."+rootNode, "machine", resourceByte1)
+	err = tree.SetResource("test1."+rootNode, "machine", *resource1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
