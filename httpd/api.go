@@ -139,8 +139,8 @@ func (s *Service) initHandler() {
 
 	s.router.POST("/api/v1/peer", s.handlerJoin)
 	s.router.DELETE("/api/v1/peer", s.handlerRemove)
-	s.router.GET("/api/v1/backup", s.handlerBackup)
-	s.router.GET("/api/v1/restore", s.handlerRestore)
+	s.router.GET("/api/v1/db/backup", s.handlerBackup)
+	s.router.GET("/api/v1/db/restore", s.handlerRestore)
 
 	s.router.POST("/api/v1/user/signin", s.HandlerSignin)
 	s.router.GET("/api/v1/user/signout", s.HandlerSignout)
@@ -211,13 +211,10 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			return
 		}
 
-		list := strings.Split(r.URL.Path, "/")
-		if len(list) < 5 {
-			ReturnJson(w, 401, "Not Authorized")
-			return
-		}
+		ns := r.Header.Get("NS")
+
 		// TODO: auth filter
-		if !permCheck(list[4], uid, r.Method) {
+		if !permCheck(ns, uid, r.Method) {
 			ReturnJson(w, 401, "Not Authorized")
 			return
 		}
@@ -229,7 +226,8 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 
 // pass agent or router backend requests, this API shuold be almost desinged in GET method.
 func uriFilter(r *http.Request) bool {
-	var UNAUTH_URI = []string{"/api/v1/user/signin", "/api/v1/agent", "/api/v1/router", "/api/v1/alarm"}
+	var UNAUTH_URI = []string{"/api/v1/user/signin", "/api/v1/agent", "/api/v1/router",
+		"/api/v1/alarm", "/api/v1/peer"}
 	for _, uri := range UNAUTH_URI {
 		if strings.HasPrefix(r.RequestURI, uri) {
 			return false
