@@ -1,7 +1,6 @@
 package node
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -85,17 +84,17 @@ func TestSearchMachine(t *testing.T) {
 	}
 
 	// 127.0.0.1 and 127.0.0.2
-	resourceByte1, _ := json.Marshal(resMap1)
+	resourceByte1, _ := model.NewResourceList(resMap1)
 	// 127.0.0.2 and 127.0.0.3
-	resourceByte2, _ := json.Marshal(resMap2)
+	resourceByte2, _ := model.NewResourceList(resMap2)
 
 	// test1.loda have 127.0.0.1 and 127.0.0.2
-	err = tree.SetResource("test1."+rootNode, "machine", resourceByte1)
+	err = tree.SetResource("test1."+rootNode, "machine", *resourceByte1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 	// test2.loda have 127.0.0.2 and 127.0.0.3
-	err = tree.SetResource("test2."+rootNode, "machine", resourceByte2)
+	err = tree.SetResource("test2."+rootNode, "machine", *resourceByte2)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}

@@ -53,7 +53,7 @@ type TreeMethod interface {
 	GetResourceList(NodeName string, ResourceType string) (*model.ResourceList, error)
 
 	// Set resource to node with nodename.
-	SetResource(nodeName, resType string, ResByte []byte) error
+	SetResource(nodeName, resType string, rl model.ResourceList) error
 
 	// SearchResourceByNs return the map[ns]resources which match the search.
 	SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error)

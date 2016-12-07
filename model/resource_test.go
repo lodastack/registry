@@ -21,7 +21,7 @@ var resByte = []byte{91, 123, 34, 114, 101, 115, 95, 107, 101, 121, 49, 34, 58, 
 var emptyResRes []map[string]string = []map[string]string{{"res_key1": "", "res_key2": ""}, {"res_key1": "res2_v1", "res_key2": "", "_id": ""}}
 
 func TestEmptyValueResource(t *testing.T) {
-	rl, err := NewResourcesMaps(emptyResRes)
+	rl, err := NewResourceList(emptyResRes)
 	if err != nil {
 		t.Fatalf("new resource from a map with empty value fail: %s", err.Error())
 	}
@@ -128,7 +128,7 @@ func TestAppendResource(t *testing.T) {
 }
 
 func TestRsMarshal(t *testing.T) {
-	ressStruct, err := NewResourcesMaps(resMaps)
+	ressStruct, err := NewResourceList(resMaps)
 	if err != nil {
 		t.Fatalf("load map to  resources fail")
 	}
@@ -167,25 +167,6 @@ func TestRUnmarshal(t *testing.T) {
 	t.Log(r)
 }
 
-func TestNewResources(t *testing.T) {
-	ressStruct, err := NewResources(resByte)
-	if err != nil {
-		t.Fatalf("Resources load byte fail", err.Error())
-	}
-	if len(*ressStruct) != 2 {
-		t.Fatalf("Resources load byte error: num of resource(map) not match")
-	}
-	for index, resouce := range *ressStruct {
-		if v, k := resouce["res_key1"]; !k || v != fmt.Sprintf("res%d_v1", index+1) {
-			t.Fatalf("unmarshal not match with expect, Unmarshal value is: %s", v)
-		}
-		if v, k := resouce["res_key2"]; !k || v != fmt.Sprintf("res%d_v2", index+1) {
-			t.Fatalf("unmarshal not match with expect, Unmarshal value is: %s", v)
-		}
-	}
-
-}
-
 func BenchmarkUnmarshal(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
@@ -197,13 +178,13 @@ func BenchmarkUnmarshal(b *testing.B) {
 func BenchmarkMarshal(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		ressStruct, _ := NewResourcesMaps(resMaps)
+		ressStruct, _ := NewResourceList(resMaps)
 		ressStruct.Marshal()
 	}
 }
 
 func TestUpdateResByID(t *testing.T) {
-	rs, err := NewResourcesMaps(resMaps)
+	rs, err := NewResourceList(resMaps)
 	if err != nil {
 		t.Fatalf("load map to  resources fail")
 	}

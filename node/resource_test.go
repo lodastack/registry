@@ -1,7 +1,6 @@
 package node
 
 import (
-	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -13,7 +12,7 @@ func TestSetResourceByID(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
-	resourceByte, _ := json.Marshal(resMap1)
+	resource, _ := model.NewResourceList(resMap1)
 
 	if err := s.Open(true); err != nil {
 		t.Fatalf("failed to open single-node store: %s", err.Error())
@@ -27,7 +26,7 @@ func TestSetResourceByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	err = tree.SetResource("test.loda", "machine", resourceByte)
+	err = tree.SetResource("test.loda", "machine", *resource)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -44,7 +43,7 @@ func TestSetResourceByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create nonLeaf behind root fail: %s", err.Error())
 	}
-	if err = tree.SetResource("testNonLeaf.loda", "machine", resourceByte); err == nil {
+	if err = tree.SetResource("testNonLeaf.loda", "machine", *resource); err == nil {
 		t.Fatalf("set resource fail: %v, not match with expect\n", err)
 	}
 }
@@ -53,7 +52,7 @@ func TestSetResourceByNs(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
-	resourceByte, _ := json.Marshal(resMap1)
+	resource, _ := model.NewResourceList(resMap1)
 
 	if err := s.Open(true); err != nil {
 		t.Fatalf("failed to open single-node store: %s", err.Error())
@@ -66,7 +65,7 @@ func TestSetResourceByNs(t *testing.T) {
 	if _, err := tree.NewNode("test", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	err = tree.SetResource("test."+rootNode, "machine", resourceByte)
+	err = tree.SetResource("test."+rootNode, "machine", *resource)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -82,7 +81,7 @@ func TestSetResourceByNs(t *testing.T) {
 	if _, err := tree.NewNode("testNonLeaf", rootNode, NonLeaf); err != nil {
 		t.Fatalf("create nonLeaf behind root fail: %s", err.Error())
 	}
-	if err = tree.SetResource("testNonLeaf."+rootNode, "machine", resourceByte); err == nil {
+	if err = tree.SetResource("testNonLeaf."+rootNode, "machine", *resource); err == nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 }
@@ -91,8 +90,8 @@ func TestSearchResource(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
-	resourceByte1, _ := json.Marshal(resMap1)
-	resourceByte2, _ := json.Marshal(resMap2)
+	resource1, _ := model.NewResourceList(resMap1)
+	resource2, _ := model.NewResourceList(resMap2)
 
 	if err := s.Open(true); err != nil {
 		t.Fatalf("failed to open single-node store: %s", err.Error())
@@ -105,14 +104,14 @@ func TestSearchResource(t *testing.T) {
 	if _, err := tree.NewNode("test1", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	err = tree.SetResource("test1."+rootNode, "machine", resourceByte1)
+	err = tree.SetResource("test1."+rootNode, "machine", *resource1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 	if _, err := tree.NewNode("test2", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	err = tree.SetResource("test2."+rootNode, "machine", resourceByte2)
+	err = tree.SetResource("test2."+rootNode, "machine", *resource2)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -183,8 +182,8 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
-	resourceByte1, _ := json.Marshal(resMap1)
-	resourceByte2, _ := json.Marshal(resMap2)
+	resource1, _ := model.NewResourceList(resMap1)
+	resource2, _ := model.NewResourceList(resMap2)
 
 	if err := s.Open(true); err != nil {
 		t.Fatalf("failed to open single-node store: %s", err.Error())
@@ -197,7 +196,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	if _, err := tree.NewNode("leaf1", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	err = tree.SetResource("leaf1."+rootNode, "machine", resourceByte1)
+	err = tree.SetResource("leaf1."+rootNode, "machine", *resource1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -213,7 +212,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	if _, err := tree.NewNode("leaf2", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	err = tree.SetResource("leaf2."+rootNode, "machine", resourceByte2)
+	err = tree.SetResource("leaf2."+rootNode, "machine", *resource2)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}

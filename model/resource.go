@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/lodastack/registry/common"
@@ -29,7 +28,7 @@ var (
 var (
 	ErrResMarshal error = errors.New("marshal resources fail")
 	ErrEmptyRes   error = errors.New("empty resources")
-	ErrResFormat  error = errors.New("invalid resource fromat")
+	ErrResFormat  error = errors.New("invalid resource format")
 )
 
 const (
@@ -47,21 +46,7 @@ type ResourceList []Resource
 
 type Resource map[string]string
 
-func NewResources(byteData []byte) (*ResourceList, error) {
-	rl := &ResourceList{}
-	resMaps := []map[string]string{}
-	if err := json.Unmarshal(byteData, &resMaps); err != nil {
-		return rl, errors.New("marshal bytes to map fail: " + err.Error())
-	}
-
-	*rl = make([]Resource, len(resMaps))
-	for i := 0; i < len(resMaps); i++ {
-		(*rl)[i] = Resource(resMaps[i])
-	}
-	return rl, nil
-}
-
-func NewResourcesMaps(resMaps []map[string]string) (*ResourceList, error) {
+func NewResourceList(resMaps []map[string]string) (*ResourceList, error) {
 	rl := &ResourceList{}
 	*rl = make([]Resource, len(resMaps))
 	for i := 0; i < len(resMaps); i++ {
@@ -186,23 +171,21 @@ func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
 			return nil, errors.New("UpdateResByID unmarshal resources fail: " + err.Error())
 		}
 
-		// skip append the the ID matched resource to ouput.
-		if resID, _ := r.ID(); resID == ID {
-			if last {
-				output = append(output, endByte)
+		// append the resource to output if not matched.
+		if resID, _ := r.ID(); resID != ID {
+			rByte, err = r.Marshal()
+			if err != nil {
+				return nil, err
 			}
-			return output, nil
+
+			if len(output) != 0 {
+				output = append(output, deliRes...)
+			}
+			output = append(output, rByte...)
 		}
-		rByte, err = r.Marshal()
-		if err != nil {
-			return nil, err
-		}
+
 		if last {
-			output = append(output, rByte...)
 			output = append(output, endByte)
-		} else {
-			output = append(output, rByte...)
-			output = append(output, deliRes...)
 		}
 		return output, nil
 	})
@@ -402,6 +385,10 @@ func delEndByte(ori []byte) ([]byte, error) {
 // ResourcesAppendByte append the resource to resources.
 func AppendResources(rsByte []byte, resource Resource) ([]byte, string, error) {
 	UUID := resource.InitID()
+	// return error if the resource have not property expect id.
+	if len(resource) <= 1 {
+		return nil, "", errors.New("not allow append empty resource")
+	}
 
 	// If append res to nil, new resources.
 	if len(rsByte) == 0 {
