@@ -16,7 +16,6 @@ import (
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/node"
 	"github.com/lodastack/registry/store"
 	"github.com/lodastack/registry/tcp"
 )
@@ -156,16 +155,8 @@ func (m *Main) Start() error {
 	}
 	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind)
 
-	// Create and init Tree
-	m.logger.Info("begin init tree...")
-	tree, err := node.NewTree(cs)
-	if err != nil {
-		return fmt.Errorf("build tree fail: %s\n", err.Error())
-	}
-	m.logger.Info("build tree success")
-
 	// Create and configure HTTP service.
-	h := httpd.New(config.C.CommonConf.HttpBind, cs, tree)
+	h, err := httpd.New(config.C.CommonConf.HttpBind, cs)
 	if err := h.Start(); err != nil {
 		return fmt.Errorf("failed to start HTTP service: %s", err.Error())
 	}

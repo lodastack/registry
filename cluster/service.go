@@ -53,6 +53,9 @@ type Store interface {
 	// Set sets the value for the given key, via distributed consensus.
 	Update(bucket []byte, key []byte, value []byte) error
 
+	// RemoveKey removes the key from the bucket.
+	RemoveKey(bucket, key []byte) error
+
 	// Batch update values for given keys in given buckets, via distributed consensus.
 	Batch(rows []model.Row) error
 

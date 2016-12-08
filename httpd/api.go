@@ -12,6 +12,7 @@ import (
 
 	"github.com/lodastack/log"
 	m "github.com/lodastack/models"
+	"github.com/lodastack/registry/authorize"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/node"
 
@@ -25,6 +26,30 @@ type Cluster interface {
 
 	// Remove removes a node from the store, specified by addr.
 	Remove(addr string) error
+
+	// Create a bucket, via distributed consensus.
+	CreateBucket(name []byte) error
+
+	// Create a bucket via distributed consensus if not exist.
+	CreateBucketIfNotExist(name []byte) error
+
+	// Remove a bucket, via distributed consensus.
+	RemoveBucket(name []byte) error
+
+	// Get returns the value for the given key.
+	View(bucket, key []byte) ([]byte, error)
+
+	// ViewPrefix returns the value for the keys has the keyPrefix.
+	ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error)
+
+	// Set sets the value for the given key, via distributed consensus.
+	Update(bucket []byte, key []byte, value []byte) error
+
+	// RemoveKey removes the key from the bucket.
+	RemoveKey(bucket, key []byte) error
+
+	// Batch update values for given keys in given buckets, via distributed consensus.
+	Batch(rows []model.Row) error
 
 	// Backup database.
 	Backup() ([]byte, error)
@@ -43,6 +68,7 @@ type Service struct {
 
 	cluster Cluster
 	tree    node.TreeMethod
+	perm    authorize.Perm
 
 	logger *log.Logger
 }
@@ -57,15 +83,30 @@ type bodyParam struct {
 }
 
 // New returns an uninitialized HTTP service.
-func New(addr string, cluster Cluster, tree node.TreeMethod) *Service {
+func New(addr string, cluster Cluster) (*Service, error) {
+	// init Tree
+	tree, err := node.NewTree(cluster)
+	if err != nil {
+		fmt.Println("init tree fail: %s", err.Error())
+		return nil, err
+	}
+
+	// init authorize
+	perm, err := authorize.NewPerm(cluster)
+	if err != nil {
+		fmt.Println("init authorize fail: %s", err.Error())
+		return nil, err
+	}
+
 	return &Service{
 		addr:    addr,
 		cluster: cluster,
 		tree:    tree,
+		perm:    perm,
 		router:  httprouter.New(),
 		session: NewSession(),
 		logger:  log.New("INFO", "http", model.LogBackend),
-	}
+	}, nil
 }
 
 // Start the server
@@ -212,9 +253,11 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		}
 
 		ns := r.Header.Get("NS")
-
-		// TODO: auth filter
-		if !permCheck(ns, uid, r.Method) {
+		res := r.Header.Get("Resource")
+		if ok, err := s.perm.Check(uid, ns, res, r.Method); err != nil {
+			s.logger.Errorf("check permission fail, error: %s", err.Error())
+			ReturnServerError(w, err)
+		} else if !ok {
 			ReturnJson(w, 401, "Not Authorized")
 			return
 		}
@@ -233,10 +276,6 @@ func uriFilter(r *http.Request) bool {
 			return false
 		}
 	}
-	return true
-}
-
-func permCheck(ns string, uid string, method string) bool {
 	return true
 }
 

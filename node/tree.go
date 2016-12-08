@@ -318,7 +318,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 		}
 		parent.Children = append(parent.Children, &newNode)
 		// if not create root/pool node, add node to cache.
-		if newNode.Name != rootNode && newNode.Name != poolNode {
+		if newNode.Name != rootNode {
 			t.Cache.Add(parent.ID, parentNs, &newNode)
 		}
 	}
