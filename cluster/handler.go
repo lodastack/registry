@@ -118,6 +118,11 @@ func (s *Service) ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error
 	return s.store.ViewPrefix(bucket, keyPrefix)
 }
 
+// RemoveKey removes the key from the bucket.
+func (s *Service) RemoveKey(bucket, key []byte) error {
+	return s.store.RemoveKey(bucket, key)
+}
+
 // Update will update the value of the given key in bucket via the cluster.
 func (s *Service) Update(bucket []byte, key []byte, value []byte) error {
 	// Try the local store. It might be the leader.

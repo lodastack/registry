@@ -1,7 +1,7 @@
 package model
 
 var (
-	templates []string = []string{
+	Templates []string = []string{
 		"machine", "alarm", "collect", "doc",
 		// "init", "deploy", "acl", "owner", "route",
 	}
