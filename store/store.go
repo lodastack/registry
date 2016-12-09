@@ -54,6 +54,7 @@ const (
 	batch                                     // Commands which modify the database.
 	createBucket                              // Commands which create the bucket.
 	removeBucket                              // Commands which remove the bucket.
+	removeKey                                 // Commands which remove the key.
 	createBucketIfNotExist                    // Commands which createBucketIfNotExist
 
 	peer
@@ -523,6 +524,42 @@ func (s *Store) CreateBucketIfNotExist(name []byte) error {
 	return r.error
 }
 
+func (s *Store) RemoveKey(bucket, key []byte) error {
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
+
+	rows := []model.Row{
+		{
+			Bucket: bucket,
+			Key:    key,
+		}}
+
+	d := &databaseSub{
+		Batch: rows,
+	}
+
+	c, err := newCommand(removeKey, d)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	f := s.raft.Apply(b, raftTimeout)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return ErrNotLeader
+		}
+		return e.Error()
+	}
+	r := f.Response().(*fsmGenericResponse)
+	return r.error
+}
+
 // RemoveBucket remove a bucket.
 func (s *Store) RemoveBucket(name []byte) error {
 	if s.raft.State() != raft.Leader {
@@ -700,6 +737,9 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 	case createBucket:
 		err := f.applyCreateBucket(c.Sub)
 		return &fsmGenericResponse{error: err}
+	case removeKey:
+		err := f.applyRemoveKey(c.Sub)
+		return &fsmGenericResponse{error: err}
 	case removeBucket:
 		err := f.applyRemoveBucket(c.Sub)
 		return &fsmGenericResponse{error: err}
@@ -829,6 +869,33 @@ func (f *fsm) applyUpdate(sub json.RawMessage) error {
 			return bucketNotFound
 		}
 		err := b.Put(rows[0].Key, rows[0].Value)
+
+		// remove cache
+		f.cache.Remove(rows[0].Bucket, rows[0].Key)
+		return err
+	})
+}
+
+func (f *fsm) applyRemoveKey(sub json.RawMessage) error {
+	var d databaseSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+	rows := d.Batch
+
+	if len(rows) != 1 {
+		return fmt.Errorf("delete key just accept 1 row data: %d", len(rows))
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return f.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(rows[0].Bucket)
+		if b == nil {
+			return bucketNotFound
+		}
+		err := b.Delete(rows[0].Key)
 
 		// remove cache
 		f.cache.Remove(rows[0].Bucket, rows[0].Key)

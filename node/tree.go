@@ -392,7 +392,7 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 
 	node, err := allNodes.Get(ns)
 	if err != nil {
-		t.logger.Errorf("GetByNs fail, error: %s", err.Error())
+		t.logger.Errorf("GetByNs %s fail, error: %s", ns, err.Error())
 		return err
 	}
 	node.update(name, machineReg)
@@ -406,7 +406,6 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 }
 
 // DelNode delete node from tree, remove bucket.
-// TOOD: clear cache.
 func (t *Tree) DelNode(ns string) error {
 	nsSplit := strings.Split(ns, nodeDeli)
 	if len(nsSplit) < 2 {
@@ -455,9 +454,3 @@ func (t *Tree) DelNode(ns string) error {
 	}
 	return nil
 }
-
-// TODO
-func (t *Tree) RmOneResource(ns, resType, resID string) {}
-
-// TODO
-func (t *Tree) RmResByMap(nsResIDMap map[string]string, resType string) {}

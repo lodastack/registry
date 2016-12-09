@@ -4,15 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+
+	m "github.com/lodastack/models"
 )
 
 var errMarshalOutput = errors.New("Marshal JSON output fail.")
 
-type Response struct {
-	Code int         `json:"httpstatus"`
-	Data interface{} `json:"data"`
-	Msg  string      `json:"msg"`
-}
+type Response m.Response
 
 func (r *Response) Write(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
