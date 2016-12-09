@@ -93,6 +93,38 @@ func Test_SingleNode_SetGetKey(t *testing.T) {
 	}
 }
 
+func Test_SingleNode_DeleteKey(t *testing.T) {
+	s := mustNewStore()
+	defer os.RemoveAll(s.Path())
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	if err := s.CreateBucket([]byte(bucket)); err != nil {
+		t.Fatalf("failed to create bucket: %s", err.Error())
+	}
+	if err := s.Update([]byte(bucket), []byte(key), []byte(value)); err != nil {
+		t.Fatalf("failed to update key: %s", err.Error())
+	}
+
+	var v []byte
+	var err error
+	if v, err = s.View([]byte(bucket), []byte(key)); err != nil {
+		t.Fatalf("failed to get key: %s", err.Error())
+	}
+	if string(v) != value {
+		t.Fatalf("funexpected results for get: %s - %s ", string(v), value)
+	}
+
+	if err := s.RemoveKey([]byte(bucket), []byte(key)); err != nil {
+		t.Fatalf("failed to delete key: %s", err.Error())
+	}
+	if v, err = s.View([]byte(bucket), []byte(key)); err != nil || len(v) != 0 {
+		t.Fatalf("get the removed key success, the output: %s, error: %v", v, err)
+	}
+}
+
 func Test_SingleNode_GetAfterAnotherBucketSetKey(t *testing.T) {
 	s := mustNewStore()
 	defer os.RemoveAll(s.Path())
@@ -180,6 +212,52 @@ func Test_MultiNode_SetGetKey(t *testing.T) {
 
 	if string(v) != value {
 		t.Fatalf("funexpected results for get: %s - %s ", string(v), value)
+	}
+}
+
+func Test_MultiNode_RemoveKey(t *testing.T) {
+	s0 := mustNewStore()
+	defer os.RemoveAll(s0.Path())
+	if err := s0.Open(true); err != nil {
+		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
+	}
+	defer s0.Close(true)
+	s0.WaitForLeader(10 * time.Second)
+	s1 := mustNewStore()
+	defer os.RemoveAll(s1.Path())
+	if err := s1.Open(false); err != nil {
+		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
+	}
+	defer s1.Close(true)
+
+	// Join the second node to the first.
+	if err := s0.Join(s1.Addr()); err != nil {
+		t.Fatalf("failed to join to node at %s: %s", s0.Addr(), err.Error())
+	}
+	if err := s0.CreateBucket([]byte(bucket)); err != nil {
+		t.Fatalf("failed to create bucket: %s", err.Error())
+	}
+	if err := s0.Update([]byte(bucket), []byte(key), []byte(value)); err != nil {
+		t.Fatalf("failed to update key: %s", err.Error())
+	}
+
+	time.Sleep(1 * time.Second)
+
+	var v []byte
+	var err error
+	if v, err = s1.View([]byte(bucket), []byte(key)); err != nil {
+		t.Fatalf("failed to get key: %s", err.Error())
+	}
+	if string(v) != value {
+		t.Fatalf("funexpected results for get: %s - %s ", string(v), value)
+	}
+
+	if err := s0.RemoveKey([]byte(bucket), []byte(key)); err != nil {
+		t.Fatalf("failed to remove key: %s", err.Error())
+	}
+	time.Sleep(1 * time.Second)
+	if v, err = s1.View([]byte(bucket), []byte(key)); err != nil || len(v) != 0 {
+		t.Fatalf("get the removed  key success, output: %s, error: %v", v, err)
 	}
 }
 
