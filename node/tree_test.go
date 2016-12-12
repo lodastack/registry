@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 	s.WaitForLeader(10 * time.Second)
 	tree, err := NewTree(s)
 
-	var leafID, nonLeafID, childNonID string
+	var leafID, nonLeafID, childNonID, childLeafID string
 	// Test reate Leaf node and create bucket.
 	if leafID, err = tree.NewNode("l1", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
@@ -50,15 +51,28 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 	if childNonID, err = tree.NewNode("nn1", "n1."+rootNode, NonLeaf); err != nil {
 		t.Fatalf("create node behind nonLeaf node fail: %s\n", err.Error())
 	}
-	if _, err = tree.NewNode("nnl1", "nn1.n1."+rootNode, Leaf); err != nil {
+	if childLeafID, err = tree.NewNode("nnl1", "nn1.n1."+rootNode, Leaf); err != nil {
 		t.Fatalf("create node under nonleaf fail: %s", err.Error())
 	}
 	if err := tree.setByteToStore(childNonID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to childID fail: %s", err.Error())
 	}
+	poolnode, err := tree.GetNode("pool.loda")
 
-	if leafIDs, ok := tree.Cache.GetLeafID(rootID); !ok || len(leafIDs) != 2 {
-		t.Fatalf("get leaf of root fail not match with expect:%v", leafIDs)
+	if err != nil {
+		t.Fatalf("get pool node fail: %s", err.Error())
+	}
+	leafIDs, ok := tree.Cache.GetLeafID(rootID)
+	if !ok || len(leafIDs) != 3 {
+		t.Fatalf("get leaf of root fail not match with expect:%s,%s %v", leafID, childLeafID, leafIDs)
+	}
+	sort.Strings(leafIDs)
+	expectedIDs := []string{leafID, childLeafID, poolnode.ID}
+	sort.Strings(expectedIDs)
+	for i := 0; i < len(leafIDs); i++ {
+		if leafIDs[i] != expectedIDs[i] {
+			t.Fatalf("leaf id not match with expect")
+		}
 	}
 }
 
