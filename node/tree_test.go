@@ -13,7 +13,7 @@ import (
 )
 
 // Test create
-func TestCreateNode(t *testing.T) {
+func TestCreateNodeAndLeafCache(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
@@ -24,7 +24,7 @@ func TestCreateNode(t *testing.T) {
 	s.WaitForLeader(10 * time.Second)
 	tree, err := NewTree(s)
 
-	var leafID, nonLeafID, childID string
+	var leafID, nonLeafID, childNonID string
 	// Test reate Leaf node and create bucket.
 	if leafID, err = tree.NewNode("l1", rootNode, Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
@@ -47,11 +47,18 @@ func TestCreateNode(t *testing.T) {
 		t.Fatalf("create node under leaf success, not match with expect")
 	}
 	// Test reate node under nonleaf node and create bucket.
-	if childID, err = tree.NewNode("n1", "n1."+rootNode, NonLeaf); err != nil {
+	if childNonID, err = tree.NewNode("nn1", "n1."+rootNode, NonLeaf); err != nil {
 		t.Fatalf("create node behind nonLeaf node fail: %s\n", err.Error())
 	}
-	if err := tree.setByteToStore(childID, "test", []byte("test")); err != nil {
+	if _, err = tree.NewNode("nnl1", "nn1.n1."+rootNode, Leaf); err != nil {
+		t.Fatalf("create node under nonleaf fail: %s", err.Error())
+	}
+	if err := tree.setByteToStore(childNonID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to childID fail: %s", err.Error())
+	}
+
+	if leafIDs, ok := tree.Cache.GetLeafID(rootID); !ok || len(leafIDs) != 2 {
+		t.Fatalf("get leaf of root fail not match with expect:%v", leafIDs)
 	}
 }
 

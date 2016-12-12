@@ -116,6 +116,17 @@ func TestSearchResource(t *testing.T) {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 
+	if _, err := tree.NewNode("nl", rootNode, NonLeaf); err != nil {
+		t.Fatalf("create leaf behind root fail: %s", err.Error())
+	}
+	if _, err := tree.NewNode("l", "nl."+rootNode, Leaf); err != nil {
+		t.Fatalf("create leaf behind root fail: %s", err.Error())
+	}
+	err = tree.SetResource("l.nl."+rootNode, "machine", *resource2)
+	if err != nil {
+		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
+	}
+
 	// search 127.0.0.1 show get 1 node each has one resource.
 	search1_1 := model.ResourceSearch{
 		Key:   "host",
@@ -149,10 +160,10 @@ func TestSearchResource(t *testing.T) {
 	}
 	search2_2 := search2_1
 	search2_2.Fuzzy = true
-	if res, err = tree.SearchResource(rootNode, "machine", search2_1); err != nil || len(res) != 2 {
+	if res, err = tree.SearchResource(rootNode, "machine", search2_1); err != nil || len(res) != 3 {
 		t.Fatalf("search host 127.0.0.2 by not fuzzy type not match with expect")
 	}
-	if res, err = tree.SearchResource(rootNode, "machine", search2_2); err != nil || len(res) != 2 {
+	if res, err = tree.SearchResource(rootNode, "machine", search2_2); err != nil || len(res) != 3 {
 		t.Fatalf("search host 127.0.0.2 by fuzzy type not match with expect")
 	}
 
@@ -168,7 +179,7 @@ func TestSearchResource(t *testing.T) {
 	if res, err = tree.SearchResource(rootNode, "machine", search3_1); err != nil || len(res) != 0 {
 		t.Fatalf("search host 127.0.0. by not fuzzy type not match with expect")
 	}
-	if res, err = tree.SearchResource(rootNode, "machine", search3_2); len(res) != 2 {
+	if res, err = tree.SearchResource(rootNode, "machine", search3_2); len(res) != 3 {
 		t.Fatalf("search host 127.0.0. by fuzzy type not match with expect")
 	}
 	for _, resMachine := range res {

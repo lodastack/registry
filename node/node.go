@@ -298,8 +298,26 @@ func (i *nodeCache) Purge() {
 
 // GetLeafID return leaf cheld IDs of a nodeID.
 func (i *nodeCache) GetLeafID(nodeId string) ([]string, bool) {
-	childIds, ok := i.Get(childCachePrefix + nodeId)
-	return strings.Split(childIds, ","), ok
+	childIDStr, ok := i.Get(childCachePrefix + nodeId)
+	if !ok {
+		return nil, false
+	}
+	childIDs := strings.Split(childIDStr, ",")
+	result := []string{}
+	for _, childID := range childIDs {
+		// Add the leaf child ns to result.
+		if _, ok := i.GetLeafID(childID); !ok {
+			result = append(result, childID)
+			continue
+		}
+
+		// Check the child of nonleaf child ns.
+		grandLeafs, _ := i.GetLeafID(childID)
+		if len(grandLeafs) != 0 {
+			result = append(result, grandLeafs...)
+		}
+	}
+	return result, true
 }
 
 // AddNode add a node to NS_ID and child cache.
@@ -307,6 +325,10 @@ func (i *nodeCache) Add(parentId, parentNs string, newNode *Node) {
 	ns := newNode.Name + nodeDeli + parentNs
 	i.Set(newNode.ID, ns)
 	i.Set(ns, newNode.ID)
+	// Init child cache for nonleaf ns.
+	if newNode.Type == NonLeaf {
+		i.Set(childCachePrefix+newNode.ID, "")
+	}
 
 	parentNewChilds := newNode.ID
 	ParentChildKey := childCachePrefix + parentId
