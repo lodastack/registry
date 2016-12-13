@@ -63,7 +63,7 @@ func (s *ResourceSearch) IdSearch(raw []byte) (ResourceList, error) {
 		case endByte:
 			//  End of resources.
 			if matchFlag {
-				if err := matchRl.AppendResourceByte(raw[startPos:]); err != nil {
+				if err := matchRl.AppendResourceByte(raw[startPos:index]); err != nil {
 					return matchRl, fmt.Errorf("unmarshal resource fail")
 				}
 			}
