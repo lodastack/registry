@@ -44,8 +44,8 @@ func TestIdSearch(t *testing.T) {
 	}
 	t.Log(rl)
 	result, err := search.Process(searchByte)
-	t.Log("search id uuid2 result:", result)
-	if err != nil || len(result) == 0 || result[0]["_id"] != "uuid2" {
+	t.Logf("search id uuid2 result: %+v", result)
+	if err != nil || len(result) == 0 || result[0]["_id"] != "uuid2" || result[0]["res_key2"] != "res2_v2" {
 		t.Fatal("id search result not match: ", err)
 	}
 }

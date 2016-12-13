@@ -275,7 +275,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
         "server0.product0.loda": [
         {
             "_id": "9fc20a93-6642-4f4b-8d15-5847f2232790",
-            "hostname": "127.0.0.3\u0002"
+            "hostname": "127.0.0.3"
         }
         ]
       },
