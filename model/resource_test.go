@@ -161,7 +161,7 @@ func TestRUnmarshal(t *testing.T) {
 	if err := r.Unmarshal(rByte); err != nil {
 		t.Fatalf("unmarshal r fail: %s", err.Error())
 	}
-	if r[idKey] != "HIJ" || len(r) != 3 {
+	if r[IdKey] != "HIJ" || len(r) != 3 {
 		t.Fatalf("unmarshal r fail: not match with expect")
 	}
 	t.Log(r)
@@ -233,7 +233,7 @@ func TestDeleteResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DeleteResource error: %s", err.Error())
 	}
-	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][idKey] != "I" {
+	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][IdKey] != "I" {
 		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rl)
 	}
 
@@ -241,7 +241,7 @@ func TestDeleteResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DeleteResource error: %s", err.Error())
 	}
-	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][idKey] != "H" {
+	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][IdKey] != "H" {
 		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rl)
 	}
 }
@@ -256,7 +256,7 @@ func TestGetResource(t *testing.T) {
 	r, err := rl.GetResource("H")
 	if err != nil {
 		t.Fatalf("get resource fail: %s", err.Error())
-	} else if r[idKey] != "H" || len(r) != 3 {
+	} else if r[IdKey] != "H" || len(r) != 3 {
 		t.Fatalf("unmarshal r fail: not match with expec: %v", r)
 	}
 
@@ -264,7 +264,7 @@ func TestGetResource(t *testing.T) {
 	r, err = rl.GetResource("I")
 	if err != nil {
 		t.Fatalf("get resource fail: %s", err.Error())
-	} else if r[idKey] != "I" || len(r) != 3 {
+	} else if r[IdKey] != "I" || len(r) != 3 {
 		t.Fatalf("unmarshal r fail: not match with expect: %v", r)
 	}
 

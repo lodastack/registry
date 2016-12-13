@@ -9,7 +9,7 @@ import (
 // Data Format: map1uuid 0 map1key1 1 map1value1 11 map1key2 1 map1value2 111 map2uuid 0 map2key1 1 map2value1 11 map2key2 1 map2value2 2
 
 const (
-	idKey      = "_id"
+	IdKey      = "_id"
 	Prefix int = iota
 	Surffix
 )
@@ -137,7 +137,7 @@ func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byt
 		// update the resource if resource ID match with expect.
 		if resID, _ := r.ID(); resID == ID {
 			for k, v := range updateMap {
-				if k == idKey {
+				if k == IdKey {
 					continue
 				}
 				r.SetProperty(k, v)
@@ -262,7 +262,7 @@ func (r *Resource) Unmarshal(raw []byte) error {
 		switch byt {
 		case uuidByte:
 			// The key readed is uuid.
-			(*r)[idKey] = string(tmpk)
+			(*r)[IdKey] = string(tmpk)
 			tmpk = make([]byte, 0)
 		case deliByte:
 			// Count length of deliByte.
@@ -302,7 +302,7 @@ func (r *Resource) Size() int {
 	// and UUID flag: uuidByte
 	totalSize := 36 + 1
 	for k, v := range *r {
-		if k == idKey {
+		if k == IdKey {
 			continue
 		}
 		totalSize += len(k)
@@ -332,7 +332,7 @@ func (r *Resource) Marshal() ([]byte, error) {
 	n += 1
 
 	for k, v := range *r {
-		if k == idKey {
+		if k == IdKey {
 			continue
 		}
 		n += copy(raw[n:], []byte(k))
@@ -365,13 +365,13 @@ func (r *Resource) SetProperty(k, v string) {
 // InitID create ID for the resource if not have, and return ID.
 func (r *Resource) InitID() string {
 	if id, _ := r.ID(); id == "" {
-		(*r)[idKey] = common.GenUUID()
+		(*r)[IdKey] = common.GenUUID()
 	}
-	return (*r)[idKey]
+	return (*r)[IdKey]
 }
 
 func (r *Resource) ID() (string, bool) {
-	return r.ReadProperty(idKey)
+	return r.ReadProperty(IdKey)
 }
 
 func delEndByte(ori []byte) ([]byte, error) {
