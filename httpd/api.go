@@ -3,6 +3,7 @@ package httpd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -81,6 +82,8 @@ type bodyParam struct {
 	Rl        model.ResourceList `json:"resourcelist"`
 	R         model.Resource     `json:"resource"`
 }
+
+var ErrInvalidParam = errors.New("invalid infomation")
 
 // New returns an uninitialized HTTP service.
 func New(addr string, cluster Cluster) (*Service, error) {
@@ -294,7 +297,7 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 	}
 	hostname, _ := machine.ReadProperty(node.HostnameProp)
 	if hostname == "" {
-		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
+		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 
@@ -433,7 +436,7 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
-	delete(param.R, "_id")
+	delete(param.R, model.IdKey)
 	if uuid, err := s.tree.AppendResource(param.Ns, param.ResType, param.R); err != nil {
 		ReturnServerError(w, err)
 	} else {
@@ -449,11 +452,12 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 	k := r.FormValue("k")
 	v := r.FormValue("v")
 	searchMod := r.FormValue("mod")
-	search := model.ResourceSearch{
-		Key:   k,
-		Value: []byte(v),
-		Fuzzy: searchMod == "fuzzy",
+	if ns == "" || resType == "" || k == "" || v == "" {
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
 	}
+	search := model.NewSearch(k, v, searchMod == "fuzzy")
+
 	res, err := s.tree.SearchResource(ns, resType, search)
 	if err != nil {
 		s.logger.Errorf("handlerSearch SearchResourceByNs fail: %s", err.Error())
@@ -515,7 +519,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 
 	nodeT, err := strconv.Atoi(nodeType)
 	if name == "" || parentNs == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
-		ReturnServerError(w, fmt.Errorf("invalid information"))
+		ReturnServerError(w, ErrInvalidParam)
 		return
 	}
 

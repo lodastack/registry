@@ -16,11 +16,7 @@ var (
 // Search hostname on the tree.
 // Return map[ns]resourceID.
 func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
-	searchHostname := model.ResourceSearch{
-		Key:   HostnameProp,
-		Value: []byte(hostname),
-		Fuzzy: false,
-	}
+	searchHostname := model.NewSearch(HostnameProp, hostname, false)
 	resMap, err := t.SearchResource(rootNode, "machine", searchHostname)
 	if err != nil {
 		t.logger.Errorf("SearchResource fail, error:%s", err.Error())

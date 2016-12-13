@@ -15,6 +15,20 @@ type ResourceSearch struct {
 	Process HandleFunc
 }
 
+func NewSearch(k, v string, fuzzy bool) ResourceSearch {
+	if k == IdKey {
+		return ResourceSearch{
+			Id:    v,
+			Fuzzy: fuzzy,
+		}
+	}
+	return ResourceSearch{
+		Key:   k,
+		Value: []byte(v),
+		Fuzzy: fuzzy,
+	}
+}
+
 func (s *ResourceSearch) Init() error {
 	lenId := len(s.Id)
 	lenValue := len(s.Value)

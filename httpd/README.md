@@ -266,6 +266,21 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
         ]
       }
     }
+    # 搜索ID
+    curl "http://127.0.0.1:9991/api/v1/resource/search?ns=loda&type=machine&k=_id&v=9fc20a93-6642-4f4b-8d15-5847f2232790"
+    # 返回
+    {
+      "httpstatus": 200,
+      "data": {
+        "server0.product0.loda": [
+        {
+            "_id": "9fc20a93-6642-4f4b-8d15-5847f2232790",
+            "hostname": "127.0.0.3\u0002"
+        }
+        ]
+      },
+      "msg": ""
+    }
     curl "http://127.0.0.1:9991/api/v1/resource/search?ns=pool.loda&type=collect&k=name&v=cpu.idle&mod=exact"|jq
     #返回
     {
