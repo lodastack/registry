@@ -184,7 +184,7 @@ func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
 			output = append(output, rByte...)
 		}
 
-		if last {
+		if last && len(output) > 0 {
 			output = append(output, endByte)
 		}
 		return output, nil

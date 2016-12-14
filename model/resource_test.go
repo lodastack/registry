@@ -236,6 +236,10 @@ func TestDeleteResource(t *testing.T) {
 	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][IdKey] != "I" {
 		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rl)
 	}
+	newResByte, err = DeleteResource(newResByte, "I")
+	if err != nil || len(newResByte) != 0 {
+		t.Fatalf("Delete all Resource error, byte length:%d, error: %v", len(newResByte), err)
+	}
 
 	newResByte, err = DeleteResource(boltByte, "I")
 	if err != nil {
