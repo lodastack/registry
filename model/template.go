@@ -6,6 +6,13 @@ var (
 		// "init", "deploy", "acl", "owner", "route",
 	}
 
+	PkProperty = map[string]string{
+		"machine": "hostname",
+		"collect": "name",
+		"alarm":   "name",
+		"doc":     "name",
+	}
+
 	TemplatePrefix string = "_template_"
 )
 
