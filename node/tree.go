@@ -262,8 +262,12 @@ func (t *Tree) LeafIDs(ns string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	leafIDs, err = node.leafID()
-	t.Cache.Set(childCachePrefix+nodeId, strings.Join(leafIDs, ","))
+	if node.Type == Leaf {
+		leafIDs = []string{node.ID}
+	} else {
+		leafIDs, err = node.leafID()
+		t.Cache.Set(childCachePrefix+nodeId, strings.Join(leafIDs, ","))
+	}
 	return leafIDs, err
 }
 

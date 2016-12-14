@@ -435,6 +435,32 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		ReturnBadRequest(w, err)
 		return
 	}
+	if param.Ns == "" || param.ResType == "" || param.R == nil {
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
+	// Check pk property.
+	pk := model.PkProperty[param.ResType]
+	pkValue, _ := param.R.ReadProperty(pk)
+	if pkValue == "" {
+		s.logger.Errorf("cannot append resource without pk: %+v", param.R)
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
+	// Check whether the pk property of the resource is already exist.
+	search := model.NewSearch(pk, pkValue, false)
+	res, err := s.tree.SearchResource(param.Ns, param.ResType, search)
+	if err != nil {
+		s.logger.Errorf("check the addend resource fail: %s", err.Error())
+		ReturnServerError(w, err)
+		return
+	} else if len(res) != 0 {
+		s.logger.Errorf("resource already exist in the ns, data: %+v", res)
+		ReturnBadRequest(w, errors.New("resource already exist"))
+		return
+	}
 
 	delete(param.R, model.IdKey)
 	if uuid, err := s.tree.AppendResource(param.Ns, param.ResType, param.R); err != nil {

@@ -197,7 +197,8 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 #### 2.2 添加资源
 
-在节点下添加一个资源项
+在节点下添加一个资源项。如果要添加的pk属性缺失或已经在该节点下存在，则不予添加。
+目前各资源对应的pk属性：`machine`资源： `hostname`， 其他资源: `name`
 
 `POST`方法, url: `/api/v1/resource/add`
 
