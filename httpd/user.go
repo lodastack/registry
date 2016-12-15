@@ -25,7 +25,10 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 	key := common.GenUUID()
-	s.session.Set(key, user)
+	if err := s.cluster.SetSession(key, user); err != nil {
+		ReturnJson(w, 500, "set session failed")
+		return
+	}
 	ReturnJson(w, 200, UserToken{User: user, Token: key})
 }
 
@@ -33,13 +36,13 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 func (s *Service) HandlerSignout(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var user string
 	key := r.Header.Get("AuthToken")
-	v := s.session.Get(key)
+	v := s.cluster.GetSession(key)
 	if v == nil {
 		ReturnJson(w, 200, UserToken{Token: key})
 		return
 	}
 	user = v.(string)
-	s.session.Delete(key)
+	s.cluster.DelSession(key)
 	ReturnJson(w, 200, UserToken{User: user, Token: key})
 	return
 }

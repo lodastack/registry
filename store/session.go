@@ -1,4 +1,4 @@
-package httpd
+package store
 
 import (
 	"sync"

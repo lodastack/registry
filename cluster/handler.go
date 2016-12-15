@@ -14,14 +14,19 @@ import (
 var ErrNotLeader = raft.ErrNotLeader
 
 var (
-	TypPeer            = []byte("peer")
 	TypCBucket         = []byte("createrBucket")
 	TypRBucket         = []byte("removeBucket")
 	TypUpdate          = []byte("update")
 	TypBatch           = []byte("batch")
-	TypJoin            = []byte("join")
-	TypRemove          = []byte("remove")
 	TypCBucketNotExist = []byte("createBucketIfNotExist")
+	TypRkey            = []byte("removekey")
+
+	TypSetSession = []byte("setsession")
+	TypDelSession = []byte("delsession")
+
+	TypJoin   = []byte("join")
+	TypRemove = []byte("remove")
+	TypPeer   = []byte("peer")
 )
 
 type response struct {
@@ -120,7 +125,16 @@ func (s *Service) ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error
 
 // RemoveKey removes the key from the bucket.
 func (s *Service) RemoveKey(bucket, key []byte) error {
-	return s.store.RemoveKey(bucket, key)
+	// Try the local store. It might be the leader.
+	err := s.store.RemoveKey(bucket, key)
+	if err == ErrNotLeader {
+		return s.WriteLeader(map[string][]byte{
+			"key":    key,
+			"bucket": bucket,
+			"type":   TypRkey,
+		})
+	}
+	return err
 }
 
 // Update will update the value of the given key in bucket via the cluster.
@@ -154,6 +168,51 @@ func (s *Service) Batch(rows []model.Row) error {
 		return s.WriteLeader(map[string][]byte{
 			"rows": buf.Bytes(),
 			"type": TypBatch,
+		})
+	}
+	return err
+}
+
+// GetSession returns the session value for the given key.
+func (s *Service) GetSession(key interface{}) interface{} {
+	return s.store.GetSession(key)
+}
+
+// SetSession set the session.
+func (s *Service) SetSession(key, value interface{}) error {
+	// Try the local store. It might be the leader.
+	err := s.store.SetSession(key, value)
+	if err == ErrNotLeader {
+		var keyStr, valueStr string
+		var ok bool
+		if keyStr, ok = key.(string); !ok {
+			return fmt.Errorf("session key type error, not a string")
+		}
+		if valueStr, ok = value.(string); !ok {
+			return fmt.Errorf("session value type error, not a string")
+		}
+		return s.WriteLeader(map[string][]byte{
+			"key":   []byte(keyStr),
+			"value": []byte(valueStr),
+			"type":  TypSetSession,
+		})
+	}
+	return err
+}
+
+// Delsession delete the session from given key.
+func (s *Service) DelSession(key interface{}) error {
+	// Try the local store. It might be the leader.
+	err := s.store.DelSession(key)
+	if err == ErrNotLeader {
+		var keyStr string
+		var ok bool
+		if keyStr, ok = key.(string); !ok {
+			return fmt.Errorf("session key type error, not a string")
+		}
+		return s.WriteLeader(map[string][]byte{
+			"key":  []byte(keyStr),
+			"type": TypDelSession,
 		})
 	}
 	return err
@@ -234,6 +293,14 @@ func (s *Service) handleConn(conn net.Conn) {
 		s.handleUpdate(msg, conn)
 	case string(TypBatch):
 		s.handleBatch(msg, conn)
+	case string(TypRkey):
+		s.handleRemoveKey(msg, conn)
+
+	case string(TypSetSession):
+		s.handleSetSession(msg, conn)
+	case string(TypDelSession):
+		s.handleDelSession(msg, conn)
+
 	case string(TypJoin):
 		s.handleJoin(msg, conn)
 	case string(TypRemove):
@@ -416,6 +483,78 @@ func (s *Service) handleBatch(msg map[string][]byte, conn net.Conn) {
 	}
 
 	if err := s.store.Batch(rows); err != nil {
+		resp := response{1, err.Error()}
+		s.writeResponse(resp, conn)
+		return
+	}
+	s.writeResponse(response{}, conn)
+	return
+}
+
+func (s *Service) handleRemoveKey(msg map[string][]byte, conn net.Conn) {
+	var bucket, key []byte
+	var ok bool
+
+	if bucket, ok = msg["bucket"]; !ok {
+		resp := response{1, "need para"}
+		s.writeResponse(resp, conn)
+		return
+	}
+
+	if key, ok = msg["key"]; !ok {
+		resp := response{1, "need para"}
+		s.writeResponse(resp, conn)
+		return
+	}
+
+	// Remove from the cluster.
+	if err := s.store.RemoveKey(bucket, key); err != nil {
+		resp := response{1, err.Error()}
+		s.writeResponse(resp, conn)
+		return
+	}
+	s.writeResponse(response{}, conn)
+	return
+}
+
+func (s *Service) handleSetSession(msg map[string][]byte, conn net.Conn) {
+	var key, value []byte
+	var ok bool
+
+	if value, ok = msg["value"]; !ok {
+		resp := response{1, "need para"}
+		s.writeResponse(resp, conn)
+		return
+	}
+
+	if key, ok = msg["key"]; !ok {
+		resp := response{1, "need para"}
+		s.writeResponse(resp, conn)
+		return
+	}
+
+	// Remove from the cluster.
+	if err := s.store.SetSession(string(key), string(value)); err != nil {
+		resp := response{1, err.Error()}
+		s.writeResponse(resp, conn)
+		return
+	}
+	s.writeResponse(response{}, conn)
+	return
+}
+
+func (s *Service) handleDelSession(msg map[string][]byte, conn net.Conn) {
+	var key []byte
+	var ok bool
+
+	if key, ok = msg["key"]; !ok {
+		resp := response{1, "need para"}
+		s.writeResponse(resp, conn)
+		return
+	}
+
+	// Remove from the cluster.
+	if err := s.store.DelSession(string(key)); err != nil {
 		resp := response{1, err.Error()}
 		s.writeResponse(resp, conn)
 		return

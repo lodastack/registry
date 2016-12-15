@@ -59,6 +59,15 @@ type Store interface {
 	// Batch update values for given keys in given buckets, via distributed consensus.
 	Batch(rows []model.Row) error
 
+	// GetSession returns the sression value for the given key.
+	GetSession(key interface{}) interface{}
+
+	// SetSession sets the value for the given key, via distributed consensus.
+	SetSession(key, value interface{}) error
+
+	// DelSession delete the value for the given key, via distributed consensus.
+	DelSession(key interface{}) error
+
 	// Backup database.
 	Backup() ([]byte, error)
 
