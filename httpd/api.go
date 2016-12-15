@@ -105,7 +105,7 @@ func New(addr string, cluster Cluster) (*Service, error) {
 	// init authorize
 	perm, err := authorize.NewPerm(cluster)
 	if err != nil {
-		fmt.Println("init authorize fail: %s", err.Error())
+		fmt.Printf("init authorize fail: %s\n", err.Error())
 		return nil, err
 	}
 
@@ -353,7 +353,7 @@ func (s *Service) handleResourceMove(w http.ResponseWriter, r *http.Request, ps 
 	toNs := r.FormValue("to")
 	resType := r.FormValue("type")
 	resId := r.FormValue("resourceid")
-	if err := s.tree.MoveResource(fromNs, toNs, resType, resId); err != nil {
+	if err := s.tree.MoveResource(fromNs, toNs, resType, strings.Split(resId, ",")...); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
@@ -401,10 +401,6 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 	}
 	if err != nil {
 		ReturnServerError(w, err)
-		return
-	}
-	if len(*resList) == 0 {
-		ReturnNotFound(w, "No resources found.")
 		return
 	}
 	ReturnJson(w, 200, resList)
@@ -457,7 +453,7 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 	}
 
 	// Check whether the pk property of the resource is already exist.
-	search := model.NewSearch(pk, pkValue, false)
+	search, _ := model.NewSearch(false, pk, pkValue)
 	res, err := s.tree.SearchResource(param.Ns, param.ResType, search)
 	if err != nil {
 		s.logger.Errorf("check the addend resource fail: %s", err.Error())
@@ -470,10 +466,10 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 	}
 
 	delete(param.R, model.IdKey)
-	if uuid, err := s.tree.AppendResource(param.Ns, param.ResType, param.R); err != nil {
+	if err := s.tree.AppendResource(param.Ns, param.ResType, param.R); err != nil {
 		ReturnServerError(w, err)
 	} else {
-		ReturnOK(w, uuid)
+		ReturnOK(w, "success")
 	}
 }
 
@@ -489,7 +485,7 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	search := model.NewSearch(k, v, searchMod == "fuzzy")
+	search, _ := model.NewSearch(searchMod == "fuzzy", k, v)
 
 	res, err := s.tree.SearchResource(ns, resType, search)
 	if err != nil {

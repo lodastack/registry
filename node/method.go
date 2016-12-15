@@ -80,11 +80,11 @@ type TreeMethod interface {
 	MachineRename(oldName, newName string) error
 
 	// Append resource to ns.
-	AppendResource(ns, resType string, appendRes model.Resource) (string, error)
+	AppendResource(ns, resType string, appendRes ...model.Resource) error
 
 	// Delete resource from ns.
-	DeleteResource(ns, resType, resId string) error
+	DeleteResource(ns, resType string, resId ...string) error
 
 	// Remove resource from one ns to another.
-	MoveResource(oldNs, newNs, resType, resourceID string) error
+	MoveResource(oldNs, newNs, resType string, resourceID ...string) error
 }

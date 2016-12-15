@@ -11,7 +11,7 @@ var searchByte = []byte{117, 117, 105, 100, 49, 0, 114, 101, 115, 95, 107, 101, 
 	114, 101, 115, 95, 107, 101, 121, 50, 1, 114, 101, 115, 50, 95, 118, 50, 2}
 
 func TestSearch(t *testing.T) {
-	dest := []byte{'1', '2', '3'}
+	dest := []string{string([]byte{'1', '2', '3'})}
 
 	ori := []byte{0, 0, '1', '2', '3', 0, 0}
 	if ok := search(ori, dest, true); !ok {
@@ -52,7 +52,7 @@ func TestIdSearch(t *testing.T) {
 
 func TestValueSearchEmptyKey(t *testing.T) {
 	search := ResourceSearch{
-		Value: []byte("res1_v2"),
+		Value: []string{"res1_v2"},
 		Fuzzy: true,
 	}
 	search.Init()
@@ -78,7 +78,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 1-1
 	search := ResourceSearch{
 		Key:   "res_key1",
-		Value: []byte("res2_v1"),
+		Value: []string{"res2_v1"},
 		Fuzzy: true,
 	}
 	search.Init()
@@ -90,7 +90,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 1-2
 	search = ResourceSearch{
 		Key:   "res_key1",
-		Value: []byte("res2_v1"),
+		Value: []string{"res2_v1"},
 		Fuzzy: false,
 	}
 	search.Init()
@@ -103,7 +103,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 2-1
 	search = ResourceSearch{
 		Key:   "res_key2",
-		Value: []byte("res1_v2"),
+		Value: []string{"res1_v2"},
 		Fuzzy: true,
 	}
 	search.Init()
@@ -118,7 +118,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 2-2
 	search = ResourceSearch{
 		Key:   "res_key2",
-		Value: []byte("res1_v2"),
+		Value: []string{"res1_v2"},
 		Fuzzy: false,
 	}
 	search.Init()
@@ -134,7 +134,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 3-1: k is not match
 	search = ResourceSearch{
 		Key:   "res_key3",
-		Value: []byte("res2_v2"),
+		Value: []string{"res2_v2"},
 		Fuzzy: true,
 	}
 	search.Init()
@@ -146,7 +146,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 3-2: k is not match
 	search = ResourceSearch{
 		Key:   "res_key3",
-		Value: []byte("res2_v2"),
+		Value: []string{"res2_v2"},
 		Fuzzy: false,
 	}
 	search.Init()
@@ -159,7 +159,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 4-1: v is not mactch
 	search = ResourceSearch{
 		Key:   "res_key2",
-		Value: []byte("res2_v3"),
+		Value: []string{"res2_v3"},
 		Fuzzy: true,
 	}
 	search.Init()
@@ -171,7 +171,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 4-2: v is not mactch
 	search = ResourceSearch{
 		Key:   "res_key2",
-		Value: []byte("res2_v3"),
+		Value: []string{"res2_v3"},
 		Fuzzy: false,
 	}
 	search.Init()
@@ -184,7 +184,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 5-1: Fuzzy search
 	search = ResourceSearch{
 		Key:   "res_key2",
-		Value: []byte("res"),
+		Value: []string{"res"},
 		Fuzzy: true,
 	}
 	search.Init()
@@ -196,7 +196,7 @@ func TestValueSearchHasKey(t *testing.T) {
 	// case 5-2: Fuzzy search
 	search = ResourceSearch{
 		Key:   "res_key2",
-		Value: []byte("res"),
+		Value: []string{"res"},
 		Fuzzy: false,
 	}
 	search.Init()

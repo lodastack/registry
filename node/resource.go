@@ -2,6 +2,7 @@ package node
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/lodastack/registry/limit"
 	"github.com/lodastack/registry/model"
@@ -56,7 +57,8 @@ func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceL
 	return &allRes, nil
 }
 
-func (t *Tree) GetResource(ns, resType, resID string) (model.Resource, error) {
+// Get Resource by ns/resource type/resource ID.
+func (t *Tree) GetResource(ns, resType string, resID ...string) ([]model.Resource, error) {
 	rl, err := t.GetResourceList(ns, resType)
 	if err != nil {
 		t.logger.Errorf("GetResourceList fail, result: %v, error: %v", *rl, err)
@@ -65,9 +67,10 @@ func (t *Tree) GetResource(ns, resType, resID string) (model.Resource, error) {
 	if len(*rl) == 0 {
 		return nil, nil
 	}
-	return rl.GetResource(resID)
+	return rl.Get(model.IdKey, resID...)
 }
 
+// Update One Resource by ns/resource type/resource ID/update map.
 func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
 	nodeId, err := t.getIDByNs(ns)
 	if err != nil {
@@ -88,26 +91,27 @@ func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]st
 }
 
 // Append one resource to ns.
-func (t *Tree) AppendResource(ns, resType string, appendRes model.Resource) (string, error) {
+func (t *Tree) AppendResource(ns, resType string, appendRes ...model.Resource) error {
 	nodeID, err := t.getIDByNs(ns)
 	if err != nil {
 		t.logger.Errorf("getID of ns %s fail when appendResource, error: %+v", ns, err)
-		return "", err
+		return err
 	}
 	resOldByte, err := t.getByteFromStore(nodeID, resType)
 	if err != nil {
 		t.logger.Errorf("resByteOfNode error, length of resOldByte: %d, error: %s", len(resOldByte), err.Error())
-		return "", err
+		return err
 	}
-	resByte, UUID, err := model.AppendResources(resOldByte, appendRes)
+	resByte, err := model.AppendResources(resOldByte, appendRes...)
 	if err != nil {
 		t.logger.Errorf("AppendResources error, length of resOld: %d, appendRes: %+v, error: %s", len(resOldByte), appendRes, err.Error())
-		return "", err
+		return err
 	}
 	err = t.setByteToStore(nodeID, resType, resByte)
-	return UUID, err
+	return err
 }
 
+// Set ResourceList to ns.
 func (t *Tree) SetResource(ns, resType string, rl model.ResourceList) error {
 	node, err := t.GetNode(ns)
 	if err != nil || node.ID == "" {
@@ -128,7 +132,7 @@ func (t *Tree) SetResource(ns, resType string, rl model.ResourceList) error {
 	return t.setByteToStore(node.ID, resType, resStore)
 }
 
-func (t *Tree) DeleteResource(ns, resType, resId string) error {
+func (t *Tree) DeleteResource(ns, resType string, resId ...string) error {
 	nodeId, err := t.getIDByNs(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
@@ -140,41 +144,64 @@ func (t *Tree) DeleteResource(ns, resType, resId string) error {
 		return errors.New("get resource fail")
 	}
 
-	resNewByte, err := model.DeleteResource(resOldByte, resId)
+	resNewByte, err := model.DeleteResource(resOldByte, resId...)
 	if err != nil {
 		return err
 	}
 	return t.setByteToStore(nodeId, resType, resNewByte)
 }
 
-// TODO: check resource name
-func (t *Tree) MoveResource(oldNs, newNs, resType, resourceID string) error {
-	resource, err := t.GetResource(oldNs, resType, resourceID)
-	if err != nil || resource == nil {
-		t.logger.Errorf("GetOneResource fail: %v", newNs, err)
+func (t *Tree) MoveResource(oldNs, newNs, resType string, resourceIDs ...string) error {
+	rs, err := t.GetResource(oldNs, resType, resourceIDs...)
+	if err != nil || rs == nil {
+		t.logger.Errorf("GetResource fail, ns: %s, error: %s", newNs, err)
 		return err
 	}
-	resourceInNewNs, _ := t.GetResource(newNs, resType, resourceID)
-	// return error if resourceList is empty or not found.
-	if resourceInNewNs != nil {
-		t.logger.Errorf("connot move resource from ns %s to ns: %s, resource type: %s,resourceID: %s",
-			oldNs, newNs, resType, resourceID)
+
+	// Check pk value of resource.
+	pkValueList := []string{}
+	for _, r := range rs {
+		pkValue, _ := r.ReadProperty(model.PkProperty[resType])
+		if pkValue == "" {
+			return errors.New("resource has invalid pk property")
+		}
+		pkValueList = append(pkValueList, pkValue)
+		continue
+	}
+	// CHeck pk in new ns.
+	searchPk, err := model.NewSearch(false, model.PkProperty[resType], pkValueList...)
+	if err != nil {
+		t.logger.Errorf("search resource in new ns before move to ns %s fail: %s", newNs, err.Error())
 		return err
 	}
-	if _, err := t.AppendResource(newNs, resType, resource); err != nil {
+	searchInNewNs, err := t.SearchResource(newNs, resType, searchPk)
+	if err != nil {
+		t.logger.Errorf("check the addend resource fail: %s", err.Error())
+		return err
+	}
+	if rl, ok := searchInNewNs[newNs]; ok {
+		alreadyExist := []string{}
+		for _, r := range *rl {
+			pkV, _ := r.ReadProperty(model.PkProperty[resType])
+			alreadyExist = append(alreadyExist, pkV)
+		}
+		t.logger.Errorf("resource pk %v already exist in the ns, data: %+v", alreadyExist, rl)
+		return errors.New("resource pk " + strings.Join(alreadyExist, ",") + " already in new ns")
+	}
+
+	if err := t.AppendResource(newNs, resType, rs...); err != nil {
 		t.logger.Errorf("AppendResource resource fail, ns %s, resource type: %s, resourceID: %v, error: %s",
-			newNs, resType, resource, err.Error())
+			newNs, resType, rs[0], err.Error())
 		return err
 	}
-	if err := t.DeleteResource(oldNs, resType, resourceID); err != nil {
-		t.logger.Errorf("DeleteResource resource fail, ns %s, resource type: %s, resourceID: %s, error: %s",
-			newNs, resType, resourceID, err.Error())
+	if err := t.DeleteResource(oldNs, resType, resourceIDs...); err != nil {
+		t.logger.Errorf("DeleteResource resource fail, ns %s, resource type: %s, resourceID: %v, error: %s",
+			newNs, resType, resourceIDs, err.Error())
 		return err
 	}
 	return nil
 }
 
-// TODO: remove time and debug log
 func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error) {
 	result := map[string]*model.ResourceList{}
 	leafIDs, err := t.LeafIDs(ns)
@@ -186,7 +213,7 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 	var fail bool
 	limit := limit.NewLimit(defaultResourceWorker)
 	resultChan := make(chan map[string]*model.ResourceList, defaultResourceWorker/2)
-	// collect process result
+	// Collect process result.
 	go func() {
 		for {
 			select {
@@ -202,10 +229,10 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 		}
 	}()
 
-	// search ns and report the result.
 	if err := search.Init(); err != nil {
 		return nil, err
 	}
+	// Search in ns and report the result.
 	for _, leafID := range leafIDs {
 		limit.Take()
 		go func(leafID string, search model.ResourceSearch) {
@@ -246,6 +273,8 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 
 		}(leafID, search)
 	}
+
+	// Wait the process is complete done.
 	limit.Wait()
 	if fail {
 		return nil, errors.New("SearchResourceByNs fail")
