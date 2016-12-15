@@ -55,7 +55,9 @@ const (
 	createBucket                              // Commands which create the bucket.
 	removeBucket                              // Commands which remove the bucket.
 	removeKey                                 // Commands which remove the key.
-	createBucketIfNotExist                    // Commands which createBucketIfNotExist
+	createBucketIfNotExist                    // Commands which create bucket if it not exist.
+	setSession                                // Commands which set a session.
+	delSession                                // Commands which delete a session key.
 
 	peer
 	restore
@@ -98,6 +100,12 @@ type databaseSub struct {
 // peersSub is a command which sets the API address for a Raft address.
 type peersSub map[string]string
 
+// sessionSub is a command which sets key and value for the session.
+type sessionSub struct {
+	Key   interface{} `json:"key,omitempty"`
+	Value interface{} `json:"value,omitempty"`
+}
+
 // Transport is the interface the network service must provide.
 type Transport interface {
 	net.Listener
@@ -116,7 +124,8 @@ type Store struct {
 	mu sync.Mutex
 	db *bolt.DB // The backend bolt store for the system.
 
-	cache *Cache
+	cache   *Cache
+	session *LodaSession
 
 	raft          *raft.Raft // The consensus mechanism
 	peerStore     raft.PeerStore
@@ -142,6 +151,7 @@ func New(path string, tn Transport) *Store {
 		meta:             newClusterMeta(),
 		dbPath:           filepath.Join(path, boltFile),
 		cache:            NewCache(cacheMaxMemorySize, nil),
+		session:          NewSession(),
 		logger:           log.New("INFO", "store", model.LogBackend),
 	}
 }
@@ -591,6 +601,79 @@ func (s *Store) RemoveBucket(name []byte) error {
 	return r.error
 }
 
+// GetSession get a session.
+func (s *Store) GetSession(k interface{}) interface{} {
+	v := s.session.Get(k)
+	if v == nil {
+		//consistency latency handler here.
+		return s.session.Get(k)
+	}
+	return v
+}
+
+// SetSession set a session.
+func (s *Store) SetSession(k, v interface{}) error {
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
+
+	d := &sessionSub{
+		Key:   k,
+		Value: v,
+	}
+
+	c, err := newCommand(setSession, d)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	f := s.raft.Apply(b, raftTimeout)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return ErrNotLeader
+		}
+		return e.Error()
+	}
+	r := f.Response().(*fsmGenericResponse)
+	return r.error
+}
+
+// DelSession delete a session by given key.
+func (s *Store) DelSession(k interface{}) error {
+	if s.raft.State() != raft.Leader {
+		return ErrNotLeader
+	}
+
+	d := &sessionSub{
+		Key: k,
+	}
+
+	c, err := newCommand(delSession, d)
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	f := s.raft.Apply(b, raftTimeout)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return ErrNotLeader
+		}
+		return e.Error()
+	}
+	r := f.Response().(*fsmGenericResponse)
+	return r.error
+}
+
 // Backup returns a snapshot of the store.
 func (s *Store) Backup() ([]byte, error) {
 	// TODO: not only leader can backup
@@ -745,6 +828,12 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		return &fsmGenericResponse{error: err}
 	case createBucketIfNotExist:
 		err := f.applyCreateBucketIfNotExist(c.Sub)
+		return &fsmGenericResponse{error: err}
+	case setSession:
+		err := f.applySetSession(c.Sub)
+		return &fsmGenericResponse{error: err}
+	case delSession:
+		err := f.applyDelSession(c.Sub)
 		return &fsmGenericResponse{error: err}
 	case peer:
 		err := f.applyPeer(c.Sub)
@@ -992,6 +1081,26 @@ func (f *fsm) applyRemoveBucket(sub json.RawMessage) error {
 		f.cache.RemoveBucket(name)
 		return nil
 	})
+}
+
+func (f *fsm) applySetSession(sub json.RawMessage) error {
+	var d sessionSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+
+	f.session.Set(d.Key, d.Value)
+	return nil
+}
+
+func (f *fsm) applyDelSession(sub json.RawMessage) error {
+	var d sessionSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+
+	f.session.Delete(d.Key)
+	return nil
 }
 
 // Restore stores the key-value store to a backup data file.

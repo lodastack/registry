@@ -202,7 +202,7 @@ func Test_MultiNode_SetGetKey(t *testing.T) {
 		t.Fatalf("failed to update key: %s", err.Error())
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 
 	var v []byte
 	var err error
@@ -241,7 +241,7 @@ func Test_MultiNode_RemoveKey(t *testing.T) {
 		t.Fatalf("failed to update key: %s", err.Error())
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 
 	var v []byte
 	var err error
@@ -255,10 +255,56 @@ func Test_MultiNode_RemoveKey(t *testing.T) {
 	if err := s0.RemoveKey([]byte(bucket), []byte(key)); err != nil {
 		t.Fatalf("failed to remove key: %s", err.Error())
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 	if v, err = s1.View([]byte(bucket), []byte(key)); err != nil || len(v) != 0 {
 		t.Fatalf("get the removed  key success, output: %s, error: %v", v, err)
 	}
+}
+
+func Test_MultiNode_SetGetRemoveSession(t *testing.T) {
+	s0 := mustNewStore()
+	defer os.RemoveAll(s0.Path())
+	if err := s0.Open(true); err != nil {
+		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
+	}
+	defer s0.Close(true)
+	s0.WaitForLeader(10 * time.Second)
+
+	s1 := mustNewStore()
+	defer os.RemoveAll(s1.Path())
+	if err := s1.Open(false); err != nil {
+		t.Fatalf("failed to open node for multi-node test: %s", err.Error())
+	}
+	defer s1.Close(true)
+
+	// Join the second node to the first.
+	if err := s0.Join(s1.Addr()); err != nil {
+		t.Fatalf("failed to join to node at %s: %s", s0.Addr(), err.Error())
+	}
+
+	if err := s0.SetSession("u1", "t1"); err != nil {
+		t.Fatalf("failed to set session: %s", err.Error())
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	var v interface{}
+	v = s1.GetSession("u1")
+	if v.(string) != "t1" {
+		t.Fatalf("funexpected results for get: %s - %s ", v.(string), "t1")
+	}
+
+	// remove
+	if err := s0.DelSession("u1"); err != nil {
+		t.Fatalf("failed to remove session: %s", err.Error())
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	v = s1.GetSession("u1")
+	if v != nil {
+		t.Fatalf("funexpected results for get: %s - %s ", v.(string), nil)
+	}
+
 }
 
 func Test_MultiNode_JoinRemove(t *testing.T) {

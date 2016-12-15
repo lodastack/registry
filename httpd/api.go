@@ -52,6 +52,15 @@ type Cluster interface {
 	// Batch update values for given keys in given buckets, via distributed consensus.
 	Batch(rows []model.Row) error
 
+	// GetSession returns the sression value for the given key.
+	GetSession(key interface{}) interface{}
+
+	// SetSession sets the value for the given key, via distributed consensus.
+	SetSession(key, value interface{}) error
+
+	// DelSession delete the value for the given key, via distributed consensus.
+	DelSession(key interface{}) error
+
 	// Backup database.
 	Backup() ([]byte, error)
 
@@ -64,8 +73,7 @@ type Service struct {
 	addr string
 	ln   net.Listener
 
-	router  *httprouter.Router
-	session *LodaSession
+	router *httprouter.Router
 
 	cluster Cluster
 	tree    node.TreeMethod
@@ -107,7 +115,6 @@ func New(addr string, cluster Cluster) (*Service, error) {
 		tree:    tree,
 		perm:    perm,
 		router:  httprouter.New(),
-		session: NewSession(),
 		logger:  log.New("INFO", "http", model.LogBackend),
 	}, nil
 }
@@ -243,7 +250,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			return
 		}
 		key := r.Header.Get("AuthToken")
-		v := s.session.Get(key)
+		v := s.cluster.GetSession(key)
 		log.Infof("Header AuthToken: %s - %s", key, v)
 		if v == nil {
 			ReturnJson(w, 401, "Not Authorized")
