@@ -82,7 +82,7 @@ func TestAppendResource(t *testing.T) {
 	// addRes := Resource{}
 	// addRes = addResMap
 
-	newRsByte, _, err := AppendResources(boltByte, addRes)
+	newRsByte, err := AppendResources(boltByte, addRes)
 	if err != nil {
 		t.Fatalf("AppendResource fail: %s", err.Error())
 	}
@@ -248,6 +248,12 @@ func TestDeleteResource(t *testing.T) {
 	if err := rl.Unmarshal(newResByte); err != nil || len(*rl) != 1 || (*rl)[0][IdKey] != "H" {
 		t.Fatalf("delete not expect with expect, error: %v, resource: %+v", err, *rl)
 	}
+
+	rl = &ResourceList{}
+	newResByte, err = DeleteResource(boltByte, "H", "I")
+	if err != nil || len(newResByte) > 1 {
+		t.Fatalf("DeleteResource error: %s", err.Error())
+	}
 }
 
 func TestGetResource(t *testing.T) {
@@ -256,25 +262,20 @@ func TestGetResource(t *testing.T) {
 		t.Fatalf("unmarshal fail")
 		return
 	}
-	r := Resource{}
-	r, err := rl.GetResource("H")
-	if err != nil {
+
+	if rs, err := rl.Get(IdKey, "H"); err != nil || len(rs) != 1 {
 		t.Fatalf("get resource fail: %s", err.Error())
-	} else if r[IdKey] != "H" || len(r) != 3 {
-		t.Fatalf("unmarshal r fail: not match with expec: %v", r)
+	} else if rs[0][IdKey] != "H" || len(rs[0]) != 3 {
+		t.Fatalf("unmarshal r fail: not match with expec: %v", rs[0])
 	}
 
-	r = Resource{}
-	r, err = rl.GetResource("I")
-	if err != nil {
+	if rs, err := rl.Get(IdKey, "I"); err != nil || len(rs) != 1 {
 		t.Fatalf("get resource fail: %s", err.Error())
-	} else if r[IdKey] != "I" || len(r) != 3 {
-		t.Fatalf("unmarshal r fail: not match with expect: %v", r)
+	} else if rs[0][IdKey] != "I" || len(rs[0]) != 3 {
+		t.Fatalf("unmarshal r fail: not match with expect: %v", rs[0])
 	}
 
-	r = Resource{}
-	r, err = rl.GetResource("not exist")
-	if err == nil {
-		t.Fatalf("get resource success not match expect")
+	if rs, err := rl.Get(IdKey, "not exist"); err != nil || len(rs) != 0 {
+		t.Fatalf("get resource success not match expect", err, rs)
 	}
 }

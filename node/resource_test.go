@@ -130,7 +130,7 @@ func TestSearchResource(t *testing.T) {
 	// search 127.0.0.1 show get 1 node each has one resource.
 	search1_1 := model.ResourceSearch{
 		Key:   "host",
-		Value: []byte("127.0.0.1"),
+		Value: []string{"127.0.0.1"},
 		Fuzzy: false,
 	}
 	search1_2 := search1_1
@@ -155,7 +155,7 @@ func TestSearchResource(t *testing.T) {
 	// search 127.0.0.2 show get 2 node each has one resource.
 	search2_1 := model.ResourceSearch{
 		Key:   "host",
-		Value: []byte("127.0.0.2"),
+		Value: []string{"127.0.0.2"},
 		Fuzzy: false,
 	}
 	search2_2 := search2_1
@@ -170,7 +170,7 @@ func TestSearchResource(t *testing.T) {
 	// search 127.0.0. with not fuzzy type should get none result.
 	search3_1 := model.ResourceSearch{
 		Key:   "host",
-		Value: []byte("127.0.0."),
+		Value: []string{"127.0.0."},
 		Fuzzy: false,
 	}
 	// search 127.0.0. with fuzzy type should get two node, and each has two resource.
@@ -248,5 +248,105 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	// case 5: get not exist resourct from NonLeaf
 	if res, err := tree.GetResourceList(rootNode, "not_exist"); err != nil || len(*res) != 0 {
 		t.Fatalf("get not exist resource from NonLeaf not expect with expect,return: %+v, error: %v\n", *res, err)
+	}
+}
+
+func TestMoveResource(t *testing.T) {
+	// MoveResource(oldNs, newNs, resType string, resourceIDs ...string)
+	// AppendResource(ns, resType string, appendRes ...model.Resource)
+	// DeleteResource(ns, resType string, resId ...string
+	// func NewResource(resMap map[string]string) Resource {
+
+	s := mustNewStore(t)
+	defer os.RemoveAll(s.Path())
+
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, _ := NewTree(s)
+
+	machine1 := model.NewResource(map[string]string{"hostname": "host1"})
+	machine2 := model.NewResource(map[string]string{"hostname": "host2"})
+
+	if _, err := tree.NewNode("testMove1", rootNode, Leaf); err != nil {
+		t.Fatalf("create testMove1 fail: %s", err.Error())
+	}
+	if _, err := tree.NewNode("testMove2", rootNode, Leaf); err != nil {
+		t.Fatalf("create testMove2 fail: %s", err.Error())
+	}
+	if err := tree.AppendResource("testMove1.loda", "machine", machine1, machine2); err != nil {
+		t.Fatalf("app resource fail: %s", err.Error())
+	}
+	rs, err := tree.GetResourceList("testMove1.loda", "machine")
+	if err != nil || len(*rs) != 2 {
+		t.Fatalf("get resource fail after set: %s\n", err.Error())
+	}
+	ids := []string{}
+	for _, r := range *rs {
+		id, _ := r.ID()
+		ids = append(ids, id)
+	}
+
+	// case 1: move one resource to empty ns
+	if err := tree.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids[0]); err != nil {
+		t.Fatalf("move one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 1 {
+			t.Fatalf("get resource fail after move one: %s\n", err.Error())
+		}
+		if rs, err := tree.GetResourceList("testMove2.loda", "machine"); err != nil || len(*rs) != 1 {
+			t.Fatalf("get resource fail after move one: %s\n", err.Error())
+		}
+	}
+
+	// case 2: move resource to the ns already has a resource has the pk
+	if err := tree.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids[0]); err == nil {
+		t.Fatalf("move one reource not match with expect: %s", err.Error())
+	}
+
+	// case 3: move resource to a ns already have some resource
+	if err := tree.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids[1]); err != nil {
+		t.Fatalf("move one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 0 {
+			t.Fatalf("get resource fail after move the last one: %s\n", err.Error())
+		}
+		if rs, err := tree.GetResourceList("testMove2.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move the last one: %s\n", err.Error())
+		}
+	}
+
+	// case 4: move multi resouce to an empty ns.
+	if err := tree.MoveResource("testMove2.loda", "testMove1.loda", "machine", ids...); err != nil {
+		t.Fatalf("move one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move all: %s\n", err.Error())
+		}
+		if rs, err := tree.GetResourceList("testMove2.loda", "machine"); err != nil || len(*rs) != 0 {
+			t.Fatalf("get resource fail after move all: %s\n", err.Error())
+		}
+	}
+
+	// case 5: move multi resource whick contain not exist id to another ns.
+	if err := tree.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids[0], ids[1], "not exist"); err != nil {
+		t.Fatalf("move one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove2.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move all: %s\n", err.Error())
+		}
+		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 0 {
+			t.Fatalf("get resource fail after move all: %s\n", err.Error())
+		}
+	}
+
+	// case 6: move multi reosurce to another ns which already has a pk.
+	if err := tree.AppendResource("testMove1.loda", "machine", machine1); err != nil {
+		t.Fatalf("app resource fail: %s", err.Error())
+	}
+	if err := tree.MoveResource("testMove2.loda", "testMove1.loda", "machine", ids...); err == nil {
+		t.Fatalf("move reource success, not match with expect")
 	}
 }

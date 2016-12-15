@@ -1,32 +1,42 @@
 package model
 
 import (
+	"errors"
 	"fmt"
+
+	"github.com/lodastack/registry/common"
 )
 
 type HandleFunc func(raw []byte) (ResourceList, error)
 
 type ResourceSearch struct {
-	Id    string // key of resource property
-	Key   string // search string
-	Value []byte // match prefix or Surffix
+	Id    string   // key of resource property
+	Key   string   // search string
+	Value []string // match prefix or Surffix
 	Fuzzy bool
 
 	Process HandleFunc
 }
 
-func NewSearch(k, v string, fuzzy bool) ResourceSearch {
+func NewSearch(fuzzy bool, k string, v ...string) (ResourceSearch, error) {
+	var search ResourceSearch
+	if len(v) == 0 {
+		return search, errors.New("invalid param")
+	}
+
 	if k == IdKey {
-		return ResourceSearch{
-			Id:    v,
+		search = ResourceSearch{
+			Id:    v[0],
+			Fuzzy: fuzzy,
+		}
+	} else {
+		search = ResourceSearch{
+			Key:   k,
+			Value: v,
 			Fuzzy: fuzzy,
 		}
 	}
-	return ResourceSearch{
-		Key:   k,
-		Value: []byte(v),
-		Fuzzy: fuzzy,
-	}
+	return search, nil
 }
 
 func (s *ResourceSearch) Init() error {
@@ -179,16 +189,12 @@ END:
 	return matchRl, nil
 }
 
-func search(ori, dest []byte, fuzzy bool) bool {
-	if !fuzzy {
-		return string(ori) == string(dest)
-	}
-
+func containBytes(data, v []byte) bool {
 	indexMatch := 0
-	lenDest := len(dest)
-	for i := range ori {
-		if ori[i] == dest[indexMatch] {
-			if indexMatch+1 == lenDest {
+	lenV := len(v)
+	for i := range data {
+		if data[i] == v[indexMatch] {
+			if indexMatch+1 == lenV {
 				return true
 			}
 			indexMatch++
@@ -196,6 +202,19 @@ func search(ori, dest []byte, fuzzy bool) bool {
 			if indexMatch != 0 {
 				indexMatch = 0
 			}
+		}
+	}
+	return false
+}
+
+func search(data []byte, vl []string, fuzzy bool) bool {
+	if !fuzzy {
+		return common.ContainsString(vl, string(data))
+	}
+
+	for _, v := range vl {
+		if containBytes(data, []byte(v)) {
+			return true
 		}
 	}
 	return false

@@ -16,7 +16,10 @@ var (
 // Search hostname on the tree.
 // Return map[ns]resourceID.
 func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
-	searchHostname := model.NewSearch(HostnameProp, hostname, false)
+	searchHostname, err := model.NewSearch(false, HostnameProp, hostname)
+	if err != nil {
+		return nil, err
+	}
 	resMap, err := t.SearchResource(rootNode, "machine", searchHostname)
 	if err != nil {
 		t.logger.Errorf("SearchResource fail, error:%s", err.Error())
@@ -105,7 +108,8 @@ func (t *Tree) RegisterMachine(newMachine model.Resource) (map[string]string, er
 
 	NsIDMap := map[string]string{}
 	for _, ns := range nsList {
-		UUID, err := t.AppendResource(ns, "machine", newMachine)
+		UUID := newMachine.InitID()
+		err := t.AppendResource(ns, "machine", newMachine)
 		if err != nil {
 			t.logger.Errorf("append machine %+v to ns %s fail when register, the whole ns list: %+v error: %+v",
 				newMachine, ns, nsList, err)

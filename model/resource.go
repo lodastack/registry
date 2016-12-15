@@ -26,9 +26,10 @@ var (
 )
 
 var (
-	ErrResMarshal error = errors.New("marshal resources fail")
-	ErrEmptyRes   error = errors.New("empty resources")
-	ErrResFormat  error = errors.New("invalid resource format")
+	ErrResMarshal   error = errors.New("marshal resources fail")
+	ErrEmptyRes     error = errors.New("empty resources")
+	ErrResFormat    error = errors.New("invalid resource format")
+	ErrInvalidParam error = errors.New("invalid param")
 )
 
 const (
@@ -160,7 +161,7 @@ func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byt
 }
 
 // Delete resource by resourceID..
-func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
+func DeleteResource(rsByte []byte, IDs ...string) ([]byte, error) {
 	return (&ResourceList{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rlWalk *ResourceList, output []byte) ([]byte, error) {
 		r := Resource{}
 		if len(rByte) == 0 {
@@ -171,8 +172,8 @@ func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
 			return nil, errors.New("UpdateResByID unmarshal resources fail: " + err.Error())
 		}
 
-		// append the resource to output if not matched.
-		if resID, _ := r.ID(); resID != ID {
+		// append the resource to output if ID not matched.
+		if resID, _ := r.ID(); !common.ContainsString(IDs, resID) {
 			rByte, err = r.Marshal()
 			if err != nil {
 				return nil, err
@@ -191,16 +192,23 @@ func DeleteResource(rsByte []byte, ID string) ([]byte, error) {
 	})
 }
 
-func (rl *ResourceList) GetResource(resID string) (Resource, error) {
-	if len(*rl) == 0 {
-		return nil, errors.New("cannoe get resource from empty list")
+// Get multi resource from rl by reousrce property.
+// And Get resource by resource ID, if k is IdKey.
+func (rl *ResourceList) Get(propertyK string, ValueList ...string) ([]Resource, error) {
+	if len(*rl) == 0 || propertyK == "" || len(ValueList) == 0 {
+		return nil, ErrInvalidParam
 	}
+
+	out := []Resource{}
+
 	for _, r := range *rl {
-		if Id, _ := r.ID(); Id == resID {
-			return r, nil
+		for _, v := range ValueList {
+			if resV, _ := r.ReadProperty(propertyK); resV == v {
+				out = append(out, r)
+			}
 		}
 	}
-	return nil, errors.New("not found")
+	return out, nil
 }
 
 // Size returns marshed bytes size.
@@ -245,8 +253,8 @@ func (rl *ResourceList) AppendResourceByte(resByte []byte) error {
 	return nil
 }
 
-func (rl *ResourceList) AppendResource(r Resource) {
-	(*rl) = append((*rl), r)
+func (rl *ResourceList) AppendResource(r ...Resource) {
+	(*rl) = append((*rl), r...)
 }
 
 func (rl *ResourceList) AppendResources(res ResourceList) {
@@ -292,7 +300,10 @@ func (r *Resource) Unmarshal(raw []byte) error {
 			}
 		}
 	}
-	(*r)[string(tmpk)] = string(tmpv)
+	// Process the last property.
+	if len(tmpk) > 0 {
+		(*r)[string(tmpk)] = string(tmpv)
+	}
 	return nil
 }
 
@@ -374,45 +385,19 @@ func (r *Resource) ID() (string, bool) {
 	return r.ReadProperty(IdKey)
 }
 
-func delEndByte(ori []byte) ([]byte, error) {
-	oriLen := len(ori)
-	if ori[oriLen-1] != endByte {
-		return nil, ErrResFormat
-	}
-	return ori[:oriLen-1], nil
-}
-
 // ResourcesAppendByte append the resource to resources.
-func AppendResources(rsByte []byte, resource Resource) ([]byte, string, error) {
-	UUID := resource.InitID()
-	// return error if the resource have not property expect id.
-	if len(resource) <= 1 {
-		return nil, "", errors.New("not allow append empty resource")
+func AppendResources(rsByte []byte, rs ...Resource) ([]byte, error) {
+	for i := range rs {
+		rs[i].InitID()
+		if len(rs[i]) <= 1 {
+			return nil, errors.New("not allow append resource only have id")
+		}
 	}
 
-	// If append res to nil, new resources.
-	if len(rsByte) == 0 {
-		rl := ResourceList{}
-		rl.AppendResource(resource)
-		rsByte, err := rl.Marshal()
-		return rsByte, UUID, err
+	rl := ResourceList{}
+	if err := rl.Unmarshal(rsByte); err != nil {
+		return nil, err
 	}
-
-	// rm the endByte of resource
-	resNoEnd, err := delEndByte(rsByte)
-	if err != nil {
-		return nil, "", err
-	}
-	// append deliRes/new resource/endByte
-	addLen := len(deliRes) + resource.Size() + 1
-	addByte := make([]byte, addLen)
-	resByte, err := resource.Marshal()
-	if err != nil {
-		return nil, "", ErrResMarshal
-	}
-	n := copy(addByte, deliRes)
-	n += copy(addByte[n:], resByte)
-	addByte[n] = endByte
-
-	return append(resNoEnd, addByte[:n+1]...), UUID, nil
+	rl.AppendResource(rs...)
+	return rl.Marshal()
 }

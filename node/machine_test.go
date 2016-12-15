@@ -167,7 +167,7 @@ func TestRegisterMachine(t *testing.T) {
 		}
 		searchIP := model.ResourceSearch{
 			Key:   "ip",
-			Value: []byte("10.10.10.1"),
+			Value: []string{"10.10.10.1"},
 			Fuzzy: false,
 		}
 		if resMap, err := tree.SearchResource(regNs, "machine", searchIP); err != nil || len(resMap) != 1 {
@@ -191,7 +191,7 @@ func TestRegisterMachine(t *testing.T) {
 		}
 		searchIP := model.ResourceSearch{
 			Key:   "ip",
-			Value: []byte("10.10.10.2"),
+			Value: []string{"10.10.10.2"},
 			Fuzzy: false,
 		}
 		if resMap, err := tree.SearchResource(regNs, "machine", searchIP); err != nil || len(resMap) != 1 {
@@ -215,7 +215,7 @@ func TestRegisterMachine(t *testing.T) {
 		}
 		searchIP := model.ResourceSearch{
 			Key:   "ip",
-			Value: []byte("10.10.10.3"),
+			Value: []string{"10.10.10.3"},
 			Fuzzy: false,
 		}
 		if resMap, err := tree.SearchResource(regNs, "machine", searchIP); err != nil || len(resMap) != 1 {
@@ -239,7 +239,7 @@ func TestRegisterMachine(t *testing.T) {
 		}
 		searchIP := model.ResourceSearch{
 			Key:   "ip",
-			Value: []byte("10.10.10.4"),
+			Value: []string{"10.10.10.4"},
 			Fuzzy: false,
 		}
 		if resMap, err := tree.SearchResource(regNs, "machine", searchIP); err != nil || len(resMap) != 1 {
