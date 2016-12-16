@@ -422,9 +422,11 @@ func (t *Tree) DelNode(ns string) error {
 		return err
 	}
 
-	// Not allow delete node which still have machine resource.
-	if rl, err := t.GetResourceList(ns, "machine"); err != nil || len(*rl) != 0 {
-		t.logger.Errorf("not allow delete ns %s, get Machine result: %v, error: %v", ns, *rl, err)
+	// Not allow delete node which still has child node or machine.
+	rl, err := t.GetResourceList(ns, "machine")
+	if (err != nil && err != ErrNoLeafChild) ||
+		(rl != nil && len(*rl) != 0) {
+		t.logger.Errorf("not allow delete ns %s, error: %v", ns, err)
 		return ErrNotAllowDel
 	}
 
