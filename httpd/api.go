@@ -236,9 +236,9 @@ func accessLog(inner http.Handler) http.Handler {
 		inner.ServeHTTP(w, r)
 		dur := time.Now().UnixNano()/1e3 - stime
 		if dur <= 1e3 {
-			log.Infof("access path %s in %d us\n", r.URL.Path, dur)
+			log.Infof("access %s path %s in %d us\n", r.Method, r.URL.Path, dur)
 		} else {
-			log.Infof("access path %s in %d ms\n", r.URL.Path, dur/1e3)
+			log.Infof("access %s path %s in %d ms\n", r.Method, r.URL.Path, dur/1e3)
 		}
 	})
 }
@@ -504,8 +504,8 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 func (s *Service) handleResourceDel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ns := r.FormValue("ns")
 	resType := r.FormValue("type")
-	resID := r.FormValue("resourceid")
-	if err := s.tree.DeleteResource(ns, resType, resID); err != nil {
+	resIDs := r.FormValue("resourceid")
+	if err := s.tree.DeleteResource(ns, resType, strings.Split(resIDs, ",")...); err != nil {
 		ReturnServerError(w, err)
 	} else {
 		ReturnOK(w, "success")
