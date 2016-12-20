@@ -4,6 +4,8 @@ import (
 	"github.com/lodastack/registry/model"
 )
 
+var rootNode = "loda"
+
 type GroupInf interface {
 	// get group.
 	GetGroup(gid string) (Group, error)
@@ -24,6 +26,9 @@ type UserInf interface {
 
 	// remove group.
 	RemoveUser(username string) error
+
+	// Check whether user exist or not.
+	CheckUserExist(username string) (bool, error)
 }
 
 type Perm interface {
@@ -37,7 +42,7 @@ type Perm interface {
 	Check(username, ns, resource, method string) (bool, error)
 
 	// init default group.
-	InitDefault() error
+	InitGroup(rootNode string) error
 }
 
 // Cluster is the interface op must implement.
@@ -69,5 +74,6 @@ func NewPerm(cluster Cluster) (Perm, error) {
 		Group{cluster: cluster},
 		User{cluster: cluster},
 	}
-	return p, p.InitDefault()
+	// TODO: get rootNode by param.
+	return p, p.InitGroup(rootNode)
 }
