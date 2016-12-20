@@ -2,7 +2,7 @@ package model
 
 var (
 	Templates []string = []string{
-		"machine", "alarm", "collect", "doc",
+		"machine", "alarm", "collect", "doc", "user", "group", "route", "ns",
 		// "init", "deploy", "acl", "owner", "route",
 	}
 
@@ -17,7 +17,6 @@ var (
 )
 
 var (
-	docTemplate     ResourceList = ResourceList{Resource{"describe": "loda"}}
 	collectTemplate ResourceList = ResourceList{Resource{
 		"name":             "app.service.coredump",
 		"interval":         "60",
@@ -202,12 +201,13 @@ var (
 		"name":             "registry",
 	},*/
 	}
-	RootTemplate map[string]ResourceList = map[string]ResourceList{
-		TemplatePrefix + "doc":     docTemplate,
-		TemplatePrefix + "collect": collectTemplate,
-		TemplatePrefix + "alarm":   nil,
-		TemplatePrefix + "machine": nil,
-	}
+	RootTemplate map[string]ResourceList
 )
 
-// TODO: post put
+func init() {
+	RootTemplate = make(map[string]ResourceList)
+	for _, resType := range Templates {
+		RootTemplate[TemplatePrefix+resType] = nil
+	}
+	RootTemplate[TemplatePrefix+"collect"] = collectTemplate
+}

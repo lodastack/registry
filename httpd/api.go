@@ -14,6 +14,7 @@ import (
 	"github.com/lodastack/log"
 	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/authorize"
+	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/node"
 
@@ -123,9 +124,11 @@ func New(addr string, cluster Cluster) (*Service, error) {
 func (s *Service) Start() error {
 	s.initHandler()
 
-	server := http.Server{
-		//Handler: accessLog(cors(s.auth(s.router))),
-		Handler: accessLog(cors(s.router)),
+	server := http.Server{}
+	if config.C.LDAPConf.Enable {
+		server.Handler = s.accessLog(cors(s.auth(s.router)))
+	} else {
+		server.Handler = s.accessLog(cors(s.router))
 	}
 
 	ln, err := net.Listen("tcp", s.addr)
@@ -193,8 +196,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/db/backup", s.handlerBackup)
 	s.router.GET("/api/v1/db/restore", s.handlerRestore)
 
-	s.router.POST("/api/v1/user/signin", s.HandlerSignin)
-	s.router.GET("/api/v1/user/signout", s.HandlerSignout)
+	s.initPermissionHandler()
 }
 
 func cors(inner http.Handler) http.Handler {
@@ -230,15 +232,15 @@ func cors(inner http.Handler) http.Handler {
 	})
 }
 
-func accessLog(inner http.Handler) http.Handler {
+func (s *Service) accessLog(inner http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		stime := time.Now().UnixNano() / 1e3
 		inner.ServeHTTP(w, r)
 		dur := time.Now().UnixNano()/1e3 - stime
 		if dur <= 1e3 {
-			log.Infof("access %s path %s in %d us\n", r.Method, r.URL.Path, dur)
+			s.logger.Infof("access %s path %s in %d us\n", r.Method, r.URL.Path, dur)
 		} else {
-			log.Infof("access %s path %s in %d ms\n", r.Method, r.URL.Path, dur/1e3)
+			s.logger.Infof("access %s path %s in %d ms\n", r.Method, r.URL.Path, dur/1e3)
 		}
 	})
 }
@@ -251,7 +253,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		}
 		key := r.Header.Get("AuthToken")
 		v := s.cluster.GetSession(key)
-		log.Infof("Header AuthToken: %s - %s", key, v)
+		s.logger.Infof("Header AuthToken: %s - %s", key, v)
 		if v == nil {
 			ReturnJson(w, 401, "Not Authorized")
 			return
@@ -267,6 +269,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		if ok, err := s.perm.Check(uid, ns, res, r.Method); err != nil {
 			s.logger.Errorf("check permission fail, error: %s", err.Error())
 			ReturnServerError(w, err)
+			return
 		} else if !ok {
 			ReturnJson(w, 401, "Not Authorized")
 			return
@@ -376,7 +379,7 @@ func (s *Service) handlerResourceSet(w http.ResponseWriter, r *http.Request, _ h
 	if param.Ns != "" {
 		err = s.tree.SetResource(param.Ns, param.ResType, param.Rl)
 	} else {
-		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
+		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 
@@ -396,7 +399,7 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 	if ns != "" {
 		resList, err = s.tree.GetResourceList(ns, resType)
 	} else {
-		ReturnBadRequest(w, fmt.Errorf("invalid infomation"))
+		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 	if err != nil {

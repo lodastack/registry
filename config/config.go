@@ -27,6 +27,7 @@ var (
 )
 
 type Config struct {
+	Admins     []string     `toml:"admins"`
 	CommonConf CommonConfig `toml:"common"`
 	DataConf   DataConfig   `toml:"data"`
 	LDAPConf   LDAPConfig   `toml:"ldap"`
@@ -46,6 +47,7 @@ type DataConfig struct {
 
 // LDAPConfig is LDAP config struct
 type LDAPConfig struct {
+	Enable   bool   `toml:"enable"`
 	Server   string `toml:"server"`
 	UID      string `toml:"uid"`
 	Binddn   string `toml:"binddn"`

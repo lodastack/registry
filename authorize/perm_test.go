@@ -28,17 +28,23 @@ func TestNewPerm(t *testing.T) {
 		t.Fatal("NewPerm fail:", err.Error())
 	}
 
-	_, err = perm.GetUser(defaultUser)
+	_, err = perm.GetUser(DefaultUser)
 	if err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if defaultGid == "" {
-		t.Fatal("defaultGid is invalid:")
+	if defaultGid == "" || adminGid == "" {
+		t.Fatal("defaultGid or adminGid is invalid")
 	}
 	g, err := perm.GetGroup(defaultGid)
 	if err != nil {
 		t.Fatal("GetGroup fail:", err.Error())
 	} else if len(g.Items) != len(model.Templates) {
+		t.Fatal("default Group items not match with expect, %+v:", g)
+	}
+	g, err = perm.GetGroup(adminGid)
+	if err != nil {
+		t.Fatal("GetGroup fail:", err.Error())
+	} else if len(g.Items) != len(model.Templates)*4 {
 		t.Fatal("default Group items not match with expect, %+v:", g)
 	}
 }

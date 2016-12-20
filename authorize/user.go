@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+
+	"github.com/lodastack/registry/common"
+	"github.com/lodastack/registry/config"
 )
 
 var (
@@ -37,6 +40,19 @@ func (u User) GetUser(username string) (User, error) {
 	return out, err
 }
 
+func (u User) CheckUserExist(username string) (bool, error) {
+	if username == "" {
+		return false, ErrInvalidParam
+	}
+	if _, err := u.GetUser(username); err != nil {
+		if err == ErrUserNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (u User) SetUser(username string, groupIDs, dashboard []string) error {
 	if username == "" {
 		return ErrInvalidParam
@@ -45,8 +61,15 @@ func (u User) SetUser(username string, groupIDs, dashboard []string) error {
 	us, err := u.GetUser(username)
 	if err != nil {
 		us.Username = username
-		us.GroupIDs = groupIDs
 		us.Dashboard = dashboard
+		if len(groupIDs) != 0 {
+			us.GroupIDs = groupIDs
+		} else if common.ContainsString(config.C.Admins, username) {
+			us.GroupIDs = []string{adminGid}
+		} else {
+			us.GroupIDs = []string{defaultGid}
+		}
+
 	} else {
 		if len(groupIDs) != 0 {
 			us.GroupIDs = groupIDs

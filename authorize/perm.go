@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 )
 
 var (
 	AuthBuck = "authorize"
 
-	defaultUser  = "default"
-	defaultGroup = "default"
-
-	defaultGid     = ""
-	defaultManager = []string{"loda-manager"}
+	DefaultUser = "default"
+	defaultGid  = ""
+	adminGid    = ""
 )
 
 type perm struct {
@@ -42,6 +41,9 @@ func (p perm) Check(username, ns, resource, method string) (bool, error) {
 			continue
 		}
 		for _, item := range g.Items {
+			if item == "" {
+				continue
+			}
 			// if has the perm of the ns or its parent, pass.
 			if strings.HasSuffix(q, item) {
 				return true, nil
@@ -52,38 +54,61 @@ func (p perm) Check(username, ns, resource, method string) (bool, error) {
 }
 
 // default group has get permission of all resource.
-func defaultGroupItems() []string {
+func defaultGroupItems(rootNode string) []string {
 	items := make([]string, len(model.Templates))
 	for index, res := range model.Templates {
-		items[index] = "ns-" + res + "-GET"
+		items[index] = fmt.Sprintf("%s-%s-%s", rootNode, res, "GET")
+	}
+	return items
+}
+
+func adminGroupItems(rootNode string) []string {
+	items := make([]string, len(model.Templates)*4)
+	for index, res := range model.Templates {
+		items[index*4] = fmt.Sprintf("%s-%s-%s", rootNode, res, "GET")
+		items[index*4+1] = fmt.Sprintf("%s-%s-%s", rootNode, res, "PUT")
+		items[index*4+2] = fmt.Sprintf("%s-%s-%s", rootNode, res, "POST")
+		items[index*4+3] = fmt.Sprintf("%s-%s-%s", rootNode, res, "DELETE")
 	}
 	return items
 }
 
 // init default group.
-func (p perm) InitDefault() error {
-	u, err := p.GetUser(defaultUser)
+func (p perm) InitGroup(rootNode string) error {
+	u, err := p.GetUser(DefaultUser)
 	if err != nil && err != ErrUserNotFound {
 		return errors.New("get default user fail: " + err.Error())
 	}
 
-	switch len(u.GroupIDs) {
-	case 0:
-		defaultGid, err = p.SetGroup("", defaultManager, defaultGroupItems())
-		if err != nil {
-			err = errors.New("get default group fail: " + err.Error())
-		}
-		if err := p.SetUser(defaultUser, []string{defaultGid}, []string{}); err != nil {
-			return errors.New("set default user fail: " + err.Error())
-		}
-	case 1:
-		if _, err = p.GetGroup(u.GroupIDs[0]); err != nil {
-			err = errors.New("get default group fail: " + err.Error())
-		}
-		defaultGid = u.GroupIDs[0]
-	default:
-		err = errors.New(fmt.Sprintf("group of default user is invalid: %v", u))
+	if len(u.GroupIDs) == 2 {
+		return p.readDefaultGroup(u.GroupIDs)
 	}
+	return p.setDefaultGroup()
+}
 
-	return err
+// Read default/admin group from default user.
+func (p perm) readDefaultGroup(defaulUserGroup []string) error {
+	if _, err := p.GetGroup(defaulUserGroup[0]); err != nil {
+		return err
+	}
+	if _, err := p.GetGroup(defaulUserGroup[1]); err != nil {
+		return err
+	}
+	defaultGid = defaulUserGroup[0]
+	adminGid = defaulUserGroup[1]
+	return nil
+}
+
+// Set default/admin group and set to default user.
+func (p perm) setDefaultGroup() error {
+	var err error
+	defaultGid, err = p.SetGroup("", config.C.Admins, defaultGroupItems(rootNode))
+	if err != nil {
+		return err
+	}
+	adminGid, err = p.SetGroup("", config.C.Admins, adminGroupItems(rootNode))
+	if err != nil {
+		return err
+	}
+	return p.SetUser(DefaultUser, []string{defaultGid, adminGid}, []string{})
 }
