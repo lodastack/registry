@@ -189,7 +189,7 @@ func (s *Service) initHandler() {
 
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 	s.router.GET("/api/v1/agent/resource", s.handlerResourceGet)
-	s.router.PUT("/api/v1/agent/report", s.handlerAgentReport)
+	s.router.POST("/api/v1/agent/report", s.handlerAgentReport)
 
 	s.router.POST("/api/v1/peer", s.handlerJoin)
 	s.router.DELETE("/api/v1/peer", s.handlerRemove)

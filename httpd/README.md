@@ -410,11 +410,11 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
     curl "http://127.0.0.1:9991/api/v1/agent/resource?ns=pool.loda&type=collect"
 
-### 4 用户登录接口
+### 4 权限
 ---
 
 #### 4.1 登录接口
-POST方法
+`POST`方法
 
 提供参数：
 - username 用户名
@@ -430,7 +430,7 @@ POST方法
 
 
 #### 4.2 登出接口
-GET方法
+`GET`方法
 
 提供参数：
 - header中的AuthToken
@@ -444,13 +444,54 @@ GET方法
 例子：
   curl "http://127.0.0.1:8004/api/v1/user/signout"
 
+
+#### 4.3 用户查询
+
+`GET`方法
+
+参数：
+- query参数 username
+
+    curl -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4" -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/user?username=zhangzz"|jq
+
+#### 4.4 用户设置
+
+`PUT`方法
+
+参数：
+- query参数 username: 要更改的用户名
+- query参数 gids: 用户的组id（不设置为不更改）
+- query参数 dashboards：**保留**
+
+    curl -X PUT -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4"  -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/user?username=test&gids=&dashboards="
+
+#### 4.5 用户组查询
+
+`GET`方法
+
+参数：
+- query参数 gids: 用户的组id
+
+    curl -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4" -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/group?gid="|jq
+
+#### 4.6 用户组设置
+
+`PUT`方法
+
+参数：
+- query参数 gid: 要更改的用户组ID
+- query参数 managers: 用户的组管理员列表（不设置为不更改）
+- query参数 items：权限列表（不设置为不更改）
+
+curl -X PUT -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4"  -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/group?gid=42f95995-79a9-44fe-9fbf-417bffbf2035&managers=zhangzz,libk,loda-ma"
+
 ### 5 上报接口
 ---
 
 如果新旧机器名不符，则将全树上的旧机器名改为新机器名
 
-PUT方法
+POST方法
 提供参数:
 - body参数: lodastack/models.Report
 
-    curl -X PUT -d '{"newhostname":"pool-newname","oldhostname":"pool-machine"}' "http://127.0.0.1:9991/api/v1/agent/report"
+    curl -X POST -d '{"newhostname":"pool-newname","oldhostname":"pool-machine"}' "http://127.0.0.1:9991/api/v1/agent/report"
