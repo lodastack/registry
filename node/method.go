@@ -59,7 +59,7 @@ type TreeMethod interface {
 	SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error)
 
 	// Return leaf child node of the ns.
-	LeafIDs(ns string) ([]string, error)
+	LeafChildIDs(ns string) ([]string, error)
 
 	// Search Machine on tree.
 	SearchMachine(hostname string) (map[string]string, error)

@@ -10,8 +10,6 @@ const (
 	Leaf    = iota // leaf type of node
 	NonLeaf        // non-leaf type of node
 	Root
-
-	childCachePrefix = "child_"
 )
 
 var (
@@ -166,7 +164,7 @@ func (n *Node) leafNs() ([]string, error) {
 }
 
 // getLeafChild return the leaf id list of the Node.
-func (n *Node) leafID() ([]string, error) {
+func (n *Node) leafChildIDs() ([]string, error) {
 	IDMap, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {
@@ -296,63 +294,19 @@ func (i *nodeCache) Purge() {
 	}
 }
 
-// GetLeafID return leaf cheld IDs of a nodeID.
-func (i *nodeCache) GetLeafID(nodeId string) ([]string, bool) {
-	childIDStr, ok := i.Get(childCachePrefix + nodeId)
-	if !ok {
-		return nil, false
-	}
-	childIDs := strings.Split(childIDStr, ",")
-	result := []string{}
-	for _, childID := range childIDs {
-		// Add the leaf child ns to result.
-		if _, ok := i.GetLeafID(childID); !ok {
-			result = append(result, childID)
-			continue
-		}
-
-		// Check the child of nonleaf child ns.
-		grandLeafs, _ := i.GetLeafID(childID)
-		if len(grandLeafs) != 0 {
-			result = append(result, grandLeafs...)
-		}
-	}
-	return result, true
-}
-
 // AddNode add a node to NS_ID and child cache.
 func (i *nodeCache) Add(parentId, parentNs string, newNode *Node) {
 	ns := newNode.Name + nodeDeli + parentNs
 	i.Set(newNode.ID, ns)
 	i.Set(ns, newNode.ID)
-	// Init child cache for nonleaf ns.
-	if newNode.Type == NonLeaf {
-		i.Set(childCachePrefix+newNode.ID, "")
-	}
 
-	parentNewChilds := newNode.ID
-	ParentChildKey := childCachePrefix + parentId
-	if parentOldChilds, _ := i.Get(ParentChildKey); parentOldChilds != "" {
-		parentNewChilds = parentOldChilds + "," + parentNewChilds
-	}
-	i.Set(ParentChildKey, parentNewChilds)
 }
 
 // DelNode delete a node from cache.
-func (i *nodeCache) Delete(parentId, delId string) {
+func (i *nodeCache) Delete(delId string) {
 	delNs, _ := i.Get(delId)
 	i.Del(delNs, delId)
 	i.Del(delId, delNs)
-
-	parentChildKey := childCachePrefix + parentId
-	parentOldChilds, _ := i.Get(parentChildKey)
-	if parentOldChilds == "" {
-		return
-	}
-	newChild := strings.Replace(parentOldChilds, delId, "", -1)
-	newChild = strings.Replace(newChild, ",,", "", -1)
-	newChild = strings.Trim(newChild, ",")
-	i.Set(childCachePrefix+parentId, newChild)
 }
 
 // initCache return the cache of ID-NS/NS-ID ang ID-childIDs.
@@ -379,14 +333,6 @@ func (n *Node) initNsCache() (*nodeCache, error) {
 		nsCache[id] = ns
 	}
 
-	// set child cache
-	childMap, err := n.getChildMap()
-	if err != nil {
-		return nil, err
-	}
-	for id, childIDs := range childMap {
-		nsCache[childCachePrefix+id] = childIDs
-	}
 	return &nodeCache{Data: nsCache}, nil
 }
 

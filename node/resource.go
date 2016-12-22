@@ -42,7 +42,7 @@ func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceL
 
 	// Return all resource of the node's child leaf if get resource from NonLeaf.
 	allRes := model.ResourceList{}
-	leafIDs, err := node.leafID()
+	leafIDs, err := node.leafChildIDs()
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (t *Tree) GetResource(ns, resType string, resID ...string) ([]model.Resourc
 
 // Update One Resource by ns/resource type/resource ID/update map.
 func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
-	nodeId, err := t.getIDByNs(ns)
+	nodeId, err := t.getID(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return err
@@ -92,7 +92,7 @@ func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]st
 
 // Append one resource to ns.
 func (t *Tree) AppendResource(ns, resType string, appendRes ...model.Resource) error {
-	nodeID, err := t.getIDByNs(ns)
+	nodeID, err := t.getID(ns)
 	if err != nil {
 		t.logger.Errorf("getID of ns %s fail when appendResource, error: %+v", ns, err)
 		return err
@@ -133,7 +133,7 @@ func (t *Tree) SetResource(ns, resType string, rl model.ResourceList) error {
 }
 
 func (t *Tree) DeleteResource(ns, resType string, resId ...string) error {
-	nodeId, err := t.getIDByNs(ns)
+	nodeId, err := t.getID(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return err
@@ -204,7 +204,7 @@ func (t *Tree) MoveResource(oldNs, newNs, resType string, resourceIDs ...string)
 
 func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error) {
 	result := map[string]*model.ResourceList{}
-	leafIDs, err := t.LeafIDs(ns)
+	leafIDs, err := t.LeafChildIDs(ns)
 	if err != nil && len(leafIDs) == 0 {
 		t.logger.Errorf("node has none leaf, ns: %s, error: %v", ns, err)
 		return nil, ErrNilChildNode
@@ -258,7 +258,7 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 				return
 			}
 			if len(resOfOneNs) != 0 {
-				ns, err := t.getNsByID(leafID)
+				ns, err := t.getNs(leafID)
 				if err != nil {
 					t.logger.Errorf("getNsByID favil, getNsByID error: %s", err.Error())
 					limit.Error(err)

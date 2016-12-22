@@ -156,7 +156,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
     # 返回
     {"httpstatus": 200, "data": null, "msg": "success"}
 
-    curl -X PUT "http://127.0.0.1:9991/api/v1/ns?ns=server1.loda&name=server1-test2&machinereg=^*"
+    curl -X PUT "http://127.0.0.1:9991/api/v1/ns?ns=server1-test.loda&name=server1-test2&machinereg=^*"
 
 #### 1.4 节点删除
 

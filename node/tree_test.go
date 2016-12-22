@@ -62,8 +62,8 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get pool node fail: %s", err.Error())
 	}
-	leafIDs, ok := tree.Cache.GetLeafID(rootID)
-	if !ok || len(leafIDs) != 3 {
+	leafIDs, err := tree.LeafChildIDs(rootNode)
+	if err != nil || len(leafIDs) != 3 {
 		t.Fatalf("get leaf of root fail not match with expect:%s,%s %v", leafID, childLeafID, leafIDs)
 	}
 	sort.Strings(leafIDs)
@@ -185,7 +185,7 @@ func TestTreeGetLeaf(t *testing.T) {
 	if tree.Cache, err = allNodes.initNsCache(); err != nil {
 		t.Fatal("initNsCache fail")
 	}
-	childIDs, err := tree.LeafIDs(rootNode)
+	childIDs, err := tree.LeafChildIDs(rootNode)
 	t.Log("result of ID LeafIDs:", childIDs)
 	if err != nil || len(childIDs) != 4 {
 		t.Fatalf("LeafIDs not match with expect, leaf: %+v, error: %v", childIDs, err)
