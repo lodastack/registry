@@ -77,7 +77,7 @@ type TreeMethod interface {
 	UpdateResource(ns, resType, resID string, updateMap map[string]string) error
 
 	// Update hostname property of machine resource.
-	MachineRename(oldName, newName string) error
+	MachineUpdate(oldName string, updateMap map[string]string) error
 
 	// Append resource to ns.
 	AppendResource(ns, resType string, appendRes ...model.Resource) error
