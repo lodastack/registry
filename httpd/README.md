@@ -488,10 +488,10 @@ curl -X PUT -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4"  -H "NS: loda" 
 ### 5 上报接口
 ---
 
-如果新旧机器名不符，则将全树上的旧机器名改为新机器名
+如果`update`为`true`，则变更有变化的`hostname`或`ip`。*注意: 为了定位变更机器，必须提交oldhostname并且值为变更之前的hostname。*如果提交`update`为`true`，但新旧参数无变化或者不合法则不予变更。
 
 POST方法
 提供参数:
 - body参数: lodastack/models.Report
 
-    curl -X POST -d '{"newhostname":"pool-newname","oldhostname":"pool-machine"}' "http://127.0.0.1:9991/api/v1/agent/report"
+    curl -X POST -d '{"update": true, "oldhostname": "old-hostname", "oldiplist": ["127.0.0.1"], "newiplist": ["10.10.10.10", "127.0.0.1"]}' "http://127.0.0.1:9991/api/v1/agent/report"
