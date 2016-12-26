@@ -340,9 +340,21 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 		ReturnBadRequest(w, err)
 		return
 	}
-
-	if report.NewHostname != "" && report.OldHostname != "" && report.NewHostname != report.OldHostname {
-		if err := s.tree.MachineRename(report.OldHostname, report.NewHostname); err != nil {
+	if report.Update {
+		if report.OldHostname == "" {
+			ReturnBadRequest(w, ErrInvalidParam)
+			return
+		}
+		updateMap := map[string]string{}
+		if report.NewHostname != "" && report.NewHostname != report.OldHostname {
+			updateMap[node.HostnameProp] = report.NewHostname
+		}
+		if len(report.NewIPList) != 0 &&
+			len(report.OldIPList) != 0 &&
+			strings.Join(report.NewIPList, ",") != strings.Join(report.OldIPList, ",") {
+			updateMap[node.IpProp] = strings.Join(report.NewIPList, ",")
+		}
+		if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
 			ReturnBadRequest(w, err)
 			return
 		}

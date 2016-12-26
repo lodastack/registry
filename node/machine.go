@@ -9,6 +9,7 @@ import (
 
 var (
 	HostnameProp = "hostname"
+	IpProp       = "ip"
 
 	ErrInvalidMachine = errors.New("invalid machine resource")
 )
@@ -41,7 +42,19 @@ func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
 	return machineRes, nil
 }
 
-func (t *Tree) MachineRename(oldName, newName string) error {
+func (t *Tree) MachineUpdate(oldName string, updateMap map[string]string) error {
+	hostname, ok := updateMap[HostnameProp]
+	if ok && hostname == "" {
+		return ErrInvalidMachine
+	}
+	ip, ok := updateMap[IpProp]
+	if ok && ip == "" {
+		return ErrInvalidMachine
+	}
+	if hostname == "" && ip == "" {
+		return ErrInvalidMachine
+	}
+
 	location, err := t.SearchMachine(oldName)
 	if err != nil {
 		t.logger.Error("SearchMachine fail: %s", err.Error())
@@ -50,11 +63,10 @@ func (t *Tree) MachineRename(oldName, newName string) error {
 	if len(location) == 0 {
 		return errors.New("machine not found")
 	}
-	updateMap := map[string]string{HostnameProp: newName}
 	for ns, resId := range location {
 		if err := t.UpdateResource(ns, "machine", resId, updateMap); err != nil {
-			t.logger.Error("MachineRename fail and skip, oldname: %s, newname: %s, fail ns: %s, error: %s",
-				oldName, newName, ns, err.Error())
+			t.logger.Error("MachineRename fail and skip, oldname: %s, ns: %s, update: %+v, error: %s",
+				oldName, ns, updateMap, err.Error())
 			return err
 		}
 	}
