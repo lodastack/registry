@@ -2,6 +2,7 @@ package httpd
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,8 +72,11 @@ type Cluster interface {
 
 // Service provides HTTP service.
 type Service struct {
-	addr string
-	ln   net.Listener
+	addr  string
+	ln    net.Listener
+	https bool
+	cert  string
+	key   string
 
 	router *httprouter.Router
 
@@ -95,7 +99,7 @@ type bodyParam struct {
 var ErrInvalidParam = errors.New("invalid infomation")
 
 // New returns an uninitialized HTTP service.
-func New(addr string, cluster Cluster) (*Service, error) {
+func New(c config.HTTPConfig, cluster Cluster) (*Service, error) {
 	// init Tree
 	tree, err := node.NewTree(cluster)
 	if err != nil {
@@ -111,7 +115,10 @@ func New(addr string, cluster Cluster) (*Service, error) {
 	}
 
 	return &Service{
-		addr:    addr,
+		addr:    c.Bind,
+		https:   c.Https,
+		cert:    c.Cert,
+		key:     c.Key,
 		cluster: cluster,
 		tree:    tree,
 		perm:    perm,
@@ -131,12 +138,31 @@ func (s *Service) Start() error {
 		server.Handler = s.accessLog(cors(s.router))
 	}
 
-	ln, err := net.Listen("tcp", s.addr)
-	if err != nil {
-		return err
-	}
+	// Open listener.
+	if s.https {
+		cert, err := tls.LoadX509KeyPair(s.cert, s.key)
+		if err != nil {
+			return err
+		}
 
-	s.ln = ln
+		listener, err := tls.Listen("tcp", s.addr, &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		})
+		if err != nil {
+			return err
+		}
+
+		s.logger.Println(fmt.Sprint("Listening on HTTPS:", s.addr))
+		s.ln = listener
+	} else {
+
+		ln, err := net.Listen("tcp", s.addr)
+		if err != nil {
+			return err
+		}
+
+		s.ln = ln
+	}
 
 	go func() {
 		err := server.Serve(s.ln)

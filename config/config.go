@@ -29,6 +29,7 @@ var (
 type Config struct {
 	Admins     []string     `toml:"admins"`
 	CommonConf CommonConfig `toml:"common"`
+	HTTPConf   HTTPConfig   `toml:"http"`
 	DataConf   DataConfig   `toml:"data"`
 	LDAPConf   LDAPConfig   `toml:"ldap"`
 	LogConf    LogConfig    `toml:"log"`
@@ -37,6 +38,13 @@ type Config struct {
 type CommonConfig struct {
 	HttpBind string `toml:"httpbind"`
 	PID      string `toml:"pid"`
+}
+
+type HTTPConfig struct {
+	Bind  string `toml:"bind"`
+	Https bool   `toml:"https"`
+	Cert  string `toml:"cert"`
+	Key   string `toml:"key"`
 }
 
 type DataConfig struct {
