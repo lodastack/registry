@@ -156,7 +156,7 @@ func (m *Main) Start() error {
 	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind)
 
 	// Create and configure HTTP service.
-	h, err := httpd.New(config.C.CommonConf.HttpBind, cs)
+	h, err := httpd.New(config.C.HTTPConf, cs)
 	if err := h.Start(); err != nil {
 		return fmt.Errorf("failed to start HTTP service: %s", err.Error())
 	}
