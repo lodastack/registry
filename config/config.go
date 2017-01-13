@@ -36,8 +36,7 @@ type Config struct {
 }
 
 type CommonConfig struct {
-	HttpBind string `toml:"httpbind"`
-	PID      string `toml:"pid"`
+	PID string `toml:"pid"`
 }
 
 type HTTPConfig struct {

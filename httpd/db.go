@@ -9,6 +9,15 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+func (s *Service) handlerPeers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	peers, err := s.cluster.Peers()
+	if err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnJson(w, 200, peers)
+}
+
 func (s *Service) handlerJoin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {

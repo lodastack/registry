@@ -27,6 +27,9 @@ var (
 	TypJoin   = []byte("join")
 	TypRemove = []byte("remove")
 	TypPeer   = []byte("peer")
+
+	Leader   = "Leader"
+	Follower = "Follower"
 )
 
 type response struct {
@@ -59,6 +62,26 @@ func (s *Service) Join(addr string) error {
 		})
 	}
 	return err
+}
+
+func (s *Service) Peers() (map[string]map[string]string, error) {
+	peerMap := make(map[string]map[string]string)
+	peers, err := s.store.APIPeers()
+	if err != nil {
+		return nil, err
+	}
+	Leadership := s.store.Leader()
+
+	for raftAddr, apiAddr := range peers {
+		peerMap[raftAddr] = make(map[string]string)
+		peerMap[raftAddr]["api"] = apiAddr
+		if raftAddr == Leadership {
+			peerMap[raftAddr]["role"] = Leader
+		} else {
+			peerMap[raftAddr]["role"] = Follower
+		}
+	}
+	return peerMap, nil
 }
 
 // Remove removes a node from the store, specified by addr.
