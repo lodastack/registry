@@ -68,6 +68,8 @@ type Cluster interface {
 
 	// Restore restores backup data file.
 	Restore(backupfile string) error
+
+	Peers() (map[string]map[string]string, error)
 }
 
 // Service provides HTTP service.
@@ -217,6 +219,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/agent/resource", s.handlerResourceGet)
 	s.router.POST("/api/v1/agent/report", s.handlerAgentReport)
 
+	s.router.GET("/api/v1/peer", s.handlerPeers)
 	s.router.POST("/api/v1/peer", s.handlerJoin)
 	s.router.DELETE("/api/v1/peer", s.handlerRemove)
 	s.router.GET("/api/v1/db/backup", s.handlerBackup)

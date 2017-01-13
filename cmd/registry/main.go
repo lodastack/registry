@@ -150,10 +150,10 @@ func (m *Main) Start() error {
 	m.logger.Printf("cluster leader is: %s", l)
 
 	// update cluster meta
-	if err := publishAPIAddr(cs, raftTn.Addr().String(), config.C.CommonConf.HttpBind, publishPeerTimeout); err != nil {
-		return fmt.Errorf("failed to set peer for %s to %s: %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind, err.Error())
+	if err := publishAPIAddr(cs, raftTn.Addr().String(), config.C.HTTPConf.Bind, publishPeerTimeout); err != nil {
+		return fmt.Errorf("failed to set peer for %s to %s: %s", raftTn.Addr().String(), config.C.HTTPConf.Bind, err.Error())
 	}
-	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.CommonConf.HttpBind)
+	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.HTTPConf.Bind)
 
 	// Create and configure HTTP service.
 	h, err := httpd.New(config.C.HTTPConf, cs)
