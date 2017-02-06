@@ -82,7 +82,7 @@ func (s *Service) handlerBackup(w http.ResponseWriter, r *http.Request, _ httpro
 	if data, err = s.cluster.Backup(); err != nil {
 		ReturnServerError(w, err)
 	} else {
-		ReturnOK(w, string(data))
+		ReturnByte(w, 200, data)
 	}
 }
 

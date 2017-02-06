@@ -1154,7 +1154,7 @@ func (f *fsm) applyRestore(sub json.RawMessage) error {
 		if err != nil {
 			panic(err)
 		}
-
+		f.cache.Purge()
 		f.db = db
 	}()
 
