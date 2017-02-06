@@ -138,7 +138,10 @@ func stopProfile() {
 		log.Printf("CPU profiling stopped")
 	}
 	if prof.mem != nil {
-		pprof.Lookup("heap").WriteTo(prof.mem, 0)
+		runtime.GC()
+		if err := pprof.Lookup("heap").WriteTo(prof.mem, 0); err != nil {
+			log.Errorf("could not write memory profile: %s\n", err)
+		}
 		prof.mem.Close()
 		log.Printf("memory profiling stopped")
 	}

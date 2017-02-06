@@ -166,6 +166,7 @@ func (m *Main) Start() error {
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
 	<-terminate
+	stopProfile()
 
 	// close HTTP service
 	if err := h.Close(); err != nil {
@@ -185,7 +186,6 @@ func (m *Main) Start() error {
 	if err := os.Remove(config.C.CommonConf.PID); err != nil {
 		m.logger.Errorf("clean PID file failed: %s", err)
 	}
-	stopProfile()
 
 	// flush log
 	model.LogBackend.Flush()
