@@ -51,3 +51,9 @@ func ReturnJson(w http.ResponseWriter, httpStatus int, returnJson interface{}) {
 	}
 	(&Response{Code: httpStatus, Data: returnJson}).Write(w)
 }
+
+// Reture byte.
+func ReturnByte(w http.ResponseWriter, httpStatus int, msg []byte) {
+	w.WriteHeader(httpStatus)
+	w.Write([]byte(msg))
+}
