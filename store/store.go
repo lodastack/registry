@@ -59,7 +59,8 @@ const (
 	setSession                                // Commands which set a session.
 	delSession                                // Commands which delete a session key.
 
-	peer
+	setPeer // Command which node join.
+	delPeer // Command which node leave.
 	restore
 )
 
@@ -763,6 +764,7 @@ func (s *Store) Join(addr string) error {
 }
 
 // Remove removes a node from the store, specified by addr.
+// NOTE: raft Bug will cause the claster cannot add peer any more.
 func (s *Store) Remove(addr string) error {
 	if s.raft.State() != raft.Leader {
 		return ErrNotLeader
@@ -774,7 +776,17 @@ func (s *Store) Remove(addr string) error {
 		return f.Error()
 	}
 	s.logger.Printf("node %s removed successfully", addr)
-	return nil
+
+	c, err := newCommand(delPeer, map[string]string{addr: ""})
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	f = s.raft.Apply(b, raftTimeout)
+	return f.Error()
 }
 
 // UpdateAPIPeers updates the cluster-wide peer information.
@@ -783,7 +795,7 @@ func (s *Store) UpdateAPIPeers(peers map[string]string) error {
 		return ErrNotLeader
 	}
 
-	c, err := newCommand(peer, peers)
+	c, err := newCommand(setPeer, peers)
 	if err != nil {
 		return err
 	}
@@ -835,8 +847,11 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 	case delSession:
 		err := f.applyDelSession(c.Sub)
 		return &fsmGenericResponse{error: err}
-	case peer:
-		err := f.applyPeer(c.Sub)
+	case setPeer:
+		err := f.applySetPeer(c.Sub)
+		return &fsmGenericResponse{error: err}
+	case delPeer:
+		err := f.applyDelPeer(c.Sub)
 		return &fsmGenericResponse{error: err}
 	case restore:
 		err := f.applyRestore(c.Sub)
@@ -923,7 +938,7 @@ func (f *fsm) Restore(rc io.ReadCloser) error {
 	return nil
 }
 
-func (f *fsm) applyPeer(sub json.RawMessage) error {
+func (f *fsm) applySetPeer(sub json.RawMessage) error {
 	var d peersSub
 	if err := json.Unmarshal(sub, &d); err != nil {
 		return err
@@ -935,6 +950,20 @@ func (f *fsm) applyPeer(sub json.RawMessage) error {
 		f.meta.APIPeers[k] = v
 	}
 
+	return nil
+}
+
+func (f *fsm) applyDelPeer(sub json.RawMessage) error {
+	var d peersSub
+	if err := json.Unmarshal(sub, &d); err != nil {
+		return err
+	}
+
+	f.metaMu.Lock()
+	defer f.metaMu.Unlock()
+	for k := range d {
+		delete(f.meta.APIPeers, k)
+	}
 	return nil
 }
 
