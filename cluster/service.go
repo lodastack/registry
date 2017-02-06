@@ -76,9 +76,6 @@ type Store interface {
 
 	// APIPeers return the map of Raft addresses to API addresses.
 	APIPeers() (map[string]string, error)
-
-	// Peer returns the API address for the given addr.
-	Peer(addr string) string
 }
 
 // Service allows access to the cluster and associated meta data,

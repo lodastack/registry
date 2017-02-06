@@ -373,7 +373,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
      curl -X PUT "http://127.0.0.1:9991/api/v1/resource/move?from=pool.loda&to=server0.product0.loda&type=machine&resourceid=d0f769bf-1e2c-4cae-85ad-61e24f1ea96d"
 
-### 3 注册接口
+### 3 agent相关接口
 ---
 
 根据hostname进行节点查找/注册:
@@ -409,6 +409,18 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 - QUERY参数 type：资源类型
 
     curl "http://127.0.0.1:9991/api/v1/agent/resource?ns=pool.loda&type=collect"
+
+#### 3.3 上报接口
+---
+
+如果`update`为`true`，则变更有变化的`hostname`或`ip`。*注意: 为了定位变更机器，必须提交oldhostname并且值为变更之前的hostname。*如果提交`update`为`true`，但新旧参数无变化或者不合法则不予变更。
+
+POST方法
+提供参数:
+- body参数: lodastack/models.Report
+
+    curl -X POST -d '{"update": true, "oldhostname": "old-hostname", "oldiplist": ["127.0.0.1"], "newiplist": ["10.10.10.10", "127.0.0.1"]}' "http://127.0.0.1:9991/api/v1/agent/report"
+
 
 ### 4 权限
 ---
@@ -485,13 +497,30 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 curl -X PUT -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4"  -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/group?gid=42f95995-79a9-44fe-9fbf-417bffbf2035&managers=zhangzz,libk,loda-ma"
 
-### 5 上报接口
+### 5 集群管理接口
 ---
 
-如果`update`为`true`，则变更有变化的`hostname`或`ip`。*注意: 为了定位变更机器，必须提交oldhostname并且值为变更之前的hostname。*如果提交`update`为`true`，但新旧参数无变化或者不合法则不予变更。
+#### 5.1 查看集群成员
 
-POST方法
-提供参数:
-- body参数: lodastack/models.Report
+`GET`方法
 
-    curl -X POST -d '{"update": true, "oldhostname": "old-hostname", "oldiplist": ["127.0.0.1"], "newiplist": ["10.10.10.10", "127.0.0.1"]}' "http://127.0.0.1:9991/api/v1/agent/report"
+    curl "http://127.0.0.1:9991/api/v1/peer"
+    返回
+    {
+    "httpstatus": 200,
+    "data": {
+        "127.0.0.1:9981": {
+            "api": "127.0.0.1:9991",
+            "role": "Leader"
+        },
+        "127.0.0.1:9982": {
+            "api": "127.0.0.1:9992",
+            "role": "Follower"
+        },
+        "127.0.0.1:9983": {
+            "api": "127.0.0.1:9993",
+            "role": "Follower"
+        }
+    },
+    "msg": ""
+    }
