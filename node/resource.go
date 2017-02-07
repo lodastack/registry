@@ -213,11 +213,16 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 	var fail bool
 	limit := limit.NewLimit(defaultResourceWorker)
 	resultChan := make(chan map[string]*model.ResourceList, defaultResourceWorker/2)
+	defer close(resultChan)
 	// Collect process result.
 	go func() {
 		for {
 			select {
-			case nsResult := <-resultChan:
+			case nsResult, live := <-resultChan:
+				if !live {
+					limit.Close()
+					return
+				}
 				for k, v := range nsResult {
 					result[k] = v
 				}
