@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/lodastack/log"
+	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
 
 	"github.com/boltdb/bolt"
@@ -60,7 +61,6 @@ const (
 	delSession                                // Commands which delete a session key.
 
 	setPeer // Command which node join.
-	delPeer // Command which node leave.
 	restore
 )
 
@@ -169,6 +169,7 @@ func (s *Store) raftConfig() *raft.Config {
 	// avoid raft logs increase fast
 	config.TrailingLogs = 1000
 	config.SnapshotThreshold = 500
+	config.ShutdownOnRemove = false
 	return config
 }
 
@@ -282,15 +283,24 @@ func (s *Store) Peer(addr string) string {
 }
 
 // APIPeers return the map of Raft addresses to API addresses.
+// Delete apiPeer record not in the cluster.
 func (s *Store) APIPeers() (map[string]string, error) {
 	s.metaMu.RLock()
 	defer s.metaMu.RUnlock()
-
-	peers := make(map[string]string, len(s.meta.APIPeers))
-	for k, v := range s.meta.APIPeers {
-		peers[k] = v
+	raftPeers, err := s.peerStore.Peers()
+	if err != nil {
+		return nil, err
 	}
-	return peers, nil
+
+	apiPeers := make(map[string]string, len(s.meta.APIPeers))
+	for k, v := range s.meta.APIPeers {
+		if !common.ContainsString(raftPeers, k) {
+			delete(s.meta.APIPeers, k)
+			continue
+		}
+		apiPeers[k] = v
+	}
+	return apiPeers, nil
 }
 
 // State returns the current node's Raft state.
@@ -777,15 +787,6 @@ func (s *Store) Remove(addr string) error {
 	}
 	s.logger.Printf("node %s removed successfully", addr)
 
-	c, err := newCommand(delPeer, map[string]string{addr: ""})
-	if err != nil {
-		return err
-	}
-	b, err := json.Marshal(c)
-	if err != nil {
-		return err
-	}
-	f = s.raft.Apply(b, raftTimeout)
 	return f.Error()
 }
 
@@ -849,9 +850,6 @@ func (f *fsm) Apply(l *raft.Log) interface{} {
 		return &fsmGenericResponse{error: err}
 	case setPeer:
 		err := f.applySetPeer(c.Sub)
-		return &fsmGenericResponse{error: err}
-	case delPeer:
-		err := f.applyDelPeer(c.Sub)
 		return &fsmGenericResponse{error: err}
 	case restore:
 		err := f.applyRestore(c.Sub)
@@ -950,20 +948,6 @@ func (f *fsm) applySetPeer(sub json.RawMessage) error {
 		f.meta.APIPeers[k] = v
 	}
 
-	return nil
-}
-
-func (f *fsm) applyDelPeer(sub json.RawMessage) error {
-	var d peersSub
-	if err := json.Unmarshal(sub, &d); err != nil {
-		return err
-	}
-
-	f.metaMu.Lock()
-	defer f.metaMu.Unlock()
-	for k := range d {
-		delete(f.meta.APIPeers, k)
-	}
 	return nil
 }
 
