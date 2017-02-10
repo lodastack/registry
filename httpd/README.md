@@ -198,7 +198,8 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 #### 2.2 添加资源
 
 在节点下添加一个资源项。如果要添加的pk属性缺失或已经在该节点下存在，则不予添加。
-目前各资源对应的pk属性：`machine`资源： `hostname`， 其他资源: `name`
+目前各资源对应的pk属性：`machine`资源： `hostname`， 其他资源: `name`。
+**系统会自动添加监控类型到collect资源的name前，比如：PROC.bin/PLUGIN.service/PORT.service.xx**
 
 `POST`方法, url: `/api/v1/resource/add`
 
@@ -373,6 +374,17 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
      curl -X PUT "http://127.0.0.1:9991/api/v1/resource/move?from=pool.loda&to=server0.product0.loda&type=machine&resourceid=d0f769bf-1e2c-4cae-85ad-61e24f1ea96d"
 
+#### 2.8 删除监控
+
+删除一个节点下的监控资源，会自动删除监控数据。
+`DELETE`方法，url:`/api/v1/resource/collect`
+提供参数：
+- Query参数 ns：资源所在的叶子节点ns
+- Query参数 measurements: 要删除的监控项
+
+    curl -X DELETE "http://127.0.0.1:9991/api/v1/resource/collect?ns=pool.loda&measurements=PORT.test,PLUGIN.test.cpu"
+
+
 ### 3 agent相关接口
 ---
 
@@ -437,7 +449,15 @@ POST方法
 
 例子：
 
-    curl -d "username=libk&password=test" "http://127.0.0.1:8004/api/v1/user/signin"
+    curl -d "username=name&password=pwd" "http://127.0.0.1:8001/api/v1/user/signin"
+    {
+      "httpstatus": 200,
+      "data": {
+            "user": "name",
+            "token": "3de20444-b3b6-475c-8404-f2b471b64a85"
+      },
+      "msg": ""
+    }
 
 
 

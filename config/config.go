@@ -28,6 +28,7 @@ var (
 
 type Config struct {
 	Admins     []string     `toml:"admins"`
+	RouterAddr string       `toml:"routeraddr"`
 	CommonConf CommonConfig `toml:"common"`
 	HTTPConf   HTTPConfig   `toml:"http"`
 	DataConf   DataConfig   `toml:"data"`
