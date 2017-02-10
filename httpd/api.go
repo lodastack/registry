@@ -18,6 +18,7 @@ import (
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/node"
+	"github.com/lodastack/registry/utils"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -209,6 +210,8 @@ func (s *Service) initHandler() {
 	s.router.PUT("/api/v1/resource", s.handleResourcePut)
 	s.router.PUT("/api/v1/resource/move", s.handleResourceMove)
 	s.router.DELETE("/api/v1/resource", s.handleResourceDel)
+
+	s.router.DELETE("/api/v1/resource/collect", s.handleCollectDel)
 
 	s.router.POST("/api/v1/ns", s.handlerNsNew)
 	s.router.PUT("/api/v1/ns", s.handlerNsUpdate)
@@ -487,6 +490,12 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
+	if param.ResType == "collect" && !model.UpdateCollectName(param.R) {
+		s.logger.Errorf("add invalid type collect: %+v", param.R)
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
 	// Check pk property.
 	pk := model.PkProperty[param.ResType]
 	pkValue, _ := param.R.ReadProperty(pk)
@@ -551,9 +560,73 @@ func (s *Service) handleResourceDel(w http.ResponseWriter, r *http.Request, _ ht
 	resIDs := r.FormValue("resourceid")
 	if err := s.tree.DeleteResource(ns, resType, strings.Split(resIDs, ",")...); err != nil {
 		ReturnServerError(w, err)
-	} else {
-		ReturnOK(w, "success")
+		return
 	}
+	ReturnOK(w, "success")
+}
+
+// handleCollectDel handle the delete collect request.
+// delete the collect resource and clear data in db.
+func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ns := r.FormValue("ns")
+	measurements := r.FormValue("measurements")
+	resNames, ok := model.GetResNameFromMeasurements(strings.Split(measurements, ","))
+	if !ok {
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
+	delDataMeasurements := make([]string, 0)
+	resIDs := make([]string, 0)
+	// search collect resource and get the ID.
+	for _, resName := range resNames {
+		search, _ := model.NewSearch(false, "name", resName)
+		res, err := s.tree.SearchResource(ns, "collect", search)
+		if err != nil {
+			s.logger.Errorf("check the addend resource fail: %s", err.Error())
+			ReturnServerError(w, err)
+			return
+		} else if len(res) == 0 {
+			s.logger.Errorf("cannot search collect resource %s in ns: %s, skip this", resName, ns)
+			continue
+		}
+
+		for _, r := range *res[ns] {
+			if resId, ok := r.ID(); ok {
+				delDataMeasurements = append(delDataMeasurements, resName)
+				resIDs = append(resIDs, resId)
+			}
+		}
+	}
+
+	if len(resIDs) == 0 {
+		s.logger.Errorf("search measurement result is nil, measurements: %s,  ns: %s", measurements, ns)
+		ReturnServerError(w, ErrInvalidParam)
+		return
+	}
+	if err := s.tree.DeleteResource(ns, "collect", resIDs...); err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+
+	// delete collect data
+	for _, delName := range delDataMeasurements {
+		go func() {
+			time.Sleep(90 * time.Second)
+			req := utils.HttpQuery{
+				Method: http.MethodDelete,
+				Url: fmt.Sprintf("http://%s?ns=collect.%s&name=%s&regexp=true",
+					config.C.RouterAddr, ns, delName),
+				BodyType: utils.Form,
+				Timeout:  10}
+			s.logger.Infof("beagin to del data: %+v", req)
+			if err := req.DoQuery(); err != nil || req.Result.Status > 299 {
+				s.logger.Errorf("del data fail: %s, error:%s, result: %+v",
+					req.Url, err.Error(), req.Result)
+			}
+		}()
+	}
+	ReturnOK(w, "success")
 }
 
 func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
