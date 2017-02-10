@@ -253,6 +253,8 @@ func cors(inner http.Handler) http.Handler {
 				`X-HTTP-Method-Override`,
 				`Authtoken`,
 				`X-Requested-With`,
+				`NS`,
+				`Resource`,
 			}, ", "))
 		}
 
@@ -314,7 +316,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 
 // pass agent or router backend requests, this API shuold be almost desinged in GET method.
 func uriFilter(r *http.Request) bool {
-	var UNAUTH_URI = []string{"/api/v1/user/signin", "/api/v1/agent", "/api/v1/router",
+	var UNAUTH_URI = []string{"/api/v1/user/signin", "/api/v1/user/signout", "/api/v1/agent", "/api/v1/router",
 		"/api/v1/alarm", "/api/v1/peer"}
 	for _, uri := range UNAUTH_URI {
 		if strings.HasPrefix(r.RequestURI, uri) {
