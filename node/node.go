@@ -145,7 +145,7 @@ func (n *Node) Walk(walkFun WalkfFun) (map[string]string, error) {
 	return walkFun(n, childReturn)
 }
 
-func (n *Node) leafNs() ([]string, error) {
+func (n *Node) LeafNs() ([]string, error) {
 	nsMap, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {
