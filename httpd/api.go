@@ -210,7 +210,6 @@ func (s *Service) initHandler() {
 	s.router.PUT("/api/v1/resource", s.handleResourcePut)
 	s.router.PUT("/api/v1/resource/move", s.handleResourceMove)
 	s.router.DELETE("/api/v1/resource", s.handleResourceDel)
-
 	s.router.DELETE("/api/v1/resource/collect", s.handleCollectDel)
 
 	s.router.POST("/api/v1/ns", s.handlerNsNew)
@@ -221,6 +220,9 @@ func (s *Service) initHandler() {
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 	s.router.GET("/api/v1/agent/resource", s.handlerResourceGet)
 	s.router.POST("/api/v1/agent/report", s.handlerAgentReport)
+
+	s.router.GET("/api/v1/router/resource", s.handlerResourceGet)
+	s.router.GET("/api/v1/router/ns", s.handlerNsGet)
 
 	s.router.GET("/api/v1/peer", s.handlerPeers)
 	s.router.POST("/api/v1/peer", s.handlerJoin)
@@ -651,6 +653,17 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 	if nodes == nil {
 		ReturnNotFound(w, "No node found.")
+		return
+	}
+	// leaf NS lsit format handler
+	// param["format"] = "list"
+	if r.FormValue("format") == "list" {
+		list, err := nodes.LeafNs()
+		if err != nil {
+			ReturnServerError(w, err)
+			return
+		}
+		ReturnJson(w, 200, list)
 		return
 	}
 
