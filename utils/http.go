@@ -29,17 +29,24 @@ type HttpResult struct {
 }
 
 func (query *HttpQuery) DoQuery() error {
-	url, _ := url.Parse(query.Url)
+	url, err := url.Parse(query.Url)
+	if err != nil {
+		return err
+	}
+
 	TimeoutDuration := time.Duration(query.Timeout) * time.Second
 	client := &http.Client{Timeout: time.Duration(TimeoutDuration)}
-	req, _ := http.NewRequest(query.Method, url.String(), bytes.NewBufferString(string(query.Body)))
+	req, err := http.NewRequest(query.Method, url.String(), bytes.NewBufferString(string(query.Body)))
+	if err != nil {
+		return err
+	}
 
 	if query.Method != http.MethodGet {
 		queryHeader := ""
 		if query.BodyType == Form {
 			queryHeader = "application/x-www-form-urlencoded"
-		} else if query.BodyType != "raw" {
-			return errors.New("Unkown body type")
+		} else if query.BodyType != Raw {
+			return errors.New("Unkown request body type")
 		}
 		req.Header.Set("Content-Type", queryHeader)
 	}

@@ -580,8 +580,8 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 	resIDs := make([]string, 0)
 	// search collect resource and get the ID.
 	for _, resName := range resNames {
-		search, _ := model.NewSearch(false, "name", resName)
-		res, err := s.tree.SearchResource(ns, "collect", search)
+		search, _ := model.NewSearch(false, model.PkProperty[model.Collect], resName)
+		res, err := s.tree.SearchResource(ns, model.Collect, search)
 		if err != nil {
 			s.logger.Errorf("check the addend resource fail: %s", err.Error())
 			ReturnServerError(w, err)
@@ -604,7 +604,7 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 		ReturnServerError(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.DeleteResource(ns, "collect", resIDs...); err != nil {
+	if err := s.tree.DeleteResource(ns, model.Collect, resIDs...); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
@@ -619,10 +619,9 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 					config.C.RouterAddr, ns, delName),
 				BodyType: utils.Form,
 				Timeout:  10}
-			s.logger.Infof("beagin to del data: %+v", req)
 			if err := req.DoQuery(); err != nil || req.Result.Status > 299 {
-				s.logger.Errorf("del data fail: %s, error:%s, result: %+v",
-					req.Url, err.Error(), req.Result)
+				s.logger.Errorf("del data fail: %s, error: %v, result: %+v",
+					req.Url, err, req.Result)
 			}
 		}()
 	}

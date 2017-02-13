@@ -1,16 +1,20 @@
 package model
 
 var (
+	Machine = "machine"
+	Collect = "collect"
+	Alarm   = "alarm"
+
 	Templates []string = []string{
-		"machine", "alarm", "collect", "doc", "user", "group", "route", "ns",
+		Machine, Alarm, Collect, "doc", "user", "group", "route", "ns",
 		// "init", "deploy", "acl", "owner", "route",
 	}
 
 	PkProperty = map[string]string{
-		"machine": "hostname",
-		"collect": "name",
-		"alarm":   "name",
-		"doc":     "name",
+		Machine: "hostname",
+		Collect: "name",
+		Alarm:   "name",
+		"doc":   "name",
 	}
 
 	TemplatePrefix string = "_template_"
@@ -209,5 +213,5 @@ func init() {
 	for _, resType := range Templates {
 		RootTemplate[TemplatePrefix+resType] = nil
 	}
-	RootTemplate[TemplatePrefix+"collect"] = collectTemplate
+	RootTemplate[TemplatePrefix+Collect] = collectTemplate
 }
