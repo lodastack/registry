@@ -7,7 +7,6 @@
 package store
 
 import (
-	"bytes"
 	//"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -192,8 +191,16 @@ func (s *Store) Open(enableSingle bool) error {
 	config := s.raftConfig()
 	config.Logger = stdlog.New(os.Stderr, "raft", stdlog.Lshortfile)
 
+	// Setup Raft communication.
+	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, os.Stderr)
+
+	// Create peer storage if necesssary.
+	if s.peerStore == nil {
+		s.peerStore = raft.NewJSONPeers(raftPath, transport)
+	}
+
 	// Check for any existing peers.
-	peers, err := readPeersJSON(filepath.Join(raftPath, "peers.json"))
+	peers, err := s.peerStore.Peers()
 	if err != nil {
 		return err
 	}
@@ -205,12 +212,6 @@ func (s *Store) Open(enableSingle bool) error {
 		config.EnableSingleNode = true
 		config.DisableBootstrapAfterElect = false
 	}
-
-	// Setup Raft communication.
-	transport := raft.NewNetworkTransport(s.raftTransport, 3, 10*time.Second, os.Stderr)
-
-	// Create peer storage.
-	s.peerStore = raft.NewJSONPeers(raftPath, transport)
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
 	snapshots, err := raft.NewFileSnapshotStore(raftPath, retainSnapshotCount, os.Stderr)
@@ -1199,22 +1200,3 @@ func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 }
 
 func (f *fsmSnapshot) Release() {}
-
-func readPeersJSON(path string) ([]string, error) {
-	b, err := ioutil.ReadFile(path)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	if len(b) == 0 {
-		return nil, nil
-	}
-
-	var peers []string
-	dec := json.NewDecoder(bytes.NewReader(b))
-	if err := dec.Decode(&peers); err != nil {
-		return nil, err
-	}
-
-	return peers, nil
-}
