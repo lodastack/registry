@@ -7,14 +7,17 @@ import (
 var rootNode = "loda"
 
 type GroupInf interface {
-	// get group.
-	GetGroup(gid string) (Group, error)
+	// GetGroup return the group.
+	GetGroup(gName string) (Group, error)
 
-	// create/update group.
-	SetGroup(gid string, manager, perm []string) (string, error)
+	// CreateGroup create a group.
+	CreateGroup(gName string, manager, items []string) error
 
-	// remove a group.
-	RemoveGroup(gid string) error
+	// UpdateGroup update the group.
+	UpdateGroup(gName string, manager, items []string) error
+
+	// RemoveGroup remove the group.
+	RemoveGroup(gName string) error
 }
 
 type UserInf interface {
@@ -75,5 +78,5 @@ func NewPerm(cluster Cluster) (Perm, error) {
 		User{cluster: cluster},
 	}
 	// TODO: get rootNode by param.
-	return p, p.InitGroup(rootNode)
+	return &p, p.InitGroup(rootNode)
 }

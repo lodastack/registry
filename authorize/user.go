@@ -17,7 +17,7 @@ var (
 type User struct {
 	sync.RWMutex `json:"-"`
 	Username     string   `json:"username"`
-	GroupIDs     []string `json:"gids"`
+	Groups       []string `json:"groups"`
 	Dashboard    []string `json:"dashboard"`
 
 	cluster Cluster `json:"-"`
@@ -25,7 +25,7 @@ type User struct {
 
 func getUKey(gid string) []byte { return []byte("u-" + gid) }
 
-func (u User) GetUser(username string) (User, error) {
+func (u *User) GetUser(username string) (User, error) {
 	out := User{}
 	u.RLock()
 	defer u.RUnlock()
@@ -40,7 +40,7 @@ func (u User) GetUser(username string) (User, error) {
 	return out, err
 }
 
-func (u User) CheckUserExist(username string) (bool, error) {
+func (u *User) CheckUserExist(username string) (bool, error) {
 	if username == "" {
 		return false, ErrInvalidParam
 	}
@@ -53,7 +53,7 @@ func (u User) CheckUserExist(username string) (bool, error) {
 	return true, nil
 }
 
-func (u User) SetUser(username string, groupIDs, dashboard []string) error {
+func (u *User) SetUser(username string, groups, dashboard []string) error {
 	if username == "" {
 		return ErrInvalidParam
 	}
@@ -62,17 +62,17 @@ func (u User) SetUser(username string, groupIDs, dashboard []string) error {
 	if err != nil {
 		us.Username = username
 		us.Dashboard = dashboard
-		if len(groupIDs) != 0 {
-			us.GroupIDs = groupIDs
+		if len(groups) != 0 {
+			us.Groups = groups
 		} else if common.ContainsString(config.C.Admins, username) {
-			us.GroupIDs = []string{adminGid}
+			us.Groups = []string{adminGName}
 		} else {
-			us.GroupIDs = []string{defaultGid}
+			us.Groups = []string{defaultGName}
 		}
 
 	} else {
-		if len(groupIDs) != 0 {
-			us.GroupIDs = groupIDs
+		if len(groups) != 0 {
+			us.Groups = groups
 		}
 		if len(dashboard) != 0 {
 			us.Dashboard = dashboard
@@ -88,7 +88,7 @@ func (u User) SetUser(username string, groupIDs, dashboard []string) error {
 	return u.cluster.Update([]byte(AuthBuck), getUKey(username), uByte)
 }
 
-func (u User) RemoveUser(username string) error {
+func (u *User) RemoveUser(username string) error {
 	u.Lock()
 	defer u.Unlock()
 	return u.cluster.RemoveKey([]byte(AuthBuck), getUKey(username))
