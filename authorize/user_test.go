@@ -30,7 +30,7 @@ func TestSetUser(t *testing.T) {
 	if err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if len(u.GroupIDs) != 1 || u.GroupIDs[0] != "gid" {
+	if len(u.Groups) != 1 || u.Groups[0] != "gid" {
 		t.Fatalf("GetUser resoult not match with expect, %v", u)
 	}
 
@@ -44,7 +44,7 @@ func TestSetUser(t *testing.T) {
 	if err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if len(u.GroupIDs) != 2 || u.GroupIDs[0] != "gid1" || u.GroupIDs[1] != "gid2" {
+	if len(u.Groups) != 2 || u.Groups[0] != "gid1" || u.Groups[1] != "gid2" {
 		t.Fatalf("GetUser resoult not match with expect, %v", u)
 	}
 }
@@ -74,7 +74,7 @@ func TestRemoveUser(t *testing.T) {
 	if err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if len(u.GroupIDs) != 1 || u.GroupIDs[0] != "gid" {
+	if len(u.Groups) != 1 || u.Groups[0] != "gid" {
 		t.Fatalf("GetUser resoult not match with expect, %v", u)
 	}
 

@@ -3,82 +3,122 @@ package authorize
 import (
 	"encoding/json"
 	"errors"
-	"sync"
-
-	"github.com/lodastack/registry/common"
 )
 
 var (
-	ErrGroupNotFound = errors.New("group not found")
+	ErrGroupNotFound     = errors.New("group not found")
+	ErrGroupAlreadyExist = errors.New("group already exist")
 )
 
 type Group struct {
-	sync.RWMutex `json:"-"`
-	Id           string   `json:"id"`
-	Manager      []string `json:"manager"`
-	Items        []string `json:"items"`
+	GName   string   `json:"name"`
+	Manager []string `json:"manager"`
+	Member  []string `json:"member"`
+	Items   []string `json:"items"`
 
 	cluster Cluster `json:"-"`
 }
 
-func getGKey(gid string) []byte { return []byte("g-" + gid) }
+func getGKey(gName string) []byte { return []byte("g-" + gName) }
 
-func (g Group) GetGroup(gid string) (Group, error) {
-	out := Group{}
-	g.RLock()
-	defer g.RUnlock()
-	if gid == "" {
-		return out, ErrInvalidParam
+func (g *Group) Byte() ([]byte, error) {
+	return json.Marshal(g)
+}
+
+// update set the infomation to group.
+func (g *Group) update(manager, items []string) error {
+	if len(manager) == 0 && len(items) == 0 {
+		return ErrInvalidParam
 	}
-	gByte, err := g.cluster.View([]byte(AuthBuck), getGKey(gid))
+	if len(manager) != 0 && manager[0] != "" {
+		g.Manager = manager
+	}
+	if len(items) != 0 && items[0] != "" {
+		g.Items = items
+	}
+	return nil
+}
+
+func (g *Group) getUpdatedByte(manager, items []string) ([]byte, error) {
+	err := g.update(manager, items)
 	if err != nil {
-		return out, err
+		return nil, err
+	}
+	return g.Byte()
+}
+
+func (g *Group) GetGroup(gName string) (Group, error) {
+	group := Group{}
+	if gName == "" {
+		return group, ErrInvalidParam
+	}
+	gByte, err := g.cluster.View([]byte(AuthBuck), getGKey(gName))
+	if err != nil {
+		return group, err
 	}
 
 	if len(gByte) == 0 {
-		return out, ErrGroupNotFound
+		return group, ErrGroupNotFound
 	}
-	err = json.Unmarshal(gByte, &out)
-	return out, err
+	err = json.Unmarshal(gByte, &group)
+	return group, err
 }
 
-func (g Group) SetGroup(gid string, manager, items []string) (string, error) {
-	var err error
-	if len(manager) == 0 && len(items) == 0 {
-		return "", ErrInvalidParam
+// TODO: set batch to update group member
+func (g *Group) CreateGroup(gName string, manager, items []string) error {
+	if gName == "" || len(manager) == 0 || manager[0] == "" {
+		return ErrInvalidParam
+	}
+	_, err := g.GetGroup(gName)
+	if err != ErrGroupNotFound {
+		if err == nil {
+			return ErrGroupAlreadyExist
+		}
+		return err
 	}
 
-	gs := Group{Id: gid}
-	if gs.Id == "" {
-		// new group
-		gs = Group{
-			Id:      common.GenUUID(),
-			Manager: manager,
-			Items:   items,
-		}
-	} else {
-		// update group
-		if gs, err = g.GetGroup(gs.Id); err != nil {
-			return "", ErrGroupNotFound
-		}
-		if len(manager) != 0 {
-			gs.Manager = manager
-		}
-		if len(items) != 0 {
-			gs.Items = items
-		}
-	}
-	g.Lock()
-	defer g.Unlock()
-	gByte, err := json.Marshal(gs)
+	gByte, err := (&Group{
+		GName:   gName,
+		Manager: manager,
+		Items:   items,
+	}).Byte()
 	if err != nil {
-		return "", err
+		return err
 	}
-	return gs.Id, g.cluster.Update([]byte(AuthBuck), getGKey(gs.Id), gByte)
+	return g.cluster.Update([]byte(AuthBuck), getGKey(gName), gByte)
 }
 
-func (g Group) RemoveGroup(gid string) error {
-	g.Lock()
-	defer g.Unlock()
-	return g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gid))
+// UpdateGroup update, not update member infomation.
+// TODO:
+//    1. manager check
+//    2. batch
+func (g *Group) UpdateGroup(gName string, manager, items []string) error {
+	group, err := g.GetGroup(gName)
+	if err != nil {
+		return err
+	}
+
+	gByte, err := group.getUpdatedByte(manager, items)
+	if err != nil {
+		return err
+	}
+	return g.cluster.Update([]byte(AuthBuck), getGKey(gName), gByte)
+}
+
+// TODO: batch to update user
+func (g *Group) RemoveGroup(gName string) error {
+	return g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gName))
+}
+
+func (g *Group) CreateIfNotExist(group Group) (bool, error) {
+	_, err := g.GetGroup(group.GName)
+	if err == ErrGroupNotFound {
+		err := g.CreateGroup(group.GName, group.Manager, group.Items)
+		return err == nil, err
+	}
+	return false, err
+}
+
+func (g *Group) UpdateMember(GName string, addUsername []string, removeUsername []string) ([]byte, error) {
+	return nil, nil
 }

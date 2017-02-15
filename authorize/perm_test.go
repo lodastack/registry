@@ -1,7 +1,6 @@
 package authorize
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -32,54 +31,18 @@ func TestNewPerm(t *testing.T) {
 	if err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if defaultGid == "" || adminGid == "" {
-		t.Fatal("defaultGid or adminGid is invalid")
-	}
-	g, err := perm.GetGroup(defaultGid)
+
+	g, err := perm.GetGroup(defaultGName)
 	if err != nil {
 		t.Fatal("GetGroup fail:", err.Error())
-	} else if len(g.Items) != len(model.Templates) {
+	} else if len(g.Items) != len(model.Templates)+3 {
 		t.Fatal("default Group items not match with expect, %+v:", g)
 	}
-	g, err = perm.GetGroup(adminGid)
+	g, err = perm.GetGroup(adminGName)
 	if err != nil {
 		t.Fatal("GetGroup fail:", err.Error())
 	} else if len(g.Items) != len(model.Templates)*4 {
 		t.Fatal("default Group items not match with expect, %+v:", g)
-	}
-}
-
-func BenchmarkCheck(b *testing.B) {
-	s := mustNewStoreB(b)
-	defer os.RemoveAll(s.Path())
-
-	if err := s.Open(true); err != nil {
-		b.Fatalf("failed to open single-node store: %s", err.Error())
-	}
-	defer s.Close(true)
-	s.WaitForLeader(10 * time.Second)
-	perm, err := NewPerm(s)
-	if err != nil {
-		b.Fatal("NewPerm fail:", err.Error())
-	}
-
-	var gids []string
-	for i := 0; i < 1000; i++ {
-		if gid, err := perm.SetGroup("", []string{"manager"}, []string{fmt.Sprintf("loda-ns-%d", i)}); err != nil {
-			b.Fatal("SetGroup fail:", err.Error())
-		} else {
-			gids = append(gids, gid)
-		}
-	}
-	for i := 0; i < 1000; i++ {
-		if err := perm.SetUser(fmt.Sprintf("loda-manager-%d", i), []string{gids[i]}, []string{}); err != nil {
-			b.Fatal("SetUser fail:", err.Error())
-		}
-	}
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		perm.Check(fmt.Sprintf("loda-manager-%d", i), "ns", "resource", " method")
 	}
 }
 

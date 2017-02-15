@@ -21,6 +21,7 @@ func (s *Service) initPermissionHandler() {
 	s.router.GET("/api/v1/user/signout", s.HandlerSignout)
 
 	s.router.GET("/api/v1/perm/group", s.HandlerGroupGet)
+	s.router.POST("/api/v1/perm/group", s.HandlerGroupCreate)
 	s.router.PUT("/api/v1/perm/group", s.HandlerGroupPut)
 	s.router.GET("/api/v1/perm/user", s.HandlerUserGet)
 	s.router.PUT("/api/v1/perm/user", s.HandlerUserSet)
@@ -80,12 +81,12 @@ func (s *Service) HandlerSignout(w http.ResponseWriter, r *http.Request, _ httpr
 
 // HandlerGroupGet handle query group resquest
 func (s *Service) HandlerGroupGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	gId := strings.ToLower(r.FormValue("gid"))
-	if gId == "" {
+	gName := strings.ToLower(r.FormValue("gname"))
+	if gName == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	g, err := s.perm.GetGroup(gId)
+	g, err := s.perm.GetGroup(gName)
 	if err != nil || &g == nil {
 		ReturnNotFound(w, "group not found")
 		return
@@ -93,13 +94,35 @@ func (s *Service) HandlerGroupGet(w http.ResponseWriter, r *http.Request, _ http
 	ReturnJson(w, 200, g)
 }
 
+func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	gName := strings.ToLower(r.FormValue("gname"))
+	managerStr := r.FormValue("managers")
+	itemStr := r.FormValue("items")
+
+	if gName == "" || managerStr == "" {
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+	// TODO: auto members
+	err := s.perm.CreateGroup(gName,
+		strings.Split(managerStr, ","),
+		// strings.Split(memberStr, ","),
+		strings.Split(itemStr, ","))
+	if err != nil {
+		s.logger.Errorf("set group fail: %s", err.Error())
+		ReturnNotFound(w, err.Error())
+		return
+	}
+	ReturnOK(w, "success")
+}
+
 // HandlerGroupGet handle update group resquest
 func (s *Service) HandlerGroupPut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	gId := strings.ToLower(r.FormValue("gid"))
+	gName := strings.ToLower(r.FormValue("gname"))
 	managerStr := r.FormValue("managers")
 	// TODO: ToLower
 	itemStr := r.FormValue("items")
-	if gId == "" {
+	if gName == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
@@ -111,7 +134,8 @@ func (s *Service) HandlerGroupPut(w http.ResponseWriter, r *http.Request, _ http
 		items = strings.Split(itemStr, ",")
 	}
 
-	_, err := s.perm.SetGroup(gId, managers, items)
+	// TODO: member
+	err := s.perm.UpdateGroup(gName, managers, items)
 	if err != nil {
 		s.logger.Errorf("set group fail: %s", err.Error())
 		ReturnNotFound(w, "set group fail")

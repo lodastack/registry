@@ -655,7 +655,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 		ReturnNotFound(w, "No node found.")
 		return
 	}
-	// leaf NS lsit format handler
+	// leaf NS list format handler
 	// param["format"] = "list"
 	if r.FormValue("format") == "list" {
 		list, err := nodes.LeafNs()
