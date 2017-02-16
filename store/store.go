@@ -295,7 +295,7 @@ func (s *Store) APIPeers() (map[string]string, error) {
 
 	apiPeers := make(map[string]string, len(s.meta.APIPeers))
 	for k, v := range s.meta.APIPeers {
-		if !common.ContainsString(raftPeers, k) {
+		if _, ok := common.ContainString(raftPeers, k); !ok {
 			delete(s.meta.APIPeers, k)
 			continue
 		}

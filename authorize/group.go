@@ -3,6 +3,9 @@ package authorize
 import (
 	"encoding/json"
 	"errors"
+
+	"github.com/lodastack/registry/common"
+	"github.com/lodastack/registry/model"
 )
 
 var (
@@ -25,28 +28,6 @@ func (g *Group) Byte() ([]byte, error) {
 	return json.Marshal(g)
 }
 
-// update set the infomation to group.
-func (g *Group) update(manager, items []string) error {
-	if len(manager) == 0 && len(items) == 0 {
-		return ErrInvalidParam
-	}
-	if len(manager) != 0 && manager[0] != "" {
-		g.Manager = manager
-	}
-	if len(items) != 0 && items[0] != "" {
-		g.Items = items
-	}
-	return nil
-}
-
-func (g *Group) getUpdatedByte(manager, items []string) ([]byte, error) {
-	err := g.update(manager, items)
-	if err != nil {
-		return nil, err
-	}
-	return g.Byte()
-}
-
 func (g *Group) GetGroup(gName string) (Group, error) {
 	group := Group{}
 	if gName == "" {
@@ -64,9 +45,8 @@ func (g *Group) GetGroup(gName string) (Group, error) {
 	return group, err
 }
 
-// TODO: set batch to update group member
-func (g *Group) CreateGroup(gName string, manager, items []string) error {
-	if gName == "" || len(manager) == 0 || manager[0] == "" {
+func (g *Group) CreateGroup(gName string, items []string) error {
+	if gName == "" {
 		return ErrInvalidParam
 	}
 	_, err := g.GetGroup(gName)
@@ -78,9 +58,8 @@ func (g *Group) CreateGroup(gName string, manager, items []string) error {
 	}
 
 	gByte, err := (&Group{
-		GName:   gName,
-		Manager: manager,
-		Items:   items,
+		GName: gName,
+		Items: items,
 	}).Byte()
 	if err != nil {
 		return err
@@ -89,36 +68,72 @@ func (g *Group) CreateGroup(gName string, manager, items []string) error {
 }
 
 // UpdateGroup update, not update member infomation.
-// TODO:
-//    1. manager check
-//    2. batch
-func (g *Group) UpdateGroup(gName string, manager, items []string) error {
+// TODO: manager check
+func (g *Group) UpdateItems(gName string, items []string) error {
 	group, err := g.GetGroup(gName)
 	if err != nil {
 		return err
 	}
 
-	gByte, err := group.getUpdatedByte(manager, items)
+	if len(items) == 0 || items[0] == "" {
+		return ErrInvalidParam
+	}
+	group.Items = items
+
+	gByte, err := group.Byte()
 	if err != nil {
 		return err
 	}
 	return g.cluster.Update([]byte(AuthBuck), getGKey(gName), gByte)
 }
 
-// TODO: batch to update user
-func (g *Group) RemoveGroup(gName string) error {
-	return g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gName))
+// TODO: manager check
+func (g *Group) GroupRemoveGroup(gName string) ([]string, error) {
+	group, err := g.GetGroup(gName)
+	if err != nil {
+		return nil, err
+	}
+
+	managerAndMember := []string{}
+	managerAndMember = append(managerAndMember, group.Manager...)
+	managerAndMember = append(managerAndMember, group.Member...)
+	return managerAndMember, g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gName))
 }
 
 func (g *Group) CreateIfNotExist(group Group) (bool, error) {
 	_, err := g.GetGroup(group.GName)
 	if err == ErrGroupNotFound {
-		err := g.CreateGroup(group.GName, group.Manager, group.Items)
+		err := g.CreateGroup(group.GName, group.Items)
 		return err == nil, err
 	}
 	return false, err
 }
 
-func (g *Group) UpdateMember(GName string, addUsername []string, removeUsername []string) ([]byte, error) {
-	return nil, nil
+func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeManagers, removeMembers []string) (model.Row, error) {
+	updateRow := model.Row{}
+	group, err := g.GetGroup(gName)
+	if err != nil {
+		return updateRow, err
+	}
+
+	for _, username := range addManagers {
+		group.Manager, _ = common.AddIfNotContain(group.Manager, username)
+	}
+	for _, username := range removeManagers {
+		group.Manager, _ = common.RemoveIfContain(group.Manager, username)
+	}
+	for _, username := range addMembers {
+		group.Member, _ = common.AddIfNotContain(group.Member, username)
+	}
+	for _, username := range removeMembers {
+		group.Member, _ = common.RemoveIfContain(group.Member, username)
+	}
+
+	newGroupByte, err := group.Byte()
+	if err != nil {
+		return updateRow, err
+	}
+
+	updateRow = model.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: newGroupByte}
+	return updateRow, nil
 }

@@ -3,10 +3,10 @@ package authorize
 import (
 	"encoding/json"
 	"errors"
-	"sync"
 
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
+	"github.com/lodastack/registry/model"
 )
 
 var (
@@ -15,20 +15,21 @@ var (
 )
 
 type User struct {
-	sync.RWMutex `json:"-"`
-	Username     string   `json:"username"`
-	Groups       []string `json:"groups"`
-	Dashboard    []string `json:"dashboard"`
+	Username  string   `json:"username"`
+	Groups    []string `json:"groups"`
+	Dashboard []string `json:"dashboard"`
 
 	cluster Cluster `json:"-"`
 }
 
 func getUKey(gid string) []byte { return []byte("u-" + gid) }
 
+func (u *User) Byte() ([]byte, error) {
+	return json.Marshal(u)
+}
+
 func (u *User) GetUser(username string) (User, error) {
 	out := User{}
-	u.RLock()
-	defer u.RUnlock()
 	uByte, err := u.cluster.View([]byte(AuthBuck), getUKey(username))
 	if err != nil {
 		return out, err
@@ -53,43 +54,66 @@ func (u *User) CheckUserExist(username string) (bool, error) {
 	return true, nil
 }
 
-func (u *User) SetUser(username string, groups, dashboard []string) error {
+// SetUser create/update user. But will not init/update groups.
+func (u *User) SetUser(username string, dashboard []string) error {
 	if username == "" {
 		return ErrInvalidParam
 	}
 
 	us, err := u.GetUser(username)
 	if err != nil {
+		// create a user.
 		us.Username = username
 		us.Dashboard = dashboard
-		if len(groups) != 0 {
-			us.Groups = groups
-		} else if common.ContainsString(config.C.Admins, username) {
+		if _, ok := common.ContainString(config.C.Admins, username); ok {
 			us.Groups = []string{adminGName}
 		} else {
 			us.Groups = []string{defaultGName}
 		}
-
 	} else {
-		if len(groups) != 0 {
-			us.Groups = groups
-		}
+		// update the user.
 		if len(dashboard) != 0 {
 			us.Dashboard = dashboard
 		}
 	}
 
-	u.Lock()
-	defer u.Unlock()
-	uByte, err := json.Marshal(us)
+	uByte, err := us.Byte()
 	if err != nil {
 		return err
 	}
 	return u.cluster.Update([]byte(AuthBuck), getUKey(username), uByte)
 }
 
-func (u *User) RemoveUser(username string) error {
-	u.Lock()
-	defer u.Unlock()
-	return u.cluster.RemoveKey([]byte(AuthBuck), getUKey(username))
+// RemoveUser will remove user and remove the user from groups.
+func (u *User) UserRemoveUser(username string) ([]string, error) {
+	us, err := u.GetUser(username)
+	if err != nil {
+		return nil, err
+	}
+
+	return us.Groups, u.cluster.RemoveKey([]byte(AuthBuck), getUKey(username))
+}
+
+func (u *User) UpdateUser(username string, addGroup string, removeGroup string) (model.Row, error) {
+	updateRow := model.Row{}
+	user, err := u.GetUser(username)
+	if err != nil {
+		return updateRow, err
+	}
+
+	if addGroup != "" {
+		user.Groups, _ = common.AddIfNotContain(user.Groups, addGroup)
+
+	}
+	if removeGroup != "" {
+		user.Groups, _ = common.RemoveIfContain(user.Groups, removeGroup)
+	}
+
+	newUserByte, err := user.Byte()
+	if err != nil {
+		return updateRow, err
+	}
+
+	updateRow = model.Row{Bucket: []byte(AuthBuck), Key: getUKey(username), Value: newUserByte}
+	return updateRow, nil
 }

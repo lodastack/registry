@@ -1,6 +1,8 @@
 package authorize
 
 import (
+	"sync"
+
 	"github.com/lodastack/registry/model"
 )
 
@@ -11,13 +13,10 @@ type GroupInf interface {
 	GetGroup(gName string) (Group, error)
 
 	// CreateGroup create a group.
-	CreateGroup(gName string, manager, items []string) error
+	CreateGroup(gName string, items []string) error
 
 	// UpdateGroup update the group.
-	UpdateGroup(gName string, manager, items []string) error
-
-	// RemoveGroup remove the group.
-	RemoveGroup(gName string) error
+	UpdateItems(gName string, items []string) error
 }
 
 type UserInf interface {
@@ -25,10 +24,7 @@ type UserInf interface {
 	GetUser(username string) (User, error)
 
 	// create/update group.
-	SetUser(username string, groupIDs, dashboard []string) error
-
-	// remove group.
-	RemoveUser(username string) error
+	SetUser(username string, dashboard []string) error
 
 	// Check whether user exist or not.
 	CheckUserExist(username string) (bool, error)
@@ -44,8 +40,17 @@ type Perm interface {
 	// check whether one query has the permission.
 	Check(username, ns, resource, method string) (bool, error)
 
-	// init default group.
+	// InitGroup init default/admin group and default user.
 	InitGroup(rootNode string) error
+
+	// UpdateGroupMember update group member and user groups.
+	UpdateMember(group string, manager []string, members []string, action string) error
+
+	// remove group.
+	RemoveUser(username string) error
+
+	// RemoveGroup remove the group.
+	RemoveGroup(gName string) error
 }
 
 // Cluster is the interface op must implement.
@@ -74,8 +79,10 @@ func NewPerm(cluster Cluster) (Perm, error) {
 		return nil, err
 	}
 	p := perm{
+		sync.RWMutex{},
 		Group{cluster: cluster},
 		User{cluster: cluster},
+		cluster,
 	}
 	// TODO: get rootNode by param.
 	return &p, p.InitGroup(rootNode)
