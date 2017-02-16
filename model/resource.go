@@ -173,7 +173,8 @@ func DeleteResource(rsByte []byte, IDs ...string) ([]byte, error) {
 		}
 
 		// append the resource to output if ID not matched.
-		if resID, _ := r.ID(); !common.ContainsString(IDs, resID) {
+		resID, _ := r.ID()
+		if _, ok := common.ContainString(IDs, resID); !ok {
 			rByte, err = r.Marshal()
 			if err != nil {
 				return nil, err

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
@@ -15,15 +16,20 @@ var (
 	DefaultUser  = "loda-defaultuser"
 	defaultGName = "loda-defaultgroup"
 	adminGName   = "loda-admingroup"
+
+	Add    = "add"
+	Remove = "remove"
 )
 
 type perm struct {
+	sync.RWMutex `json:"-"`
 	Group
 	User
+	cluster Cluster `json:"-"`
 }
 
 // check whether one query has the permission.
-func (p perm) Check(username, ns, resource, method string) (bool, error) {
+func (p *perm) Check(username, ns, resource, method string) (bool, error) {
 	u, err := p.GetUser(username)
 	if err != nil {
 		return false, errors.New("get user fail: " + err.Error())
@@ -80,15 +86,22 @@ func adminGroupItems(rootNode string) []string {
 }
 
 // InitGroup createIfNotExist the default user and admin/default group.
-func (p perm) InitGroup(rootNode string) error {
+func (p *perm) InitGroup(rootNode string) error {
+	if err := p.SetUser(DefaultUser, []string{}); err != nil {
+		return err
+	}
 	if err := p.checkDefaultGroup(); err != nil {
 		return err
 	}
-	return p.SetUser(DefaultUser, []string{adminGName, defaultGName}, []string{})
+
+	if err := p.UpdateMember(defaultGName, []string{DefaultUser}, []string{DefaultUser}, Add); err != nil {
+		return err
+	}
+	return p.UpdateMember(adminGName, []string{DefaultUser}, []string{DefaultUser}, Add)
 }
 
-// Set default/admin group and set to default user.
-func (p perm) checkDefaultGroup() error {
+// checkDefaultGroup set default/admin group and set to default user.
+func (p *perm) checkDefaultGroup() error {
 	g := Group{
 		GName:   defaultGName,
 		Manager: config.C.Admins,
@@ -110,4 +123,94 @@ func (p perm) checkDefaultGroup() error {
 	}
 
 	return nil
+}
+
+func (p *perm) UpdateMember(gName string, manager []string, members []string, action string) error {
+	updateRows := []model.Row{}
+	p.Lock()
+	defer p.Unlock()
+
+	switch action {
+	case Add:
+		gRows, err := p.UpdateGroupMember(gName, manager, members, []string{}, []string{})
+		if err != nil {
+			return err
+		}
+		updateRows = append(updateRows, gRows)
+		for _, username := range manager {
+			uRows, err := p.UpdateUser(username, gName, "")
+			if err != nil {
+				return err
+			}
+			updateRows = append(updateRows, uRows)
+		}
+		for _, username := range members {
+			uRows, err := p.UpdateUser(username, gName, "")
+			if err != nil {
+				return err
+			}
+			updateRows = append(updateRows, uRows)
+		}
+	case Remove:
+		gRows, err := p.UpdateGroupMember(gName, []string{}, []string{}, manager, members)
+		if err != nil {
+			return err
+		}
+		updateRows = append(updateRows, gRows)
+		for _, username := range manager {
+			uRows, err := p.UpdateUser(username, "", gName)
+			if err != nil {
+				return err
+			}
+			updateRows = append(updateRows, uRows)
+		}
+		for _, username := range members {
+			uRows, err := p.UpdateUser(username, "", gName)
+			if err != nil {
+				return err
+			}
+			updateRows = append(updateRows, uRows)
+		}
+	default:
+		return ErrInvalidParam
+	}
+
+	return p.cluster.Batch(updateRows)
+}
+
+// RemoveUser remove group and update the groups of manger/member.
+func (p *perm) RemoveUser(username string) error {
+	groups, err := p.UserRemoveUser(username)
+	if err != nil {
+		return err
+	}
+
+	updateGroupRows := []model.Row{}
+	for _, gName := range groups {
+		udpateRow, err := p.UpdateGroupMember(gName, []string{}, []string{},
+			[]string{username}, []string{username})
+		if err != nil {
+			return err
+		}
+		updateGroupRows = append(updateGroupRows, udpateRow)
+	}
+	return p.cluster.Batch(updateGroupRows)
+}
+
+// RemoveGroup remove the group.
+func (p *perm) RemoveGroup(gName string) error {
+	userList, err := p.GroupRemoveGroup(gName)
+	if err != nil {
+		return err
+	}
+
+	updateGroupRows := []model.Row{}
+	for _, username := range userList {
+		udpateRow, err := p.UpdateUser(username, "", gName)
+		if err != nil {
+			return err
+		}
+		updateGroupRows = append(updateGroupRows, udpateRow)
+	}
+	return p.cluster.Batch(updateGroupRows)
 }

@@ -22,9 +22,13 @@ func (s *Service) initPermissionHandler() {
 
 	s.router.GET("/api/v1/perm/group", s.HandlerGroupGet)
 	s.router.POST("/api/v1/perm/group", s.HandlerGroupCreate)
-	s.router.PUT("/api/v1/perm/group", s.HandlerGroupPut)
+	s.router.PUT("/api/v1/perm/group/item", s.HandlerUpdateGroupItem)
+	s.router.PUT("/api/v1/perm/group/member", s.HandlerUpdateGroupMember)
+	s.router.DELETE("/api/v1/perm/group", s.HandlerRemoveGroup)
+
 	s.router.GET("/api/v1/perm/user", s.HandlerUserGet)
 	s.router.PUT("/api/v1/perm/user", s.HandlerUserSet)
+	s.router.DELETE("/api/v1/perm/user", s.HandlerRemoveUser)
 }
 
 // SigninHandler handler signin request
@@ -53,7 +57,7 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 		s.logger.Errorf("check user fail: %s", err.Error())
 	} else if !ok {
 		// create user if first login.
-		if err = s.perm.SetUser(user, nil, nil); err != nil {
+		if err = s.perm.SetUser(user, nil); err != nil {
 			s.logger.Errorf("set user fail: %s", err.Error())
 		}
 	}
@@ -96,17 +100,15 @@ func (s *Service) HandlerGroupGet(w http.ResponseWriter, r *http.Request, _ http
 
 func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	gName := strings.ToLower(r.FormValue("gname"))
-	managerStr := r.FormValue("managers")
+	// managerStr := r.FormValue("managers")
 	itemStr := r.FormValue("items")
 
-	if gName == "" || managerStr == "" {
+	if gName == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 	// TODO: auto members
 	err := s.perm.CreateGroup(gName,
-		strings.Split(managerStr, ","),
-		// strings.Split(memberStr, ","),
 		strings.Split(itemStr, ","))
 	if err != nil {
 		s.logger.Errorf("set group fail: %s", err.Error())
@@ -117,31 +119,55 @@ func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ h
 }
 
 // HandlerGroupGet handle update group resquest
-func (s *Service) HandlerGroupPut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Service) HandlerUpdateGroupItem(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	gName := strings.ToLower(r.FormValue("gname"))
-	managerStr := r.FormValue("managers")
-	// TODO: ToLower
 	itemStr := r.FormValue("items")
-	if gName == "" {
+	if gName == "" || itemStr == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	var managers, items []string
-	if managerStr != "" {
-		managers = strings.Split(managerStr, ",")
-	}
-	if itemStr != "" {
-		items = strings.Split(itemStr, ",")
-	}
 
-	// TODO: member
-	err := s.perm.UpdateGroup(gName, managers, items)
+	err := s.perm.UpdateItems(gName, strings.Split(itemStr, ","))
 	if err != nil {
 		s.logger.Errorf("set group fail: %s", err.Error())
 		ReturnNotFound(w, "set group fail")
 		return
 	}
 	ReturnOK(w, "success")
+}
+
+func (s *Service) HandlerUpdateGroupMember(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	gName := strings.ToLower(r.FormValue("gname"))
+	action := r.FormValue("action")
+	managerStr := r.FormValue("managers")
+	memberStr := r.FormValue("members")
+	managers, members := []string{}, []string{}
+	if managerStr != "" {
+		managers = strings.Split(managerStr, ",")
+	}
+	if memberStr != "" {
+		members = strings.Split(memberStr, ",")
+	}
+	if err := s.perm.UpdateMember(gName, managers, members, action); err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnOK(w, "success")
+}
+
+// HandlerRemoveGroup handle remove group request
+func (s *Service) HandlerRemoveGroup(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	gName := strings.ToLower(r.FormValue("gname"))
+	if gName == "" {
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
+	if err := s.perm.RemoveGroup(gName); err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnJson(w, 200, "success")
 }
 
 // HandlerGroupGet handle query user resquest
@@ -162,25 +188,31 @@ func (s *Service) HandlerUserGet(w http.ResponseWriter, r *http.Request, _ httpr
 // HandlerGroupGet handle set user resquest
 func (s *Service) HandlerUserSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	username := strings.ToLower(r.FormValue("username"))
-	gidStr := r.FormValue("gids")
 	dashboardStr := r.FormValue("dashboards")
 	if username == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
+	dashboards := strings.Split(dashboardStr, ",")
 
-	var gids, dashboards []string
-	if gidStr != "" {
-		gids = strings.Split(gidStr, ",")
-	}
-	if dashboardStr != "" {
-		dashboards = strings.Split(dashboardStr, ",")
-	}
-
-	if err := s.perm.SetUser(username, gids, dashboards); err != nil {
+	if err := s.perm.SetUser(username, dashboards); err != nil {
 		s.logger.Errorf("set user fail: %s", err.Error())
 		ReturnNotFound(w, "set user fail")
 		return
 	}
 	ReturnOK(w, "success")
+}
+
+func (s *Service) HandlerRemoveUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	username := strings.ToLower(r.FormValue("username"))
+	if username == "" {
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
+	if err := s.perm.RemoveUser(username); err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnJson(w, 200, "success")
 }

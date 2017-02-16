@@ -209,7 +209,8 @@ func containBytes(data, v []byte) bool {
 
 func search(data []byte, vl []string, fuzzy bool) bool {
 	if !fuzzy {
-		return common.ContainsString(vl, string(data))
+		_, ok := common.ContainString(vl, string(data))
+		return ok
 	}
 
 	for _, v := range vl {
