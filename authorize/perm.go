@@ -97,7 +97,17 @@ func (p *perm) InitGroup(rootNode string) error {
 	if err := p.UpdateMember(defaultGName, []string{DefaultUser}, []string{DefaultUser}, Add); err != nil {
 		return err
 	}
-	return p.UpdateMember(adminGName, []string{DefaultUser}, []string{DefaultUser}, Add)
+	if err := p.UpdateMember(adminGName, []string{DefaultUser}, []string{DefaultUser}, Add); err != nil {
+		return err
+	}
+
+	for _, admin := range config.C.Admins {
+		if admin == "" {
+			continue
+		}
+		p.UpdateMember(adminGName, []string{admin}, []string{admin}, Add)
+	}
+	return nil
 }
 
 // checkDefaultGroup set default/admin group and set to default user.
