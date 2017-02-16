@@ -217,12 +217,17 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/ns", s.handlerNsGet)
 	s.router.DELETE("/api/v1/ns", s.handlerNsDel)
 
+	// For agent
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 	s.router.GET("/api/v1/agent/resource", s.handlerResourceGet)
 	s.router.POST("/api/v1/agent/report", s.handlerAgentReport)
 
+	// For router, just allow Get method
 	s.router.GET("/api/v1/router/resource", s.handlerResourceGet)
 	s.router.GET("/api/v1/router/ns", s.handlerNsGet)
+
+	// For alarm, just allow Get method
+	s.router.GET("/api/v1/alarm/resource", s.handlerResourceGet)
 
 	s.router.GET("/api/v1/peer", s.handlerPeers)
 	s.router.POST("/api/v1/peer", s.handlerJoin)
