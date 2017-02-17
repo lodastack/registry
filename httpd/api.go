@@ -689,10 +689,11 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 
 	for _, nsLetter := range name {
-		if nsLetter != '-' && (nsLetter < 'a' || nsLetter > 'z') {
-			ReturnBadRequest(w, ErrInvalidParam)
-			return
+		if nsLetter == '-' || (nsLetter >= 'a' && nsLetter <= 'z') || (nsLetter >= '0' && nsLetter <= '9') {
+			continue
 		}
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
 	}
 
 	if _, err = s.tree.NewNode(name, parentNs, nodeT, machineMatch); err != nil {
@@ -708,10 +709,11 @@ func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, _ http
 	machinereg := r.FormValue("machinereg")
 
 	for _, nsLetter := range name {
-		if nsLetter != '-' && (nsLetter < 'a' || nsLetter > 'z') {
-			ReturnBadRequest(w, ErrInvalidParam)
-			return
+		if nsLetter == '-' || (nsLetter >= 'a' && nsLetter <= 'z') || (nsLetter >= '0' && nsLetter <= '9') {
+			continue
 		}
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
 	}
 
 	if err := s.tree.UpdateNode(ns, name, machinereg); err != nil {
