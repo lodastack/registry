@@ -68,7 +68,7 @@ type Cluster interface {
 	Batch(rows []model.Row) error
 
 	// ViewPrefix returns the value for the keys has the keyPrefix.
-	ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error)
+	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
 
 	// Create a bucket via distributed consensus if not exist.
 	CreateBucketIfNotExist(name []byte) error

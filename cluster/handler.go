@@ -142,7 +142,7 @@ func (s *Service) View(bucket, key []byte) ([]byte, error) {
 }
 
 // ViewPrefix returns the value for the keys has the keyPrefix.
-func (s *Service) ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error) {
+func (s *Service) ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error) {
 	return s.store.ViewPrefix(bucket, keyPrefix)
 }
 

@@ -35,7 +35,7 @@ type Cluster interface {
 	Backup() ([]byte, error)
 
 	// ViewPrefix returns the value for the keys has the keyPrefix.
-	ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error)
+	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
 }
 
 // TreeMethod is the interface tree must implement.
@@ -48,6 +48,9 @@ type TreeMethod interface {
 
 	// NewNode create node.
 	NewNode(name, parentNs string, nodeType int, property ...string) (string, error)
+
+	// GetResource return the resourceList by ns/resource type/resource ID.
+	GetResource(ns, resType string, resID ...string) ([]model.Resource, error)
 
 	// Get resource by NodeName and resour type
 	GetResourceList(NodeName string, ResourceType string) (*model.ResourceList, error)
