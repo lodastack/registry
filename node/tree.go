@@ -161,7 +161,7 @@ func (t *Tree) setByteToStore(nodeId, resType string, resByte []byte) error {
 	return t.Cluster.Update([]byte(nodeId), []byte(resType), resByte)
 }
 
-func (t *Tree) templateOfNode(nodeId string) (map[string]string, error) {
+func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
 	return t.Cluster.ViewPrefix([]byte(nodeId), []byte(template))
 }
 
@@ -331,7 +331,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			}
 		}
 	} else {
-		// Read the template of parent node.
+		// Set the template of parent node to this new node.
 		templateRes, err := t.templateOfNode(parent.ID)
 		if err != nil {
 			return "nil", err
@@ -340,7 +340,29 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			if nodeType == Leaf {
 				k = k[len(template):]
 			}
-			if err = t.setByteToStore(nodeId, k, []byte(resStore)); err != nil {
+
+			// generate alarm resource new Ns.
+			// NOTE: not rollback if make alarm resouce error
+			if k == model.Alarm {
+				rl := new(model.ResourceList)
+				err = rl.Unmarshal([]byte(resStore))
+				if err != nil && err != ErrEmptyRes {
+					t.logger.Errorf("unmarshal alarm resource fail, parent ns: %s, error: %s, data: %s:",
+						parentNs, err, string(resStore))
+					return "", err
+				}
+				for index := range *rl {
+					if (*rl)[index], err = model.NewAlarmResourceByMap(newNode.Name+nodeDeli+parentNs, (*rl)[index], ""); err != nil {
+						t.logger.Errorf("make alarm template fail, parent ns: %s, error: %s",
+							parentNs, err.Error())
+					}
+				}
+				resStore, err = rl.Marshal()
+				if err != nil {
+					t.logger.Errorf("marshal alarm template fail, error: %s", err.Error())
+				}
+			}
+			if err = t.setByteToStore(nodeId, k, resStore); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when newnode %s, error: %s", nodeId, err.Error())
 			}
 		}

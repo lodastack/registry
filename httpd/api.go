@@ -44,7 +44,7 @@ type Cluster interface {
 	View(bucket, key []byte) ([]byte, error)
 
 	// ViewPrefix returns the value for the keys has the keyPrefix.
-	ViewPrefix(bucket, keyPrefix []byte) (map[string]string, error)
+	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
 
 	// Set sets the value for the given key, via distributed consensus.
 	Update(bucket []byte, key []byte, value []byte) error
@@ -475,12 +475,18 @@ func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
+	if param.ResType == model.Alarm {
+		if param.UpdateMap, err = model.NewAlarmResourceByMap(param.Ns, param.UpdateMap, param.ResId); err != nil {
+			ReturnBadRequest(w, err)
+			return
+		}
+	}
+
 	if err := s.tree.UpdateResource(param.Ns, param.ResType, param.ResId, param.UpdateMap); err != nil {
 		ReturnBadRequest(w, err)
 		return
-	} else {
-		ReturnOK(w, "success")
 	}
+	ReturnOK(w, "success")
 }
 
 func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -527,7 +533,15 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
-	delete(param.R, model.IdKey)
+	if param.ResType != model.Alarm {
+		delete(param.R, model.IdKey)
+	} else {
+		if param.R, err = model.NewAlarmResourceByMap(param.Ns, param.R, ""); err != nil {
+			ReturnBadRequest(w, err)
+			return
+		}
+	}
+
 	if err := s.tree.AppendResource(param.Ns, param.ResType, param.R); err != nil {
 		ReturnServerError(w, err)
 	} else {
