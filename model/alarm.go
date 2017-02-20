@@ -13,7 +13,7 @@ import (
 
 var (
 	VersionSep = "__"
-	dbPrefix   = "collect."
+	DbPrefix   = "collect."
 )
 
 type AlarmResource models.Alarm
@@ -21,7 +21,7 @@ type AlarmResource models.Alarm
 func NewAlarm(ns, name string) *AlarmResource {
 	return &AlarmResource{
 		Name:    name,
-		DB:      dbPrefix + ns,
+		DB:      DbPrefix + ns,
 		Enable:  "true",
 		Default: "false"}
 }
@@ -75,10 +75,11 @@ func (a *AlarmResource) SetMD5AndVersion() error {
 		return errors.New("invalid id")
 	}
 
-	if len(a.DB) < len(dbPrefix)+1 {
+	if len(a.DB) < len(DbPrefix)+1 {
 		return errors.New("invalid db")
 	}
-	ns := a.DB[len(dbPrefix):]
+	a.MD5, a.Version = "", ""
+	ns := a.DB[len(DbPrefix):]
 
 	md5, err := a.calMD5()
 	if err != nil {
@@ -102,7 +103,7 @@ func (a *AlarmResource) calMD5() (string, error) {
 
 func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) {
 	name, ok := data["name"]
-	if !ok {
+	if !ok || ns == "" {
 		return &AlarmResource{}, ErrInvalidParam
 	}
 
