@@ -101,10 +101,28 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 	}
 	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != 31 {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
-	} else {
 	}
+	if alarms, err := tree.GetResourceList("testnl.loda", template+model.Alarm); err != nil || len(*alarms) != 1 {
+		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*alarms), err)
+	} else {
+		for _, alarm := range *alarms {
+			if alarm["db"] != "" {
+				t.Fatalf("get nonLeafNode alarm_template not match with expect, db: %s \n", alarm["db"])
+			}
+		}
+	}
+
 	if res, err := tree.GetResourceList("testl.loda", "collect"); err != nil || len(*res) != 31 {
 		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
+	}
+	if alarms, err := tree.GetResourceList("testl.loda", model.Alarm); err != nil || len(*alarms) != 1 {
+		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*alarms), err)
+	} else {
+		for _, alarm := range *alarms {
+			if alarm["db"] != model.DbPrefix+"testl.loda" {
+				t.Fatalf("get nonLeafNode alarm_template not match with expect, db: %s \n", alarm["db"])
+			}
+		}
 	}
 }
 
