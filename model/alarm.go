@@ -11,17 +11,12 @@ import (
 	"github.com/lodastack/models"
 )
 
-var (
-	VersionSep = "__"
-	DbPrefix   = "collect."
-)
-
 type AlarmResource models.Alarm
 
 func NewAlarm(ns, name string) *AlarmResource {
 	return &AlarmResource{
 		Name:    name,
-		DB:      DbPrefix + ns,
+		DB:      models.DBPrefix + ns,
 		Enable:  "true",
 		Default: "false"}
 }
@@ -75,18 +70,18 @@ func (a *AlarmResource) SetMD5AndVersion() error {
 		return errors.New("invalid id")
 	}
 
-	if len(a.DB) < len(DbPrefix)+1 {
+	if len(a.DB) < len(models.DBPrefix)+1 {
 		return errors.New("invalid db")
 	}
 	a.MD5, a.Version = "", ""
-	ns := a.DB[len(DbPrefix):]
+	ns := a.DB[len(models.DBPrefix):]
 
 	md5, err := a.calMD5()
 	if err != nil {
 		return err
 	}
 	a.MD5 = md5
-	a.Version = ns + VersionSep + a.Measurement + VersionSep + a.ID + VersionSep + md5
+	a.Version = ns + models.VersionSep + a.Measurement + models.VersionSep + a.ID + models.VersionSep + md5
 	return nil
 }
 
