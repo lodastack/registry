@@ -3,6 +3,8 @@ package model
 import (
 	"strings"
 	"testing"
+
+	"github.com/lodastack/models"
 )
 
 var testNewAlarmMap map[string]string = map[string]string{
@@ -44,7 +46,7 @@ func TestNewAlarmByRes(t *testing.T) {
 	if alarm, err := NewAlarmByRes("test", testNewAlarmMap, ""); err != nil ||
 		alarm.MD5 == "md5" ||
 		alarm.DB != "collect.test" ||
-		len(strings.Split(alarm.Version, VersionSep)) != 4 {
+		len(strings.Split(alarm.Version, models.VersionSep)) != 4 {
 		t.Fatalf("case3 success, not match with expect, %+v", *alarm)
 	}
 
@@ -53,10 +55,10 @@ func TestNewAlarmByRes(t *testing.T) {
 		alarm.ID != "ID-test" ||
 		alarm.MD5 == "md5" ||
 		alarm.DB != "collect.test" ||
-		len(strings.Split(alarm.Version, VersionSep)) != 4 {
+		len(strings.Split(alarm.Version, models.VersionSep)) != 4 {
 		t.Fatalf("case4 success, not match with expect, %+v", *alarm)
 	} else {
-		versionSplit := strings.Split(alarm.Version, VersionSep)
+		versionSplit := strings.Split(alarm.Version, models.VersionSep)
 		if versionSplit[0] != "test" ||
 			versionSplit[1] != "cpu.idle" ||
 			versionSplit[2] != "ID-test" {

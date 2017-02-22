@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lodastack/log"
+	"github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/store"
 )
@@ -119,7 +120,7 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*alarms), err)
 	} else {
 		for _, alarm := range *alarms {
-			if alarm["db"] != model.DbPrefix+"testl.loda" {
+			if alarm["db"] != models.DBPrefix+"testl.loda" {
 				t.Fatalf("get nonLeafNode alarm_template not match with expect, db: %s \n", alarm["db"])
 			}
 		}
