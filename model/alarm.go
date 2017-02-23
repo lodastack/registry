@@ -13,6 +13,8 @@ import (
 
 type AlarmResource models.Alarm
 
+var rp string = "loda"
+
 func NewAlarm(ns, name string) *AlarmResource {
 	return &AlarmResource{
 		Name:    name,
@@ -109,28 +111,32 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 		alarm.SetID(common.GenUUID())
 	}
 
-	function, OKFunction := data["function"]
-	rp, OKRp := data["rp"]
-	measurement, OKMeasurement := data["measurement"]
-	period, OKPeriod := data["period"]
+	function, _ := data["function"]
+
+	measurement, _ := data["measurement"]
+	period, _ := data["period"]
 	where, _ := data["where"]
-	expression, OKExpression := data["expression"]
-	every, OKEvery := data["every"]
-	groupby, OKGroupby := data["groupby"]
-	trigger, OKTrigger := data["trigger"]
-	shift, OKTrigger := data["shift"]
-	value, OKValue := data["value"]
+	expression, _ := data["expression"]
+	every, _ := data["every"]
+	groupby, _ := data["groupby"]
+	trigger, _ := data["trigger"]
+	shift, _ := data["shift"]
+	value, _ := data["value"]
 
-	level, OKLevel := data["level"]
-	groups, OKGroups := data["groups"]
-	alert, OKAlert := data["alert"]
-	message, OKMessage := data["message"]
+	level, _ := data["level"]
+	groups, _ := data["groups"]
+	alert, _ := data["alert"]
+	message, _ := data["message"]
 
-	if !OKFunction || !OKRp || !OKMeasurement ||
-		!OKPeriod || !OKPeriod ||
-		!OKExpression || !OKEvery || !OKGroupby ||
-		!OKTrigger || !OKTrigger || !OKValue ||
-		!OKLevel || !OKGroups || !OKAlert || !OKMessage {
+	if measurement == "" || period == "" || expression == "" ||
+		every == "" || trigger == "" || level == "" ||
+		alert == "" || message == "" || function == "" ||
+		groupby == "" || groups == "" {
+		return &AlarmResource{}, ErrInvalidParam
+	}
+
+	if (trigger == models.ThresHold && value == "") ||
+		(trigger == models.Relative && shift == "") {
 		return &AlarmResource{}, ErrInvalidParam
 	}
 

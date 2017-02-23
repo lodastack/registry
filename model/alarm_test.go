@@ -51,6 +51,26 @@ func TestNewAlarmByRes(t *testing.T) {
 	}
 
 	// case4
+	testNewAlarmMap["trigger"], testNewAlarmMap["value"] = models.ThresHold, ""
+	if alarm, err := NewAlarmByRes("", testNewAlarmMap, ""); err == nil {
+		t.Fatalf("case2 success, not match with expect, %+v", *alarm)
+	}
+	testNewAlarmMap["trigger"], testNewAlarmMap["shift"] = models.Relative, ""
+	if alarm, err := NewAlarmByRes("", testNewAlarmMap, ""); err == nil {
+		t.Fatalf("case2 success, not match with expect, %+v", *alarm)
+	}
+
+	// case5
+	testNewAlarmMap["trigger"], testNewAlarmMap["value"] = models.ThresHold, "1"
+	if alarm, err := NewAlarmByRes("test", testNewAlarmMap, ""); err != nil {
+		t.Fatalf("case2 success, not match with expect, %+v", *alarm)
+	}
+	testNewAlarmMap["trigger"], testNewAlarmMap["shift"] = models.Relative, "1"
+	if alarm, err := NewAlarmByRes("test", testNewAlarmMap, ""); err != nil {
+		t.Fatalf("case2 success, not match with expect, %+v", *alarm)
+	}
+
+	// case 6
 	if alarm, err := NewAlarmByRes("test", testNewAlarmMap, "ID-test"); err != nil ||
 		alarm.ID != "ID-test" ||
 		alarm.MD5 == "md5" ||
