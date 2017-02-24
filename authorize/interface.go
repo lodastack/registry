@@ -9,6 +9,12 @@ import (
 var rootNode = "loda"
 
 type GroupInf interface {
+	// GetNsAdminGKey return group key of ns.
+	GetNsAdminGKey(ns string) []byte
+
+	// ListGroup return the group which name have the prefix.
+	ListNsGroup(ns string) ([]Group, error)
+
 	// GetGroup return the group.
 	GetGroup(gName string) (Group, error)
 
@@ -17,6 +23,12 @@ type GroupInf interface {
 
 	// UpdateGroup update the group.
 	UpdateItems(gName string, items []string) error
+
+	// Get Ns Group Prefix Name.
+	GetGNameByNs(ns string) string
+
+	// Get Ns Admin Group Name.
+	GetNsAdminGName(ns string) string
 }
 
 type UserInf interface {
@@ -36,6 +48,8 @@ type Perm interface {
 
 	// group interface
 	GroupInf
+
+	AdminGroupItems(rootNode string) []string
 
 	// check whether one query has the permission.
 	Check(username, ns, resource, method string) (bool, error)

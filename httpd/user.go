@@ -21,6 +21,7 @@ func (s *Service) initPermissionHandler() {
 	s.router.GET("/api/v1/user/signout", s.HandlerSignout)
 
 	s.router.GET("/api/v1/perm/group", s.HandlerGroupGet)
+	s.router.GET("/api/v1/perm/group/list", s.HandlerGroupList)
 	s.router.POST("/api/v1/perm/group", s.HandlerGroupCreate)
 	s.router.PUT("/api/v1/perm/group/item", s.HandlerUpdateGroupItem)
 	s.router.PUT("/api/v1/perm/group/member", s.HandlerUpdateGroupMember)
@@ -98,11 +99,28 @@ func (s *Service) HandlerGroupGet(w http.ResponseWriter, r *http.Request, _ http
 	ReturnJson(w, 200, g)
 }
 
+// HandlerGroupGet handle query group list resquest
+func (s *Service) HandlerGroupList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ns := strings.ToLower(r.FormValue("ns"))
+	if ns == "" {
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+	gList, err := s.perm.ListNsGroup(ns)
+	if err != nil {
+		ReturnNotFound(w, "group not found")
+		return
+	}
+	ReturnJson(w, 200, gList)
+}
+
 func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	gName := strings.ToLower(r.FormValue("gname"))
-	// managerStr := r.FormValue("managers")
+	ns := r.FormValue("ns")
 	itemStr := r.FormValue("items")
-
+	if ns != "" {
+		gName = s.perm.GetGNameByNs(ns) + "-" + gName
+	}
 	if gName == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
