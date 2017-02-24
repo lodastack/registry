@@ -110,9 +110,14 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	} else {
 		alarm.SetID(common.GenUUID())
 	}
+	if enable, _ := data["enable"]; enable == "false" {
+		alarm.DisableSelf()
+	}
+	if isNsAdminGroup, _ := data["default"]; isNsAdminGroup == "true" {
+		alarm.SetDefault()
+	}
 
 	function, _ := data["function"]
-
 	measurement, _ := data["measurement"]
 	period, _ := data["period"]
 	where, _ := data["where"]
