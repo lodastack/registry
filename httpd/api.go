@@ -714,6 +714,28 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		ReturnServerError(w, err)
 		return
 	}
+
+	// ceate ns admin group
+	ns := name + "." + parentNs
+	gAdminName := s.perm.GetNsAdminGName(ns)
+	err = s.perm.CreateGroup(gAdminName, s.perm.AdminGroupItems(ns))
+	if err != nil {
+		ReturnServerError(w, fmt.Errorf("create ns admin group fail: %s", err.Error()))
+		return
+	}
+	// update admin/member to group
+
+	adminList := []string{}
+	admin := r.Header.Get(`UID`)
+	if admin != "" {
+		adminList = append(adminList, admin)
+	}
+	err = s.perm.UpdateMember(gAdminName, adminList, adminList, authorize.Add)
+
+	if err != nil {
+		ReturnServerError(w, fmt.Errorf("update group's admin fail: %s", err.Error()))
+		return
+	}
 	ReturnOK(w, "success")
 }
 
@@ -742,6 +764,11 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 
 	if err := s.tree.DelNode(ns); err != nil {
 		ReturnServerError(w, err)
+		return
+	}
+
+	if err := s.perm.RemoveGroup(s.perm.GetNsAdminGName(ns)); err != nil {
+		ReturnServerError(w, fmt.Errorf("remove ns admin group fail: %s", err.Error()))
 		return
 	}
 	ReturnOK(w, "success")

@@ -3,6 +3,7 @@ package authorize
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
@@ -11,6 +12,8 @@ import (
 var (
 	ErrGroupNotFound     = errors.New("group not found")
 	ErrGroupAlreadyExist = errors.New("group already exist")
+
+	nsSep = "."
 )
 
 type Group struct {
@@ -23,6 +26,28 @@ type Group struct {
 }
 
 func getGKey(gName string) []byte { return []byte("g-" + gName) }
+
+// GetGNameByNs reverse the split of ns.
+// Reverse the ns to view the group by prefix,
+// so that can list the group under one ns.
+// e.g: server1.product1.loda -> loda.product1.server1
+func (g *Group) GetGNameByNs(ns string) string {
+	gName := ""
+	nsSplit := strings.Split(ns, nsSep)
+	for i := len(nsSplit) - 1; i >= 0; i-- {
+		gName += nsSplit[i] + nsSep
+	}
+	gName = strings.TrimRight(gName, nsSep)
+	return gName
+}
+
+func (g *Group) GetNsAdminGName(ns string) string {
+	return g.GetGNameByNs(ns) + "-admin"
+}
+
+func (g *Group) GetNsAdminGKey(ns string) []byte {
+	return getGKey(g.GetNsAdminGName(ns))
+}
 
 func (g *Group) Byte() ([]byte, error) {
 	return json.Marshal(g)
@@ -43,6 +68,28 @@ func (g *Group) GetGroup(gName string) (Group, error) {
 	}
 	err = json.Unmarshal(gByte, &group)
 	return group, err
+}
+
+func (g *Group) ListNsGroup(ns string) ([]Group, error) {
+	GroupList := []Group{}
+	gKeyPrefix := getGKey(g.GetGNameByNs(ns))
+	groupMap, err := g.cluster.ViewPrefix([]byte(AuthBuck), gKeyPrefix)
+	if err != nil {
+		return GroupList, err
+	}
+
+	for _, gByte := range groupMap {
+		if len(gByte) == 0 {
+			continue
+		}
+		group := Group{}
+		err = json.Unmarshal(gByte, &group)
+		if err != nil {
+			return GroupList, err
+		}
+		GroupList = append(GroupList, group)
+	}
+	return GroupList, nil
 }
 
 func (g *Group) CreateGroup(gName string, items []string) error {

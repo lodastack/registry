@@ -62,7 +62,7 @@ func (p *perm) Check(username, ns, resource, method string) (bool, error) {
 // defaultGroupItems return the item of default group.
 // default user could get all resource,
 // could get/post/put/delete the group which user is the group manager.
-func defaultGroupItems(rootNode string) []string {
+func (p *perm) DefaultGroupItems(rootNode string) []string {
 	items := make([]string, len(model.Templates)+3)
 	for index, res := range model.Templates {
 		items[index] = fmt.Sprintf("%s-%s-%s", rootNode, res, "GET")
@@ -74,7 +74,7 @@ func defaultGroupItems(rootNode string) []string {
 }
 
 // adminGroupItems return the items of admin group.
-func adminGroupItems(rootNode string) []string {
+func (p *perm) AdminGroupItems(rootNode string) []string {
 	items := make([]string, len(model.Templates)*4)
 	for index, res := range model.Templates {
 		items[index*4] = fmt.Sprintf("%s-%s-%s", rootNode, res, "GET")
@@ -116,7 +116,7 @@ func (p *perm) checkDefaultGroup() error {
 		GName:   defaultGName,
 		Manager: config.C.Admins,
 		Member:  config.C.Admins,
-		Items:   defaultGroupItems(rootNode)}
+		Items:   p.DefaultGroupItems(rootNode)}
 	if _, err := p.CreateIfNotExist(g); err != nil {
 		fmt.Printf("init default group error: %s\n", err.Error())
 		return err
@@ -126,7 +126,7 @@ func (p *perm) checkDefaultGroup() error {
 		GName:   adminGName,
 		Manager: config.C.Admins,
 		Member:  config.C.Admins,
-		Items:   adminGroupItems(rootNode)}
+		Items:   p.AdminGroupItems(rootNode)}
 	if _, err := p.CreateIfNotExist(g); err != nil {
 		fmt.Printf("init admin group error: %s\n", err.Error())
 		return err
@@ -221,6 +221,10 @@ func (p *perm) RemoveGroup(gName string) error {
 			return err
 		}
 		updateGroupRows = append(updateGroupRows, udpateRow)
+	}
+
+	if len(updateGroupRows) == 0 {
+		return nil
 	}
 	return p.cluster.Batch(updateGroupRows)
 }
