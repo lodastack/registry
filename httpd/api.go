@@ -721,8 +721,8 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 
 	// ceate ns admin group
-	ns := name + "." + parentNs
-	gAdminName := s.perm.GetNsAdminGName(ns)
+	var ns, gAdminName string
+	ns, gAdminName = name+"."+parentNs, s.perm.GetNsAdminGName(ns)
 	err = s.perm.CreateGroup(gAdminName, s.perm.AdminGroupItems(ns))
 	if err != nil {
 		ReturnServerError(w, fmt.Errorf("create ns admin group fail: %s", err.Error()))
@@ -730,11 +730,8 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 	// update admin/member to group
 
-	adminList := []string{}
-	admin := r.Header.Get(`UID`)
-	if admin != "" {
-		adminList = append(adminList, admin)
-	}
+	adminList := []string{r.Header.Get(`UID`)}
+
 	err = s.perm.UpdateMember(gAdminName, adminList, adminList, authorize.Add)
 
 	if err != nil {

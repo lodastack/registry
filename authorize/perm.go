@@ -142,45 +142,63 @@ func (p *perm) UpdateMember(gName string, manager []string, members []string, ac
 
 	switch action {
 	case Add:
+		for _, username := range manager {
+			if username == "" {
+				continue
+			}
+			uRows, err := p.UpdateUser(username, gName, "")
+			if err != nil {
+				return err
+			}
+			updateRows = append(updateRows, uRows)
+		}
+		for _, username := range members {
+			if username == "" {
+				continue
+			}
+			uRows, err := p.UpdateUser(username, gName, "")
+			if err != nil {
+				return err
+			}
+			updateRows = append(updateRows, uRows)
+		}
+		if len(updateRows) == 0 {
+			return nil
+		}
 		gRows, err := p.UpdateGroupMember(gName, manager, members, []string{}, []string{})
 		if err != nil {
 			return err
 		}
 		updateRows = append(updateRows, gRows)
+	case Remove:
 		for _, username := range manager {
-			uRows, err := p.UpdateUser(username, gName, "")
+			if username == "" {
+				continue
+			}
+			uRows, err := p.UpdateUser(username, "", gName)
 			if err != nil {
 				return err
 			}
 			updateRows = append(updateRows, uRows)
 		}
 		for _, username := range members {
-			uRows, err := p.UpdateUser(username, gName, "")
+			if username == "" {
+				continue
+			}
+			uRows, err := p.UpdateUser(username, "", gName)
 			if err != nil {
 				return err
 			}
 			updateRows = append(updateRows, uRows)
 		}
-	case Remove:
+		if len(updateRows) == 0 {
+			return nil
+		}
 		gRows, err := p.UpdateGroupMember(gName, []string{}, []string{}, manager, members)
 		if err != nil {
 			return err
 		}
 		updateRows = append(updateRows, gRows)
-		for _, username := range manager {
-			uRows, err := p.UpdateUser(username, "", gName)
-			if err != nil {
-				return err
-			}
-			updateRows = append(updateRows, uRows)
-		}
-		for _, username := range members {
-			uRows, err := p.UpdateUser(username, "", gName)
-			if err != nil {
-				return err
-			}
-			updateRows = append(updateRows, uRows)
-		}
 	default:
 		return ErrInvalidParam
 	}
