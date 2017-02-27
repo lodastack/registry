@@ -7,7 +7,7 @@ github.com/hashicorp/raft 5f09c4ffdbcd2a53768e78c47717415de12b6728
 github.com/hashicorp/raft-boltdb d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee
 github.com/julienschmidt/httprouter 6aacfd5ab513e34f7e64ea9627ab9670371b34e7
 github.com/lodastack/log b25a4d2e8c2235ee21a1663198a4b26c7f7b4aaa
-github.com/lodastack/models 0efdd5e2e653fce508e5f6bacf261e16086504f3
+github.com/lodastack/models 415503d271958c3d910d4808e8e1b19e1f59a385
 github.com/pquerna/ffjson 184f78649ba053f484de46921391e6d0c6f5172f
 github.com/satori/go.uuid 879c5887cd475cd7864858769793b2ceb0d44feb
 gopkg.in/asn1-ber.v1 4e86f4367175e39f69d9358a5f17b4dda270378d

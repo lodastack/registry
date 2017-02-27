@@ -32,12 +32,15 @@ func getGKey(gName string) []byte { return []byte("g-" + gName) }
 // so that can list the group under one ns.
 // e.g: server1.product1.loda -> loda.product1.server1
 func (g *Group) GetGNameByNs(ns string) string {
-	gName := ""
+	var gName string
+	gName = ""
+
 	nsSplit := strings.Split(ns, nsSep)
-	for i := len(nsSplit) - 1; i >= 0; i-- {
-		gName += nsSplit[i] + nsSep
+	for i, j := 0, len(nsSplit)-1; i < j; i, j = i+1, j-1 {
+		nsSplit[i], nsSplit[j] = nsSplit[j], nsSplit[i]
 	}
-	gName = strings.TrimRight(gName, nsSep)
+
+	gName = strings.Join(nsSplit, nsSep)
 	return gName
 }
 
@@ -71,13 +74,15 @@ func (g *Group) GetGroup(gName string) (Group, error) {
 }
 
 func (g *Group) ListNsGroup(ns string) ([]Group, error) {
-	GroupList := []Group{}
 	gKeyPrefix := getGKey(g.GetGNameByNs(ns))
 	groupMap, err := g.cluster.ViewPrefix([]byte(AuthBuck), gKeyPrefix)
 	if err != nil {
-		return GroupList, err
+		return nil, err
 	}
 
+	var GroupList []Group
+	var i int
+	GroupList, i = make([]Group, len(groupMap)), 0
 	for _, gByte := range groupMap {
 		if len(gByte) == 0 {
 			continue
@@ -87,9 +92,10 @@ func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 		if err != nil {
 			return GroupList, err
 		}
-		GroupList = append(GroupList, group)
+		GroupList[i] = group
+		i++
 	}
-	return GroupList, nil
+	return GroupList[:i], nil
 }
 
 func (g *Group) CreateGroup(gName string, items []string) error {
