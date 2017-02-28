@@ -468,13 +468,14 @@ POST方法
 - header中的AuthToken
 
 结果返回：
-- `{
-  "user": "libk",
-  "token": "39dfcfb7-5f2b-45dc-b99f-6f0011d9dcc7"
-}`
+    {
+      "user": "libk",
+      "token": "39dfcfb7-5f2b-45dc-b99f-6f0011d9dcc7"
+    }
 
-例子：
-  curl "http://127.0.0.1:8004/api/v1/user/signout"
+例子:
+
+    curl "http://127.0.0.1:8004/api/v1/user/signout"
 
 
 #### 4.3 用户查询
@@ -492,30 +493,123 @@ POST方法
 
 参数：
 - query参数 username: 要更改的用户名
-- query参数 gids: 用户的组id（不设置为不更改）
 - query参数 dashboards：**保留**
+
+例子:
 
     curl -X PUT -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4"  -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/user?username=test&gids=&dashboards="
 
-#### 4.5 用户组查询
+#### 4.5 组创建
+
+`POST`方法
+
+参数：
+- query参数 gname: 用户组name
+- query参数 items: 用户的组权限列表，`,`分隔
+
+    curl  -H "AuthToken: aeaec15e-5601-4bd9-a81a-b1a096244a8c" -H "NS: loda" -H "Resource: ns" -X POST "http://127.0.0.1:9991/api/v1/perm/group?gname=test&items=1,2,33"
+    {
+      "httpstatus": 404,
+      "data": null,
+      "msg": "group already exist"
+    }
+
+#### 4.6 组查询
 
 `GET`方法
 
 参数：
-- query参数 gids: 用户的组id
+- query参数 gname: 用户组name
 
-    curl -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4" -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/group?gid="|jq
+例子:
 
-#### 4.6 用户组设置
+    curl -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4" -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/group?gname=loda-defaultgroup
+    "|jq
+
+#### 4.7 用户组成员管理
 
 `PUT`方法
 
 参数：
-- query参数 gid: 要更改的用户组ID
+- query参数 gname: 要更改的用户组
 - query参数 managers: 用户的组管理员列表（不设置为不更改）
-- query参数 items：权限列表（不设置为不更改）
+- query参数 members: 用户组成员列表
 
-curl -X PUT -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4"  -H "NS: loda" -H "Resource: ns" "http://127.0.0.1:9991/api/v1/perm/group?gid=42f95995-79a9-44fe-9fbf-417bffbf2035&managers=zhangzz,libk,loda-ma"
+例子:
+
+    curl  -H "AuthToken: 9fc601ba-f834-4a53-a289-bb83ffd0cc15" -H "NS: loda" -H "Resource: ns" -X PUT "http://127.0.0.1:9991/api/v1/perm/group/member?gname=loda.test.leaf-test&action=add&members=fuyin"
+    curl  -H "AuthToken: 9fc601ba-f834-4a53-a289-bb83ffd0cc15" -H "NS: loda" -H "Resource: ns" -X PUT "http://127.0.0.1:9991/api/v1/perm/group/member?gname=loda.test.leaf-test&action=add&managers=fuyin"
+
+#### 4.8 用户组权限管理
+
+`GET`方法
+
+参数：
+- query参数 gname: 要更改的用户组
+- query参数 items: 用户的组权限列表，`,`分隔
+
+例子:
+
+    curl  -H "AuthToken: aeaec15e-5601-4bd9-a81a-b1a096244a8c" -H "NS: loda" -H "Resource: ns" -X PUT "http://127.0.0.1:9991/api/v1/perm/group/item?gname=test&items=1,2,33,444"
+
+#### 4.9 NS下用户组查询
+
+`GET`方法
+
+参数：
+- query参数 ns: 要查询的group列表所属ns
+
+例子:
+
+    curl "http://127.0.0.1:9991/api/v1/perm/group/list?ns=server0.loda"
+    {
+        "httpstatus": 200,
+        "data": [
+            {
+                "name": "loda.server0-admin",
+                "manager": [
+                    "loda-defaultuser",
+                    "zhangzz"
+                ],
+                "member": [
+                    "loda-defaultuser",
+                    "zhangzz"
+                ],
+                "items": [
+                    "server0.loda-machine-GET",
+                    "server0.loda-machine-PUT",
+                    "server0.loda-machine-POST",
+                    "server0.loda-machine-DELETE",
+                    "server0.loda-alarm-GET",
+                    "server0.loda-alarm-PUT",
+                    .......
+                ]
+            },
+            .....
+            {
+                "name": "loda.server0test2",
+                "manager": null,
+                "member": null,
+                "items": [
+                  "1",
+                  "2",
+                  "33"
+                ]
+          }
+      ],
+    "msg": ""
+  }
+
+#### 4.10 用户组删除
+
+`DELETE`方法
+
+参数：
+- query参数 gname: 用户组name
+
+例子:
+
+    curl  -H "AuthToken: aeaec15e-5601-4bd9-a81a-b1a096244a8c" -H "NS: loda" -H "Resource: ns" -X DELETE "http://127.0.0.1:9991/api/v1/perm/group?gname=test"|jq
 
 ### 5 集群管理接口
 ---
@@ -524,8 +618,10 @@ curl -X PUT -H "AuthToken: d1a02e5e-d1d3-4c9c-9fe5-e8eeccbd8ee4"  -H "NS: loda" 
 
 `GET`方法
 
+例子:
+
     curl "http://127.0.0.1:9991/api/v1/peer"
-    返回
+    #返回
     {
     "httpstatus": 200,
     "data": {
