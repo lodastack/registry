@@ -223,11 +223,16 @@ func (s *Service) initHandler() {
 	s.router.POST("/api/v1/agent/report", s.handlerAgentReport)
 
 	// For router, just allow Get method
-	s.router.GET("/api/v1/router/resource", s.handlerResourceGet)
 	s.router.GET("/api/v1/router/ns", s.handlerNsGet)
+	s.router.GET("/api/v1/router/resource", s.handlerResourceGet)
 
 	// For alarm, just allow Get method
+	s.router.GET("/api/v1/alarm/ns", s.handlerNsGet)
 	s.router.GET("/api/v1/alarm/resource", s.handlerResourceGet)
+
+	// For event, just allow Get method
+	s.router.GET("/api/v1/event/ns", s.handlerNsGet)
+	s.router.GET("/api/v1/event/resource", s.handlerResourceGet)
 
 	s.router.GET("/api/v1/peer", s.handlerPeers)
 	s.router.POST("/api/v1/peer", s.handlerJoin)
@@ -324,7 +329,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 // pass agent or router backend requests, this API shuold be almost desinged in GET method.
 func uriFilter(r *http.Request) bool {
 	var UNAUTH_URI = []string{"/api/v1/user/signin", "/api/v1/user/signout", "/api/v1/agent", "/api/v1/router",
-		"/api/v1/alarm", "/api/v1/peer"}
+		"/api/v1/alarm", "/api/v1/event", "/api/v1/peer"}
 	for _, uri := range UNAUTH_URI {
 		if strings.HasPrefix(r.RequestURI, uri) {
 			return false
