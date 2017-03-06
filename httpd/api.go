@@ -707,11 +707,17 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
+	var ns, gAdminName string
+	ns = name + "." + parentNs
+	if len(ns) > 64-len("collect.") {
+		ReturnBadRequest(w, errors.New("The ns name is to long, please check and re-operate."))
+		return
+	}
 	for _, nsLetter := range name {
 		if nsLetter == '-' || (nsLetter >= 'a' && nsLetter <= 'z') || (nsLetter >= '0' && nsLetter <= '9') {
 			continue
 		}
-		ReturnBadRequest(w, ErrInvalidParam)
+		ReturnBadRequest(w, errors.New("The ns name only allows numbers/letters/crossed, please check and re-operate."))
 		return
 	}
 
@@ -720,22 +726,18 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	// ceate ns admin group
-	var ns, gAdminName string
-	ns, gAdminName = name+"."+parentNs, s.perm.GetNsAdminGName(ns)
+	gAdminName = s.perm.GetNsAdminGName(ns)
 	err = s.perm.CreateGroup(gAdminName, s.perm.AdminGroupItems(ns))
 	if err != nil {
-		ReturnServerError(w, fmt.Errorf("create ns admin group fail: %s", err.Error()))
+		ReturnServerError(w, fmt.Errorf("Create group of ns %s fail: %s", gAdminName, err.Error()))
 		return
 	}
 	// update admin/member to group
 
 	adminList := []string{r.Header.Get(`UID`)}
-
 	err = s.perm.UpdateMember(gAdminName, adminList, adminList, authorize.Add)
-
 	if err != nil {
-		ReturnServerError(w, fmt.Errorf("update group's admin fail: %s", err.Error()))
+		ReturnServerError(w, fmt.Errorf("Set member to admin group fail: %s", err.Error()))
 		return
 	}
 	ReturnOK(w, "success")
