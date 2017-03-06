@@ -17,7 +17,7 @@ var (
 )
 
 type Group struct {
-	GName   string   `json:"name"`
+	GName   string   `json:"gname"`
 	Manager []string `json:"manager"`
 	Member  []string `json:"member"`
 	Items   []string `json:"items"`
