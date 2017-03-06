@@ -202,7 +202,7 @@ func Test_MultiNode_SetGetKey(t *testing.T) {
 		t.Fatalf("failed to update key: %s", err.Error())
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	var v []byte
 	var err error
@@ -241,7 +241,7 @@ func Test_MultiNode_RemoveKey(t *testing.T) {
 		t.Fatalf("failed to update key: %s", err.Error())
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	var v []byte
 	var err error
@@ -255,7 +255,7 @@ func Test_MultiNode_RemoveKey(t *testing.T) {
 	if err := s0.RemoveKey([]byte(bucket), []byte(key)); err != nil {
 		t.Fatalf("failed to remove key: %s", err.Error())
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 	if v, err = s1.View([]byte(bucket), []byte(key)); err != nil || len(v) != 0 {
 		t.Fatalf("get the removed  key success, output: %s, error: %v", v, err)
 	}
@@ -286,11 +286,12 @@ func Test_MultiNode_SetGetRemoveSession(t *testing.T) {
 		t.Fatalf("failed to set session: %s", err.Error())
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	var v interface{}
 	v = s1.GetSession("u1")
-	if v.(string) != "t1" {
+	vStr, ok := v.(string)
+	if !ok || vStr != "t1" {
 		t.Fatalf("funexpected results for get: %s - %s ", v.(string), "t1")
 	}
 
@@ -299,7 +300,7 @@ func Test_MultiNode_SetGetRemoveSession(t *testing.T) {
 		t.Fatalf("failed to remove session: %s", err.Error())
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 	v = s1.GetSession("u1")
 	if v != nil {
 		t.Fatalf("funexpected results for get: %s - %s ", v.(string), nil)

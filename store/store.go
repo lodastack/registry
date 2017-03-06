@@ -443,7 +443,8 @@ func (s *Store) ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error) 
 	c := b.Cursor()
 	for k, v := c.Seek(keyPrefix); len(k) != 0 && strings.HasPrefix(string(k), string(keyPrefix)); k, v = c.Next() {
 		if len(v) != 0 {
-			result[string(k)] = v
+			result[string(k)] = make([]byte, len(v))
+			copy(result[string(k)], v)
 		}
 	}
 	return result, nil
