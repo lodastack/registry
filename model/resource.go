@@ -69,15 +69,12 @@ func NewResource(resMap map[string]string) Resource {
 type walkResourceFunc func(rByte []byte, last bool, rl *ResourceList, output []byte) ([]byte, error)
 
 // walk the resources byte, process every resource by handler.
-func (rl *ResourceList) WalkRsByte(_rsByte []byte, handler walkResourceFunc) ([]byte, error) {
+func (rl *ResourceList) WalkRsByte(rsByte []byte, handler walkResourceFunc) ([]byte, error) {
 	*rl = make([]Resource, 0)
 	startPos, endPos := 0, 0
 	deliLen := 0
 	output := make([]byte, 0)
 	var err error
-	// copy _rsByte
-	rsByte := make([]byte, len(_rsByte))
-	copy(rsByte, _rsByte)
 
 	for index, byt := range rsByte {
 		switch byt {
