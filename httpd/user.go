@@ -27,6 +27,8 @@ func (s *Service) initPermissionHandler() {
 	s.router.PUT("/api/v1/perm/group/member", s.HandlerUpdateGroupMember)
 	s.router.DELETE("/api/v1/perm/group", s.HandlerRemoveGroup)
 
+	s.router.GET("/api/v1/event/group", s.HandlerGroupGet)
+
 	s.router.GET("/api/v1/perm/user", s.HandlerUserGet)
 	s.router.PUT("/api/v1/perm/user", s.HandlerUserSet)
 	s.router.DELETE("/api/v1/perm/user", s.HandlerRemoveUser)
