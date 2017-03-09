@@ -382,16 +382,16 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 		ReturnBadRequest(w, err)
 		return
 	}
-	if err := report.UnmarshalJSON(buf.Bytes()); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), &report); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	}
+	updateMap := report.Marshal()
 	if report.Update {
 		if report.OldHostname == "" {
 			ReturnBadRequest(w, ErrInvalidParam)
 			return
 		}
-		updateMap := map[string]string{}
 		if report.NewHostname != "" && report.NewHostname != report.OldHostname {
 			updateMap[node.HostnameProp] = report.NewHostname
 		}
@@ -400,10 +400,10 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 			strings.Join(report.NewIPList, ",") != strings.Join(report.OldIPList, ",") {
 			updateMap[node.IpProp] = strings.Join(report.NewIPList, ",")
 		}
-		if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
-			ReturnBadRequest(w, err)
-			return
-		}
+	}
+	if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
+		ReturnBadRequest(w, err)
+		return
 	}
 	// TODO: process the report time/version.
 	ReturnOK(w, "success")
