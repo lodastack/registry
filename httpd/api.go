@@ -401,7 +401,8 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 			updateMap[node.IpProp] = strings.Join(report.NewIPList, ",")
 		}
 	}
-	if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
+	if err := s.tree.MachineUpdate(report.NewHostname, updateMap); err != nil {
+		log.Errorf("update machine %s fail, data: %+v, error: %s", report.NewHostname, updateMap, err.Error())
 		ReturnBadRequest(w, err)
 		return
 	}

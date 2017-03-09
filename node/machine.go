@@ -51,9 +51,6 @@ func (t *Tree) MachineUpdate(oldName string, updateMap map[string]string) error 
 	if ok && ip == "" {
 		return ErrInvalidMachine
 	}
-	if hostname == "" && ip == "" {
-		return ErrInvalidMachine
-	}
 
 	location, err := t.SearchMachine(oldName)
 	if err != nil {
