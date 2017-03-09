@@ -13,7 +13,14 @@ import (
 
 type AlarmResource models.Alarm
 
-var rp string = "loda"
+var (
+	rp string = "loda"
+
+	_defaultHostBlockPeriod = "5"
+	_defaultHostBlockTimes  = "3"
+	_defaultNsBlockPeriod   = "5"
+	_defaultNsBlockTimes    = "20"
+)
 
 func NewAlarm(ns, name string) *AlarmResource {
 	return &AlarmResource{
@@ -41,6 +48,23 @@ func (a *AlarmResource) SetQuery(function, rp, measurement, period, where,
 	a.Value = value
 	a.GroupBy = groupby
 	return nil
+}
+
+func (a *AlarmResource) SetBlock(HostBlockPeriod, HostBlockTimes, NsBlockPeriod, NsBlockTimes string) {
+	if HostBlockTimes == "" || HostBlockTimes == "" {
+		a.HostBlockPeriod = _defaultHostBlockPeriod
+		a.HostBlockTimes = _defaultHostBlockTimes
+	} else {
+		a.HostBlockPeriod = HostBlockPeriod
+		a.HostBlockTimes = HostBlockTimes
+	}
+	if NsBlockPeriod == "" || NsBlockTimes == "" {
+		a.NsBlockPeriod = _defaultNsBlockPeriod
+		a.NsBlockTimes = _defaultNsBlockTimes
+	} else {
+		a.NsBlockPeriod = NsBlockPeriod
+		a.NsBlockTimes = NsBlockTimes
+	}
 }
 
 func (a *AlarmResource) SetAlert(level, groups, alert, message string) error {
@@ -133,6 +157,11 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	alert, _ := data["alert"]
 	message, _ := data["message"]
 
+	HostBlockPeriod, _ := data["hostblockperiod"]
+	HostBlockTimes, _ := data["hostblocktimes"]
+	NsBlockPeriod, _ := data["nsblockperiod"]
+	NsBlockTimes, _ := data["nsblocktimes"]
+
 	if measurement == "" || period == "" || expression == "" ||
 		every == "" || trigger == "" || level == "" ||
 		alert == "" || message == "" || function == "" ||
@@ -155,6 +184,7 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	if err := alarm.SetMD5AndVersion(); err != nil {
 		return alarm, err
 	}
+	alarm.SetBlock(HostBlockPeriod, HostBlockTimes, NsBlockPeriod, NsBlockTimes)
 
 	return alarm, nil
 }
