@@ -9,17 +9,11 @@ import (
 var rootNode = "loda"
 
 type GroupInf interface {
-	// GetNsAdminGKey return group key of ns.
-	GetNsAdminGKey(ns string) []byte
-
 	// ListGroup return the group which name have the prefix.
 	ListNsGroup(ns string) ([]Group, error)
 
 	// GetGroup return the group.
 	GetGroup(gName string) (Group, error)
-
-	// CreateGroup create a group.
-	CreateGroup(gName string, items []string) error
 
 	// UpdateGroup update the group.
 	UpdateItems(gName string, items []string) error
@@ -27,8 +21,10 @@ type GroupInf interface {
 	// Get Ns Group Prefix Name.
 	GetGNameByNs(ns string) string
 
-	// Get Ns Admin Group Name.
-	GetNsAdminGName(ns string) string
+	// Get Ns Op Group Name.
+	GetNsOpGName(ns string) string
+	// Get Ns Dev Group Name.
+	GetNsDevGName(ns string) string
 }
 
 type UserInf interface {
@@ -56,6 +52,9 @@ type Perm interface {
 
 	// InitGroup init default/admin group and default user.
 	InitGroup(rootNode string) error
+
+	// CreateGroup create a group.
+	CreateGroup(gName string, manager, member, items []string) error
 
 	// UpdateGroupMember update group member and user groups.
 	UpdateMember(group string, manager []string, members []string, action string) error

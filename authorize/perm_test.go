@@ -39,7 +39,7 @@ func TestUpdateGroupMember(t *testing.T) {
 	if _, err = perm.GetUser("user2"); err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if err = perm.CreateGroup("group1", []string{""}); err != nil {
+	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{""}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
 	if _, err = perm.GetGroup("group1"); err != nil {
@@ -119,7 +119,7 @@ func TestRemoveUser(t *testing.T) {
 	if err = perm.SetUser("user3", []string{}); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.CreateGroup("group1", []string{""}); err != nil {
+	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{""}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
 	if err = perm.UpdateMember("group1", []string{"user1", "user3"}, []string{"user2", "user3"}, Add); err != nil {
@@ -191,13 +191,13 @@ func TestRemoveGroup(t *testing.T) {
 	if err = perm.SetUser("user3", []string{}); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.CreateGroup("group1", []string{}); err != nil {
+	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
-	if err = perm.CreateGroup("group2", []string{}); err != nil {
+	if err = perm.CreateGroup("group2", []string{}, []string{}, []string{}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
-	if err = perm.CreateGroup("group3", []string{}); err != nil {
+	if err = perm.CreateGroup("group3", []string{}, []string{}, []string{}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
 
