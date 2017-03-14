@@ -384,7 +384,9 @@ func (s *Store) View(bucket, key []byte) ([]byte, error) {
 	if value != nil {
 		s.cache.Add(bucket, key, value)
 	}
-	return value, err
+	data := make([]byte, len(value))
+	copy(data, value)
+	return data, err
 }
 
 // Update the value for the given key.

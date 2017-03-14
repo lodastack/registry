@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/lodastack/log"
 	"github.com/lodastack/registry/common"
 )
 
@@ -121,7 +122,8 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (ResourceList, error) {
 		// If the resource is matched, append it to result.
 		if matchFlag {
 			if err := matchRl.AppendResourceByte(raw[resStartPos:end]); err != nil {
-				return fmt.Errorf("unmarshal resource fail")
+				log.Errorf("search AppendResourceByte fail: %s", err.Error())
+				return fmt.Errorf("search AppendResourceByte fail")
 			}
 		}
 		return nil
@@ -139,7 +141,8 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (ResourceList, error) {
 		// Read the end of resources.
 		case endByte:
 			if err := processResource(vPos, startPos, index); err != nil {
-				return nil, fmt.Errorf("unmarshal resource fail")
+				log.Errorf("search process resource fail: %s", err.Error())
+				return nil, fmt.Errorf("processResource fail")
 			}
 			goto END
 		default:
@@ -152,6 +155,7 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (ResourceList, error) {
 						vPos = index
 					} else {
 						// If get one deli when read value, return error.
+						log.Error("search data error")
 						return nil, fmt.Errorf("unmarshal resources fail")
 					}
 					// If Key is not set or matched, value of the key should be checked.
@@ -170,6 +174,7 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (ResourceList, error) {
 				// Read resource completely when get a deliRes
 				case len(deliRes):
 					if err := processResource(vPos, startPos, index-deliLen); err != nil {
+						log.Errorf("search processResource error: %s", err.Error())
 						return nil, fmt.Errorf("unmarshal resource fail")
 					}
 					matchFlag, matchValue = false, false

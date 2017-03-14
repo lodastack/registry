@@ -2,6 +2,7 @@ package node
 
 import (
 	// "github.com/lodastack/log"
+	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
 )
 
@@ -42,6 +43,12 @@ type Cluster interface {
 type TreeMethod interface {
 	// AllNodes return all nodes.
 	AllNodes() (*Node, error)
+
+	// SetAgentInfo set agent info
+	SetAgentInfo(info m.Report) error
+
+	// GetAgents return agent info
+	GetAgents() map[string]m.Report
 
 	// GetNodesById return exact node by nodeid.
 	GetNode(id string) (*Node, error)

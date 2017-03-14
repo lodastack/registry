@@ -10,6 +10,8 @@ import (
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
+
+	m "github.com/lodastack/models"
 )
 
 var (
@@ -31,6 +33,11 @@ const (
 	NoMachineMatch = "^$"
 )
 
+type AgentInfo struct {
+	sync.RWMutex
+	AgentInfo map[string]m.Report
+}
+
 type Tree struct {
 	Nodes   *Node
 	Cluster Cluster
@@ -38,6 +45,7 @@ type Tree struct {
 	Cache *nodeCache
 	Mu    sync.RWMutex
 
+	agents AgentInfo
 	logger *log.Logger
 }
 
@@ -47,6 +55,7 @@ func NewTree(cluster Cluster) (*Tree, error) {
 		Cluster: cluster,
 		Mu:      sync.RWMutex{},
 		logger:  log.New(config.C.LogConf.Level, "tree", model.LogBackend),
+		agents:  AgentInfo{sync.RWMutex{}, make(map[string]m.Report)},
 		Cache:   &nodeCache{Data: map[string]string{}},
 	}
 	err := t.init()
@@ -462,4 +471,21 @@ func (t *Tree) DelNode(ns string) error {
 	}
 	t.Cache.Delete(delID)
 	return nil
+}
+
+func (t *Tree) SetAgentInfo(info m.Report) error {
+	t.agents.Lock()
+	defer t.agents.Unlock()
+	if info.NewHostname == "" {
+		return ErrInvalidParam
+	}
+	if info.OldHostname != info.NewHostname {
+		delete(t.agents.AgentInfo, info.OldHostname)
+	}
+	t.agents.AgentInfo[info.NewHostname] = info
+	return nil
+}
+
+func (t *Tree) GetAgents() map[string]m.Report {
+	return t.agents.AgentInfo
 }

@@ -23,19 +23,20 @@ func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
 	}
 	resMap, err := t.SearchResource(rootNode, "machine", searchHostname)
 	if err != nil {
-		t.logger.Errorf("SearchResource fail, error:%s", err.Error())
+		t.logger.Errorf("SearchResource fail, error: %s", err.Error())
 		return nil, err
 	}
 
 	machineRes := map[string]string{}
 	for ns, machines := range resMap {
 		if len(*machines) == 0 {
-			continue
+			t.logger.Errorf("machine search resout have no ID, ns: %s, machine: %+v", ns, *machines)
+			return nil, errors.New("search machine error")
 		}
 		machineID, _ := (*machines)[0].ID()
 		if machineID == "" {
-			t.logger.Errorf("machine search resout have no ID, ns: %s, machine: %+v", ns, machines)
-			continue
+			t.logger.Errorf("machine search resout have no ID, ns: %s, machine: %+v", ns, *machines)
+			return nil, errors.New("search machine fail")
 		}
 		machineRes[ns] = machineID
 	}
@@ -62,7 +63,7 @@ func (t *Tree) MachineUpdate(oldName string, updateMap map[string]string) error 
 	}
 	for ns, resId := range location {
 		if err := t.UpdateResource(ns, "machine", resId, updateMap); err != nil {
-			t.logger.Error("MachineRename fail and skip, oldname: %s, ns: %s, update: %+v, error: %s",
+			t.logger.Errorf("MachineRename fail and skip, oldname: %s, ns: %s, update: %+v, error: %s",
 				oldName, ns, updateMap, err.Error())
 			return err
 		}
