@@ -217,6 +217,8 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/ns", s.handlerNsGet)
 	s.router.DELETE("/api/v1/ns", s.handlerNsDel)
 
+	s.router.GET("/api/v1/agents", s.handlerAgents)
+
 	// For agent
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
 	s.router.GET("/api/v1/agent/resource", s.handlerResourceGet)
@@ -387,13 +389,13 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 	if report.OldHostname == "" {
-		log.Errorf("report data invalid %+v", report)
+		// log.Errorf("report data invalid %+v", report)
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 
-	updateMap := report.Marshal()
 	if report.Update {
+		updateMap := map[string]string{}
 		if report.NewHostname != "" && report.NewHostname != report.OldHostname {
 			updateMap[node.HostnameProp] = report.NewHostname
 		}
@@ -402,13 +404,18 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 			strings.Join(report.NewIPList, ",") != strings.Join(report.OldIPList, ",") {
 			updateMap[node.IpProp] = strings.Join(report.NewIPList, ",")
 		}
+
+		if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
+			log.Errorf("update machine %s fail, data: %+v, error: %s", report.NewHostname, updateMap, err.Error())
+			ReturnServerError(w, err)
+			return
+		}
 	}
-	if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
-		log.Errorf("update machine %s fail, data: %+v, error: %s", report.NewHostname, updateMap, err.Error())
+
+	if err := s.tree.SetAgentInfo(report); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	}
-	// TODO: process the report time/version.
 	ReturnOK(w, "success")
 }
 
@@ -779,4 +786,8 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 	ReturnOK(w, "success")
+}
+
+func (s *Service) handlerAgents(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ReturnJson(w, 200, s.tree.GetAgents())
 }

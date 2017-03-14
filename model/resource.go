@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 
+	"github.com/lodastack/log"
 	"github.com/lodastack/registry/common"
 )
 
@@ -30,6 +31,7 @@ var (
 	ErrEmptyRes     error = errors.New("empty resources")
 	ErrResFormat    error = errors.New("invalid resource format")
 	ErrInvalidParam error = errors.New("invalid param")
+	ErrInvalidUUID  error = errors.New("invalid uuid")
 )
 
 const (
@@ -114,6 +116,7 @@ func (rl *ResourceList) Unmarshal(raw []byte) error {
 	_, err := rl.WalkRsByte(raw, func(rByte []byte, last bool, rlWalk *ResourceList, output []byte) ([]byte, error) {
 		r := Resource{}
 		if err := r.Unmarshal(rByte); err != nil {
+			log.Errorf("unmarshal resource fail:  %s", rByte)
 			return nil, errors.New("unmarshal resources fail: " + err.Error())
 		}
 		*rlWalk = append(*rlWalk, r)
@@ -125,6 +128,10 @@ func (rl *ResourceList) Unmarshal(raw []byte) error {
 // Update resource with resourceID by updateMap.
 // NOTE: will not change resource ID.
 func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byte, error) {
+	if len(rsByte) == 0 {
+		return nil, errors.New("empty resource to update")
+	}
+	var match bool
 	return (&ResourceList{}).WalkRsByte(rsByte, func(rByte []byte, last bool, rlWalk *ResourceList, output []byte) ([]byte, error) {
 		r := Resource{}
 		if len(rByte) == 0 {
@@ -137,6 +144,7 @@ func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byt
 
 		// update the resource if resource ID match with expect.
 		if resID, _ := r.ID(); resID == ID {
+			match = true
 			for k, v := range updateMap {
 				if k == IdKey {
 					continue
@@ -150,6 +158,9 @@ func UpdateResByID(rsByte []byte, ID string, updateMap map[string]string) ([]byt
 			return nil, err
 		}
 		if last {
+			if !match {
+				return nil, errors.New("not match the id when update resource")
+			}
 			output = append(output, rByte...)
 			output = append(output, endByte)
 		} else {
@@ -176,14 +187,16 @@ func DeleteResource(rsByte []byte, IDs ...string) ([]byte, error) {
 		resID, _ := r.ID()
 		if _, ok := common.ContainString(IDs, resID); !ok {
 			rByte, err = r.Marshal()
-			if err != nil {
+			if err == nil {
+				if len(output) != 0 {
+					output = append(output, deliRes...)
+				}
+				output = append(output, rByte...)
+			} else if err == ErrInvalidUUID {
+				log.Errorf("invalid uuid in DeleteResource: %+v\n", r)
+			} else {
 				return nil, err
 			}
-
-			if len(output) != 0 {
-				output = append(output, deliRes...)
-			}
-			output = append(output, rByte...)
 		}
 
 		if last && len(output) > 0 {
@@ -248,7 +261,7 @@ func (rl *ResourceList) Marshal() ([]byte, error) {
 func (rl *ResourceList) AppendResourceByte(resByte []byte) error {
 	r := Resource{}
 	if err := r.Unmarshal(resByte); err != nil {
-		return errors.New("unmarshal resource fail")
+		return errors.New("unmarshal resource fail" + err.Error())
 	}
 	(*rl) = append((*rl), r)
 	return nil
@@ -291,6 +304,8 @@ func (r *Resource) Unmarshal(raw []byte) error {
 					kvFlag = propertyKey
 					(*r)[string(tmpk)] = string(tmpv)
 					tmpk, tmpv = make([]byte, 0), make([]byte, 0)
+				case len(deliRes):
+					return errors.New("invalid deliLen in resource Unmarshal")
 				}
 				deliLen = 0
 			}
@@ -339,6 +354,9 @@ func (r *Resource) Marshal() ([]byte, error) {
 	var n int
 
 	UUID := r.InitID()
+	if len(UUID) != 36 {
+		return nil, ErrInvalidUUID
+	}
 	n += copy(raw[n:], []byte(UUID))
 	raw[n] = uuidByte
 	n += 1
@@ -355,9 +373,9 @@ func (r *Resource) Marshal() ([]byte, error) {
 		if len(v) == 0 {
 			raw[n] = nilByte
 			n += 1
+		} else {
+			n += copy(raw[n:], []byte(v))
 		}
-
-		n += copy(raw[n:], []byte(v))
 		n += copy(raw[n:], deliProp)
 	}
 	return raw[0 : n-len(deliProp)], nil

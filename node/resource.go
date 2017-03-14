@@ -32,7 +32,7 @@ func (t *Tree) getResFromStore(nodeId, resourceType string) (*model.ResourceList
 func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceList, error) {
 	node, err := t.GetNode(ns)
 	if err != nil {
-		t.logger.Errorf("get resource fail because get node by ns fail, ns: %s, resource: %s", ns, resourceType)
+		// t.logger.Errorf("get resource fail because get node by ns fail, ns: %s, resource: %s", ns, resourceType)
 		return nil, err
 	}
 
@@ -82,6 +82,8 @@ func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]st
 		t.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %v", nodeId, resType, err)
 		return errors.New("get resource fail")
 	}
+	oldByte := make([]byte, len(resOldByte))
+	copy(oldByte, resOldByte)
 	resNewByte, err := model.UpdateResByID(resOldByte, resID, updateMap)
 	if err != nil {
 		t.logger.Errorf("UpdateResource fail becource update error: %s", err.Error())
@@ -102,7 +104,10 @@ func (t *Tree) AppendResource(ns, resType string, appendRes ...model.Resource) e
 		t.logger.Errorf("resByteOfNode error, length of resOldByte: %d, error: %s", len(resOldByte), err.Error())
 		return err
 	}
-	resByte, err := model.AppendResources(resOldByte, appendRes...)
+
+	oldByte := make([]byte, len(resOldByte))
+	copy(oldByte, resOldByte)
+	resByte, err := model.AppendResources(oldByte, appendRes...)
 	if err != nil {
 		t.logger.Errorf("AppendResources error, length of resOld: %d, appendRes: %+v, error: %s", len(resOldByte), appendRes, err.Error())
 		return err
