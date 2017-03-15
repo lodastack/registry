@@ -513,8 +513,8 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
-	if param.ResType == "collect" && !model.UpdateCollectName(param.R) {
-		s.logger.Errorf("add invalid type collect: %+v", param.R)
+	if param.ResType == "collect" && model.UpdateCollectName(param.R) != nil {
+		s.logger.Errorf("add invalid collect: %+v", param.R)
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
@@ -607,7 +607,6 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 		return
 	}
 
-	delDataMeasurements := make([]string, 0)
 	resIDs := make([]string, 0)
 	// search collect resource and get the ID.
 	for _, resName := range resNames {
@@ -624,30 +623,26 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 
 		for _, r := range *res[ns] {
 			if resId, ok := r.ID(); ok {
-				delDataMeasurements = append(delDataMeasurements, resName)
 				resIDs = append(resIDs, resId)
 			}
 		}
 	}
 
-	if len(resIDs) == 0 {
-		s.logger.Errorf("search measurement result is nil, measurements: %s,  ns: %s", measurements, ns)
-		ReturnServerError(w, ErrInvalidParam)
-		return
-	}
-	if err := s.tree.DeleteResource(ns, model.Collect, resIDs...); err != nil {
-		ReturnServerError(w, err)
-		return
+	if len(resIDs) != 0 {
+		if err := s.tree.DeleteResource(ns, model.Collect, resIDs...); err != nil {
+			ReturnServerError(w, err)
+			return
+		}
 	}
 
 	// delete collect data
-	for _, delName := range delDataMeasurements {
+	for _, measurement := range strings.Split(measurements, ",") {
 		go func() {
 			time.Sleep(90 * time.Second)
 			req := utils.HttpQuery{
 				Method: http.MethodDelete,
-				Url: fmt.Sprintf("http://%s?ns=collect.%s&name=%s&regexp=true",
-					config.C.RouterAddr, ns, delName),
+				Url: fmt.Sprintf("http://%s?ns=collect.%s&name=%s",
+					config.C.RouterAddr, ns, measurement),
 				BodyType: utils.Form,
 				Timeout:  10}
 			if err := req.DoQuery(); err != nil || req.Result.Status > 299 {
