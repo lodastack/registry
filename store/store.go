@@ -377,16 +377,17 @@ func (s *Store) View(bucket, key []byte) ([]byte, error) {
 			if b == nil {
 				return bucketNotFound
 			}
-			value = b.Get(key)
+
+			data := b.Get(key)
+			value = make([]byte, len(data))
+			copy(value, data)
+			if data != nil {
+				s.cache.Add(bucket, key, data)
+			}
 			return nil
 		})
-	// if the key not exist, bolt will return nil.
-	if value != nil {
-		s.cache.Add(bucket, key, value)
-	}
-	data := make([]byte, len(value))
-	copy(data, value)
-	return data, err
+
+	return value, err
 }
 
 // Update the value for the given key.
