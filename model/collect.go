@@ -2,18 +2,25 @@ package model
 
 import (
 	"strings"
+
+	"github.com/lodastack/log"
 )
 
 var (
 	ProcCollect   = "PROC"
 	PluginCollect = "PLUGIN"
 	PortCollect   = "PORT"
+	ApiCollect    = "API"
+
+	RunPrefix = "RUN"
+	RunType   = []string{ApiCollect}
 )
 
 // GetNameFromMeasurements get the resource names of the measurements.
 // PROC.bin.cpu.idle -> PROC.bin
 // PLUGIN.name.cpu.idle -> PLUGIN.name
 // PORT.service.xx -> PORT.service.xx
+// RUN.API.Ping.xx -> RUN.API.Ping
 func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 	resNames := make([]string, len(measurements))
 	cnt := 0
@@ -33,7 +40,12 @@ func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 			}
 		case PortCollect:
 			resNames[cnt] = measurement
-
+		case RunPrefix:
+			if len(nameSplit) > 3 {
+				resNames[cnt] = strings.Join(nameSplit[1:3], ".")
+			} else {
+				log.Errorf("invalid collect name %s, skip", measurement)
+			}
 		default:
 			continue
 		}
@@ -58,13 +70,23 @@ func collectTypeIllegal(collectType string) bool {
 	return false
 }
 
-func UpdateCollectName(collects ...Resource) bool {
+func UpdateCollectName(collects ...Resource) error {
 	for index := range collects {
 		collectType, _ := collects[index]["measurement_type"]
 		if collectTypeIllegal(collectType) {
-			return false
+			return ErrInvalidParam
+		}
+
+		for _, nameLetter := range collects[index]["name"] {
+			if nameLetter == '-' ||
+				(nameLetter >= 'a' && nameLetter <= 'z') ||
+				(nameLetter >= 'A' && nameLetter <= 'Z') ||
+				(nameLetter >= '0' && nameLetter <= '9') {
+				continue
+			}
+			return ErrInvalidParam
 		}
 		collects[index]["name"] = GenCollectName(collectType, collects[index]["name"])
 	}
-	return true
+	return nil
 }
