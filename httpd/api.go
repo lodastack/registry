@@ -301,12 +301,12 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		v := s.cluster.GetSession(key)
 		s.logger.Infof("Header AuthToken: %s - %s", key, v)
 		if v == nil {
-			ReturnJson(w, 401, "Not Authorized")
+			ReturnJson(w, 401, "Not Authorized. Please login.")
 			return
 		}
 		uid, ok := v.(string)
 		if !ok {
-			ReturnJson(w, 401, "Not Authorized")
+			ReturnJson(w, 401, "Not Authorized. Please login.")
 			return
 		}
 
@@ -317,7 +317,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			ReturnServerError(w, err)
 			return
 		} else if !ok {
-			ReturnJson(w, 401, "Not Authorized")
+			ReturnJson(w, 403, "Not Authorized. Please check your permission.")
 			return
 		}
 		w.Header().Set(`UID`, uid)
@@ -698,6 +698,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	name := r.FormValue("name")
 	nodeType := r.FormValue("type")
 	machineMatch := r.FormValue("machinereg")
+	devStr := r.FormValue("devstr")
 
 	nodeT, err := strconv.Atoi(nodeType)
 	if name == "" || parentNs == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
@@ -705,7 +706,8 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	var ns, gAdminName string
+	var ns, gOpName, gDevName string
+	var ops, devs []string
 	ns = name + "." + parentNs
 	if len(ns) > 64-len("collect.") {
 		ReturnBadRequest(w, errors.New("The ns name is to long, please check and re-operate."))
@@ -724,18 +726,23 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	gAdminName = s.perm.GetNsAdminGName(ns)
-	err = s.perm.CreateGroup(gAdminName, s.perm.AdminGroupItems(ns))
+	ops = []string{r.Header.Get(`UID`)}
+	gOpName = s.perm.GetNsOpGName(ns)
+	err = s.perm.CreateGroup(gOpName, ops, ops, s.perm.AdminGroupItems(ns))
 	if err != nil {
-		ReturnServerError(w, fmt.Errorf("Create group of ns %s fail: %s", gAdminName, err.Error()))
+		ReturnServerError(w, fmt.Errorf("Create op group %s fail: %s", gOpName, err.Error()))
 		return
 	}
-	// update admin/member to group
 
-	adminList := []string{r.Header.Get(`UID`)}
-	err = s.perm.UpdateMember(gAdminName, adminList, adminList, authorize.Add)
+	if devStr != "" {
+		devs = strings.Split(devStr, ",")
+	} else {
+		devs = []string{r.Header.Get(`UID`)}
+	}
+	gDevName = s.perm.GetNsDevGName(ns)
+	err = s.perm.CreateGroup(gDevName, devs, devs, s.perm.AdminGroupItems(ns))
 	if err != nil {
-		ReturnServerError(w, fmt.Errorf("Set member to admin group fail: %s", err.Error()))
+		ReturnServerError(w, fmt.Errorf("Create dev group %s fail: %s", gDevName, err.Error()))
 		return
 	}
 	ReturnOK(w, "success")
@@ -769,9 +776,11 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	if err := s.perm.RemoveGroup(s.perm.GetNsAdminGName(ns)); err != nil {
-		ReturnServerError(w, fmt.Errorf("remove ns admin group fail: %s", err.Error()))
-		return
+	if err := s.perm.RemoveGroup(s.perm.GetNsOpGName(ns)); err != nil {
+		log.Errorf("remove ns admin group fail: %s", err.Error())
+	}
+	if err := s.perm.RemoveGroup(s.perm.GetNsDevGName(ns)); err != nil {
+		log.Errorf("remove ns admin group fail: %s", err.Error())
 	}
 	ReturnOK(w, "success")
 }
