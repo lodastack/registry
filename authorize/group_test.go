@@ -21,10 +21,10 @@ func TestCreateGroup(t *testing.T) {
 	}
 
 	// new Group
-	if err = perm.CreateGroup("", []string{"ns-resource-method"}); err == nil {
+	if err = perm.CreateGroup("", []string{}, []string{}, []string{"ns-resource-method"}); err == nil {
 		t.Fatal("SetGroup success, not match with expect")
 	}
-	if err = perm.CreateGroup("test", []string{"ns-resource-method"}); err != nil {
+	if err = perm.CreateGroup("test", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
 
@@ -34,7 +34,7 @@ func TestCreateGroup(t *testing.T) {
 		t.Fatal("GetGroup fail:", err.Error())
 	}
 
-	if err = perm.CreateGroup("test", []string{"ns-resource-method"}); err == nil {
+	if err = perm.CreateGroup("test", []string{}, []string{}, []string{"ns-resource-method"}); err == nil {
 		t.Fatal("SetGroup success not match expect")
 	}
 }
@@ -52,7 +52,7 @@ func TestUpdateGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal("NewPerm fail:", err.Error())
 	}
-	if err = perm.CreateGroup("test", []string{"ns-resource-method"}); err != nil {
+	if err = perm.CreateGroup("test", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
 
@@ -98,11 +98,11 @@ func TestListGroup(t *testing.T) {
 	}
 	nsList := []string{"server1.product1.com", "server2.product1.com", "server1.product2.com"}
 	for _, ns := range nsList {
-		if err := perm.CreateGroup(perm.GetGNameByNs(ns)+"-group1", []string{"ns-resource-method"}); err != nil {
+		if err := perm.CreateGroup(perm.GetGNameByNs(ns)+"-group1", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 			t.Fatal("SetGroup fail:", err)
 		}
 	}
-	if err := perm.CreateGroup(perm.GetGNameByNs(nsList[0])+"-group2", []string{"ns-resource-method"}); err != nil {
+	if err := perm.CreateGroup(perm.GetGNameByNs(nsList[0])+"-group2", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
 
