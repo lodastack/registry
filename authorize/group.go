@@ -17,10 +17,10 @@ var (
 )
 
 type Group struct {
-	GName   string   `json:"gname"`
-	Manager []string `json:"manager"`
-	Member  []string `json:"member"`
-	Items   []string `json:"items"`
+	GName    string   `json:"gname"`
+	Managers []string `json:"managers"`
+	Members  []string `json:"members"`
+	Items    []string `json:"items"`
 
 	cluster Cluster `json:"-"`
 }
@@ -148,8 +148,8 @@ func (g *Group) GroupRemoveGroup(gName string) ([]string, error) {
 	}
 
 	managerAndMember := []string{}
-	managerAndMember = append(managerAndMember, group.Manager...)
-	managerAndMember = append(managerAndMember, group.Member...)
+	managerAndMember = append(managerAndMember, group.Managers...)
+	managerAndMember = append(managerAndMember, group.Members...)
 	return managerAndMember, g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gName))
 }
 
@@ -170,16 +170,16 @@ func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeM
 	}
 
 	for _, username := range addManagers {
-		group.Manager, _ = common.AddIfNotContain(group.Manager, username)
+		group.Managers, _ = common.AddIfNotContain(group.Managers, username)
 	}
 	for _, username := range removeManagers {
-		group.Manager, _ = common.RemoveIfContain(group.Manager, username)
+		group.Managers, _ = common.RemoveIfContain(group.Managers, username)
 	}
 	for _, username := range addMembers {
-		group.Member, _ = common.AddIfNotContain(group.Member, username)
+		group.Members, _ = common.AddIfNotContain(group.Members, username)
 	}
 	for _, username := range removeMembers {
-		group.Member, _ = common.RemoveIfContain(group.Member, username)
+		group.Members, _ = common.RemoveIfContain(group.Members, username)
 	}
 
 	newGroupByte, err := group.Byte()
