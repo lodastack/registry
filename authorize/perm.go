@@ -113,20 +113,20 @@ func (p *perm) InitGroup(rootNode string) error {
 // checkDefaultGroup set default/admin group and set to default user.
 func (p *perm) checkDefaultGroup() error {
 	g := Group{
-		GName:   defaultGName,
-		Manager: config.C.Admins,
-		Member:  config.C.Admins,
-		Items:   p.DefaultGroupItems(rootNode)}
+		GName:    defaultGName,
+		Managers: config.C.Admins,
+		Members:  config.C.Admins,
+		Items:    p.DefaultGroupItems(rootNode)}
 	if _, err := p.CreateIfNotExist(g); err != nil {
 		fmt.Printf("init default group error: %s\n", err.Error())
 		return err
 	}
 
 	g = Group{
-		GName:   adminGName,
-		Manager: config.C.Admins,
-		Member:  config.C.Admins,
-		Items:   p.AdminGroupItems(rootNode)}
+		GName:    adminGName,
+		Managers: config.C.Admins,
+		Members:  config.C.Admins,
+		Items:    p.AdminGroupItems(rootNode)}
 	if _, err := p.CreateIfNotExist(g); err != nil {
 		fmt.Printf("init admin group error: %s\n", err.Error())
 		return err

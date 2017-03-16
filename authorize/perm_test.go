@@ -55,7 +55,7 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatalf("TestUpdateGroupMember case1 fail, %v, user: %+v", err, user)
 	}
 	group, err := perm.GetGroup("group1")
-	if err != nil || len(group.Manager) != 1 || group.Manager[0] != "user1" || len(group.Member) != 0 {
+	if err != nil || len(group.Managers) != 1 || group.Managers[0] != "user1" || len(group.Members) != 0 {
 		t.Fatalf("TestUpdateGroupMember case1 fail, %v, group: %+v", err, group)
 	}
 
@@ -72,7 +72,7 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatalf("TestUpdateGroupMember case2 fail, %v, user: %+v", err, user)
 	}
 	group, err = perm.GetGroup("group1")
-	if err != nil || len(group.Manager) != 1 || group.Manager[0] != "user1" || len(group.Member) != 1 || group.Member[0] != "user2" {
+	if err != nil || len(group.Managers) != 1 || group.Managers[0] != "user1" || len(group.Members) != 1 || group.Members[0] != "user2" {
 		t.Fatalf("TestUpdateGroupMember case2 fail, %v, group: %+v", err, group)
 	}
 
@@ -89,7 +89,7 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatalf("TestUpdateGroupMember case3 fail, %v, user: %+v", err, user)
 	}
 	group, err = perm.GetGroup("group1")
-	if err != nil || len(group.Manager) != 0 || len(group.Member) != 0 {
+	if err != nil || len(group.Managers) != 0 || len(group.Members) != 0 {
 		t.Fatalf("TestUpdateGroupMember case3 fail, %v, group: %+v", err, group)
 	}
 }
@@ -139,7 +139,7 @@ func TestRemoveUser(t *testing.T) {
 	if user, err := perm.GetUser("user3"); err != nil || len(user.Groups) != 2 {
 		t.Fatalf("TestUpdateGroupMember case1 fail, %v, user: %+v", err, user)
 	}
-	if group, err := perm.GetGroup("group1"); err != nil || len(group.Manager) != 1 || len(group.Member) != 2 {
+	if group, err := perm.GetGroup("group1"); err != nil || len(group.Managers) != 1 || len(group.Members) != 2 {
 		t.Fatalf("TestUpdateGroupMember case1 fail, %v, group: %+v", err, group)
 	}
 
@@ -153,7 +153,7 @@ func TestRemoveUser(t *testing.T) {
 	if user, err := perm.GetUser("user3"); err != nil || len(user.Groups) != 2 {
 		t.Fatalf("TestUpdateGroupMember case2")
 	}
-	if group, err := perm.GetGroup("group1"); err != nil || len(group.Manager) != 1 || len(group.Member) != 1 {
+	if group, err := perm.GetGroup("group1"); err != nil || len(group.Managers) != 1 || len(group.Members) != 1 {
 		t.Fatalf("TestUpdateGroupMember case2 fail, %v, group: %+v", err, group)
 	}
 
@@ -163,7 +163,7 @@ func TestRemoveUser(t *testing.T) {
 	if _, err := perm.GetUser("user3"); err == nil {
 		t.Fatalf("TestUpdateGroupMember case2")
 	}
-	if group, err := perm.GetGroup("group1"); err != nil || len(group.Manager) != 0 || len(group.Member) != 0 {
+	if group, err := perm.GetGroup("group1"); err != nil || len(group.Managers) != 0 || len(group.Members) != 0 {
 		t.Fatalf("TestUpdateGroupMember case2 fail, %v, group: %+v", err, group)
 	}
 }
