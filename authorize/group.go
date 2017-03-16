@@ -44,12 +44,12 @@ func (g *Group) GetGNameByNs(ns string) string {
 	return gName
 }
 
-func (g *Group) GetNsAdminGName(ns string) string {
-	return g.GetGNameByNs(ns) + "-admin"
+func (g *Group) GetNsDevGName(ns string) string {
+	return g.GetGNameByNs(ns) + "-dev"
 }
 
-func (g *Group) GetNsAdminGKey(ns string) []byte {
-	return getGKey(g.GetNsAdminGName(ns))
+func (g *Group) GetNsOpGName(ns string) string {
+	return g.GetGNameByNs(ns) + "-op"
 }
 
 func (g *Group) Byte() ([]byte, error) {
@@ -98,26 +98,31 @@ func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 	return GroupList[:i], nil
 }
 
-func (g *Group) CreateGroup(gName string, items []string) error {
+func (g *Group) createGroup(gName string, managers, members, items []string) (model.Row, error) {
+	updateRow := model.Row{}
 	if gName == "" {
-		return ErrInvalidParam
+		return updateRow, ErrInvalidParam
 	}
 	_, err := g.GetGroup(gName)
 	if err != ErrGroupNotFound {
 		if err == nil {
-			return ErrGroupAlreadyExist
+			return updateRow, ErrGroupAlreadyExist
 		}
-		return err
+		return updateRow, err
 	}
 
 	gByte, err := (&Group{
-		GName: gName,
-		Items: items,
+		GName:    gName,
+		Managers: managers,
+		Members:  members,
+		Items:    items,
 	}).Byte()
 	if err != nil {
-		return err
+		return updateRow, err
 	}
-	return g.cluster.Update([]byte(AuthBuck), getGKey(gName), gByte)
+
+	updateRow = model.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: gByte}
+	return updateRow, nil
 }
 
 // UpdateGroup update, not update member infomation.
@@ -141,7 +146,7 @@ func (g *Group) UpdateItems(gName string, items []string) error {
 }
 
 // TODO: manager check
-func (g *Group) GroupRemoveGroup(gName string) ([]string, error) {
+func (g *Group) removeGroup(gName string) ([]string, error) {
 	group, err := g.GetGroup(gName)
 	if err != nil {
 		return nil, err
@@ -151,15 +156,6 @@ func (g *Group) GroupRemoveGroup(gName string) ([]string, error) {
 	managerAndMember = append(managerAndMember, group.Managers...)
 	managerAndMember = append(managerAndMember, group.Members...)
 	return managerAndMember, g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gName))
-}
-
-func (g *Group) CreateIfNotExist(group Group) (bool, error) {
-	_, err := g.GetGroup(group.GName)
-	if err == ErrGroupNotFound {
-		err := g.CreateGroup(group.GName, group.Items)
-		return err == nil, err
-	}
-	return false, err
 }
 
 func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeManagers, removeMembers []string) (model.Row, error) {
