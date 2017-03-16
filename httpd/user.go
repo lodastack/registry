@@ -120,6 +120,9 @@ func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ h
 	gName := strings.ToLower(r.FormValue("gname"))
 	ns := r.FormValue("ns")
 	itemStr := r.FormValue("items")
+	managerStr := r.FormValue("manager")
+	memberStr := r.FormValue("member")
+
 	if ns != "" {
 		gName = s.perm.GetGNameByNs(ns) + "-" + gName
 	}
@@ -129,6 +132,8 @@ func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ h
 	}
 	// TODO: auto members
 	err := s.perm.CreateGroup(gName,
+		strings.Split(managerStr, ","),
+		strings.Split(memberStr, ","),
 		strings.Split(itemStr, ","))
 	if err != nil {
 		s.logger.Errorf("set group fail: %s", err.Error())

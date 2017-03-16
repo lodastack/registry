@@ -90,49 +90,96 @@ func (p *perm) InitGroup(rootNode string) error {
 	if err := p.SetUser(DefaultUser, []string{}); err != nil {
 		return err
 	}
-	if err := p.checkDefaultGroup(); err != nil {
-		return err
-	}
-
-	if err := p.UpdateMember(defaultGName, []string{DefaultUser}, []string{DefaultUser}, Add); err != nil {
-		return err
-	}
-	if err := p.UpdateMember(adminGName, []string{DefaultUser}, []string{DefaultUser}, Add); err != nil {
-		return err
-	}
-
+	// create admin user if not exist.
 	for _, admin := range config.C.Admins {
-		if admin == "" {
-			continue
+		if err := p.createUserIfNotExist(admin); err != nil {
+			return err
 		}
-		p.UpdateMember(adminGName, []string{admin}, []string{admin}, Add)
 	}
-	return nil
+
+	return p.checkDefaultGroup()
 }
 
 // checkDefaultGroup set default/admin group and set to default user.
 func (p *perm) checkDefaultGroup() error {
 	g := Group{
 		GName:   defaultGName,
-		Manager: config.C.Admins,
-		Member:  config.C.Admins,
+		Manager: append(config.C.Admins, DefaultUser),
+		Member:  append(config.C.Admins, DefaultUser),
 		Items:   p.DefaultGroupItems(rootNode)}
-	if _, err := p.CreateIfNotExist(g); err != nil {
+	if err := p.createGroupIfNotExist(g); err != nil {
 		fmt.Printf("init default group error: %s\n", err.Error())
 		return err
 	}
 
 	g = Group{
 		GName:   adminGName,
-		Manager: config.C.Admins,
-		Member:  config.C.Admins,
+		Manager: append(config.C.Admins, DefaultUser),
+		Member:  append(config.C.Admins, DefaultUser),
 		Items:   p.AdminGroupItems(rootNode)}
-	if _, err := p.CreateIfNotExist(g); err != nil {
+	if err := p.createGroupIfNotExist(g); err != nil {
 		fmt.Printf("init admin group error: %s\n", err.Error())
 		return err
 	}
 
 	return nil
+}
+
+func (p *perm) createGroupIfNotExist(g Group) error {
+	_, err := p.GetGroup(g.GName)
+	if err == nil {
+		return nil
+	}
+	if err != ErrGroupNotFound {
+		return err
+	}
+	return p.CreateGroup(g.GName, g.Manager, g.Member, g.Items)
+
+}
+
+func (p *perm) createUserIfNotExist(username string) error {
+	_, err := p.GetUser(username)
+	if err == nil {
+		return nil
+	}
+	if err != ErrUserNotFound {
+		return err
+	}
+	return p.SetUser(DefaultUser, []string{})
+}
+
+func (p *perm) CreateGroup(gName string, manager, member, items []string) error {
+	updateRows := []model.Row{}
+	p.Lock()
+	defer p.Unlock()
+
+	cgroupRow, err := p.createGroup(gName, manager, member, items)
+	if err != nil {
+		return err
+	}
+	updateRows = append(updateRows, cgroupRow)
+
+	for _, username := range manager {
+		if username == "" {
+			continue
+		}
+		uRows, err := p.UpdateUser(username, gName, "")
+		if err != nil {
+			return err
+		}
+		updateRows = append(updateRows, uRows)
+	}
+	for _, username := range member {
+		if username == "" {
+			continue
+		}
+		uRows, err := p.UpdateUser(username, gName, "")
+		if err != nil {
+			return err
+		}
+		updateRows = append(updateRows, uRows)
+	}
+	return p.cluster.Batch(updateRows)
 }
 
 func (p *perm) UpdateMember(gName string, manager []string, members []string, action string) error {
@@ -227,7 +274,7 @@ func (p *perm) RemoveUser(username string) error {
 
 // RemoveGroup remove the group.
 func (p *perm) RemoveGroup(gName string) error {
-	userList, err := p.GroupRemoveGroup(gName)
+	userList, err := p.removeGroup(gName)
 	if err != nil {
 		return err
 	}
