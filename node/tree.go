@@ -361,7 +361,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 					return "", err
 				}
 				for index := range *rl {
-					if (*rl)[index], err = model.NewAlarmResourceByMap(newNode.Name+nodeDeli+parentNs, (*rl)[index], ""); err != nil {
+					if (*rl)[index], err = GenAlarmFromTemplate(newNode.Name+nodeDeli+parentNs, (*rl)[index], ""); err != nil {
 						t.logger.Errorf("make alarm template fail, parent ns: %s, error: %s",
 							parentNs, err.Error())
 					}

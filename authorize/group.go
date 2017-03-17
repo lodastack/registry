@@ -31,7 +31,7 @@ func getGKey(gName string) []byte { return []byte("g-" + gName) }
 // Reverse the ns to view the group by prefix,
 // so that can list the group under one ns.
 // e.g: server1.product1.loda -> loda.product1.server1
-func (g *Group) GetGNameByNs(ns string) string {
+func GetGNameByNs(ns string) string {
 	var gName string
 	gName = ""
 
@@ -44,12 +44,12 @@ func (g *Group) GetGNameByNs(ns string) string {
 	return gName
 }
 
-func (g *Group) GetNsDevGName(ns string) string {
-	return g.GetGNameByNs(ns) + "-dev"
+func GetNsDevGName(ns string) string {
+	return GetGNameByNs(ns) + "-dev"
 }
 
-func (g *Group) GetNsOpGName(ns string) string {
-	return g.GetGNameByNs(ns) + "-op"
+func GetNsOpGName(ns string) string {
+	return GetGNameByNs(ns) + "-op"
 }
 
 func (g *Group) Byte() ([]byte, error) {
@@ -74,7 +74,7 @@ func (g *Group) GetGroup(gName string) (Group, error) {
 }
 
 func (g *Group) ListNsGroup(ns string) ([]Group, error) {
-	gKeyPrefix := getGKey(g.GetGNameByNs(ns))
+	gKeyPrefix := getGKey(GetGNameByNs(ns))
 	groupMap, err := g.cluster.ViewPrefix([]byte(AuthBuck), gKeyPrefix)
 	if err != nil {
 		return nil, err

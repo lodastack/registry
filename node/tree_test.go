@@ -123,6 +123,9 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 			if alarm["db"] != models.DBPrefix+"testl.loda" {
 				t.Fatalf("get nonLeafNode alarm_template not match with expect, db: %s \n", alarm["db"])
 			}
+			if alarm["groups"] != "loda.testl-op" {
+				t.Fatalf("get nonLeafNode alarm_template not match with expect, groups: %s \n", alarm["groups"])
+			}
 		}
 	}
 }

@@ -164,7 +164,7 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 
 	if measurement == "" || period == "" || expression == "" ||
 		every == "" || trigger == "" || level == "" ||
-		alert == "" || message == "" || function == "" ||
+		alert == "" || function == "" ||
 		groupby == "" || groups == "" {
 		return &AlarmResource{}, ErrInvalidParam
 	}

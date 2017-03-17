@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/lodastack/registry/authorize"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 
@@ -124,7 +125,7 @@ func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ h
 	members := r.FormValue("members")
 
 	if ns != "" {
-		gName = s.perm.GetGNameByNs(ns) + "-" + gName
+		gName = authorize.GetGNameByNs(ns) + "-" + gName
 	}
 	if gName == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
