@@ -741,7 +741,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	} else {
 		ops = []string{creater}
 	}
-	err = s.perm.CreateGroup(s.perm.GetNsOpGName(ns), ops, ops, s.perm.AdminGroupItems(ns))
+	err = s.perm.CreateGroup(authorize.GetNsOpGName(ns), ops, ops, s.perm.AdminGroupItems(ns))
 	if err != nil {
 		ReturnServerError(w, fmt.Errorf("Create op group %s fail: %s", gOpName, err.Error()))
 		return
@@ -752,7 +752,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	} else {
 		devs = []string{creater}
 	}
-	gDevName = s.perm.GetNsDevGName(ns)
+	gDevName = authorize.GetNsDevGName(ns)
 	err = s.perm.CreateGroup(gDevName, devs, devs, s.perm.AdminGroupItems(ns))
 	if err != nil {
 		ReturnServerError(w, fmt.Errorf("Create dev group %s fail: %s", gDevName, err.Error()))
@@ -789,10 +789,10 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	if err := s.perm.RemoveGroup(s.perm.GetNsOpGName(ns)); err != nil {
+	if err := s.perm.RemoveGroup(authorize.GetNsOpGName(ns)); err != nil {
 		log.Errorf("remove ns admin group fail: %s", err.Error())
 	}
-	if err := s.perm.RemoveGroup(s.perm.GetNsDevGName(ns)); err != nil {
+	if err := s.perm.RemoveGroup(authorize.GetNsDevGName(ns)); err != nil {
 		log.Errorf("remove ns admin group fail: %s", err.Error())
 	}
 	ReturnOK(w, "success")

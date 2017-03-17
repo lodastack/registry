@@ -98,11 +98,11 @@ func TestListGroup(t *testing.T) {
 	}
 	nsList := []string{"server1.product1.com", "server2.product1.com", "server1.product2.com"}
 	for _, ns := range nsList {
-		if err := perm.CreateGroup(perm.GetGNameByNs(ns)+"-group1", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
+		if err := perm.CreateGroup(GetGNameByNs(ns)+"-group1", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 			t.Fatal("SetGroup fail:", err)
 		}
 	}
-	if err := perm.CreateGroup(perm.GetGNameByNs(nsList[0])+"-group2", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
+	if err := perm.CreateGroup(GetGNameByNs(nsList[0])+"-group2", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
 
@@ -113,13 +113,13 @@ func TestListGroup(t *testing.T) {
 		for _, ns := range nsList {
 			match := false
 			for _, group := range gList {
-				if group.GName == perm.GetGNameByNs(ns)+"-group1" {
+				if group.GName == GetGNameByNs(ns)+"-group1" {
 					match = true
 					break
 				}
 			}
 			if !match {
-				t.Fatalf("ListGroup not match with expect: %s, %+v", perm.GetGNameByNs(ns)+"-group1", gList)
+				t.Fatalf("ListGroup not match with expect: %s, %+v", GetGNameByNs(ns)+"-group1", gList)
 			}
 
 		}

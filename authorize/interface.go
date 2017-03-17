@@ -17,14 +17,6 @@ type GroupInf interface {
 
 	// UpdateGroup update the group.
 	UpdateItems(gName string, items []string) error
-
-	// Get Ns Group Prefix Name.
-	GetGNameByNs(ns string) string
-
-	// Get Ns Op Group Name.
-	GetNsOpGName(ns string) string
-	// Get Ns Dev Group Name.
-	GetNsDevGName(ns string) string
 }
 
 type UserInf interface {
