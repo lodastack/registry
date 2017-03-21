@@ -585,10 +585,6 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 
-	if len(res) == 0 {
-		ReturnNotFound(w, "No resources found.")
-		return
-	}
 	ReturnJson(w, 200, res)
 }
 
