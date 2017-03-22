@@ -293,13 +293,17 @@ func (s *Store) APIPeers() (map[string]string, error) {
 		return nil, err
 	}
 
-	apiPeers := make(map[string]string, len(s.meta.APIPeers))
-	for k, v := range s.meta.APIPeers {
+	apiPeers := make(map[string]string)
+	for _, raftAddr := range raftPeers {
+		apiAddr, _ := s.meta.APIPeers[raftAddr]
+		apiPeers[raftAddr] = apiAddr
+	}
+
+	// clear APIPeers by Peers.
+	for k := range s.meta.APIPeers {
 		if _, ok := common.ContainString(raftPeers, k); !ok {
 			delete(s.meta.APIPeers, k)
-			continue
 		}
-		apiPeers[k] = v
 	}
 	return apiPeers, nil
 }
