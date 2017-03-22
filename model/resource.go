@@ -247,6 +247,9 @@ func (rl *ResourceList) Marshal() ([]byte, error) {
 
 	var n int
 	for _, resource := range *rl {
+		if resource == nil {
+			continue
+		}
 		resourceByte, err := resource.Marshal()
 		if err != nil {
 			return raw, err

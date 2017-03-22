@@ -343,11 +343,14 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 		// Set the template of parent node to this new node.
 		templateRes, err := t.templateOfNode(parent.ID)
 		if err != nil {
-			return "nil", err
+			return "", err
 		}
 		for k, resStore := range templateRes {
 			if nodeType == Leaf {
 				k = k[len(template):]
+			}
+			if len(resStore) == 0 {
+				continue
 			}
 
 			// generate alarm resource new Ns.
@@ -364,15 +367,18 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 					if (*rl)[index], err = GenAlarmFromTemplate(newNode.Name+nodeDeli+parentNs, (*rl)[index], ""); err != nil {
 						t.logger.Errorf("make alarm template fail, parent ns: %s, error: %s",
 							parentNs, err.Error())
+						return "", err
 					}
 				}
 				resStore, err = rl.Marshal()
 				if err != nil {
 					t.logger.Errorf("marshal alarm template fail, error: %s", err.Error())
+					return "", err
 				}
 			}
 			if err = t.setByteToStore(nodeId, k, resStore); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when newnode %s, error: %s", nodeId, err.Error())
+				return "", err
 			}
 		}
 	}
