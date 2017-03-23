@@ -121,7 +121,7 @@ type Store struct {
 	dbPath   string
 	ready    chan struct{} // Wait for snapshot
 
-	mu sync.Mutex
+	mu sync.RWMutex
 	db *bolt.DB // The backend bolt store for the system.
 
 	cache   *Cache
@@ -375,6 +375,8 @@ func (s *Store) View(bucket, key []byte) ([]byte, error) {
 		return v, nil
 	}
 
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	err := s.db.View(
 		func(tx *bolt.Tx) error {
 			b := tx.Bucket(bucket)
