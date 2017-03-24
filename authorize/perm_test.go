@@ -27,13 +27,13 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatal("NewPerm fail:", err.Error())
 	}
 
-	if err = perm.SetUser("user1", []string{}); err != nil {
+	if err = perm.SetUser("user1", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if _, err = perm.GetUser("user1"); err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user2", []string{}); err != nil {
+	if err = perm.SetUser("user2", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if _, err = perm.GetUser("user2"); err != nil {
@@ -110,13 +110,13 @@ func TestRemoveUser(t *testing.T) {
 	}
 
 	// case 1
-	if err = perm.SetUser("user1", []string{}); err != nil {
+	if err = perm.SetUser("user1", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user2", []string{}); err != nil {
+	if err = perm.SetUser("user2", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user3", []string{}); err != nil {
+	if err = perm.SetUser("user3", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{""}); err != nil {
@@ -182,13 +182,13 @@ func TestRemoveGroup(t *testing.T) {
 		t.Fatal("NewPerm fail:", err.Error())
 	}
 
-	if err = perm.SetUser("user1", []string{}); err != nil {
+	if err = perm.SetUser("user1", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user2", []string{}); err != nil {
+	if err = perm.SetUser("user2", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user3", []string{}); err != nil {
+	if err = perm.SetUser("user3", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{}); err != nil {
@@ -356,3 +356,22 @@ func (m *mockTransport) Accept() (net.Conn, error) { return m.ln.Accept() }
 func (m *mockTransport) Close() error { return m.ln.Close() }
 
 func (m *mockTransport) Addr() net.Addr { return m.ln.Addr() }
+
+func openPerm(t testing.T) (Perm, *store.Store) {
+	s := mustNewStore(&t)
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+
+	s.WaitForLeader(10 * time.Second)
+	perm, err := NewPerm(s)
+	if err != nil {
+		t.Fatal("NewPerm fail:", err.Error())
+	}
+	return perm, s
+}
+
+func closePerm(s *store.Store) {
+	s.Close(true)
+	os.RemoveAll(s.Path())
+}

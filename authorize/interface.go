@@ -23,8 +23,12 @@ type UserInf interface {
 	// get user.
 	GetUser(username string) (User, error)
 
+	// GetUserList return a map[string]User,
+	// key is username and value is User.
+	GetUserList(usernames []string) (map[string]User, error)
+
 	// create/update group.
-	SetUser(username string, dashboard []string) error
+	SetUser(username, mobile string) error
 
 	// Check whether user exist or not.
 	CheckUserExist(username string) (bool, error)

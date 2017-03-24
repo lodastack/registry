@@ -31,6 +31,7 @@ func (s *Service) initPermissionHandler() {
 	s.router.GET("/api/v1/event/group", s.HandlerGroupGet)
 
 	s.router.GET("/api/v1/perm/user", s.HandlerUserGet)
+	s.router.GET("/api/v1/perm/user/list", s.HandlerUserListGet)
 	s.router.PUT("/api/v1/perm/user", s.HandlerUserSet)
 	s.router.DELETE("/api/v1/perm/user", s.HandlerRemoveUser)
 }
@@ -61,7 +62,7 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 		s.logger.Errorf("check user fail: %s", err.Error())
 	} else if !ok {
 		// create user if first login.
-		if err = s.perm.SetUser(user, nil); err != nil {
+		if err = s.perm.SetUser(user, ""); err != nil {
 			s.logger.Errorf("set user fail: %s", err.Error())
 		}
 	}
@@ -211,17 +212,28 @@ func (s *Service) HandlerUserGet(w http.ResponseWriter, r *http.Request, _ httpr
 	ReturnJson(w, 200, u)
 }
 
+// HandlerUserListGet handle query user list resquest
+func (s *Service) HandlerUserListGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	usernameStr := r.FormValue("usernames")
+	usernames := strings.Split(usernameStr, ",")
+
+	userData, err := s.perm.GetUserList(usernames)
+	if err != nil {
+		ReturnServerError(w, err)
+	}
+	ReturnJson(w, 200, userData)
+}
+
 // HandlerGroupGet handle set user resquest
 func (s *Service) HandlerUserSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	username := strings.ToLower(r.FormValue("username"))
-	dashboardStr := r.FormValue("dashboards")
+	mobile := r.FormValue("mobile")
 	if username == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	dashboards := strings.Split(dashboardStr, ",")
 
-	if err := s.perm.SetUser(username, dashboards); err != nil {
+	if err := s.perm.SetUser(username, mobile); err != nil {
 		s.logger.Errorf("set user fail: %s", err.Error())
 		ReturnNotFound(w, "set user fail")
 		return
