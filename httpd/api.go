@@ -572,7 +572,7 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 	k := r.FormValue("k")
 	v := r.FormValue("v")
 	searchMod := r.FormValue("mod")
-	if ns == "" || resType == "" || k == "" || v == "" {
+	if ns == "" || resType == "" || v == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
