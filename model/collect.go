@@ -87,6 +87,15 @@ func UpdateCollectName(collects ...Resource) error {
 			return ErrInvalidParam
 		}
 
+		// do not update name if the collect resource is base system collect.
+		collectType := collects[index]["measurement_type"]
+		if collectType != PortCollect &&
+			collectType != ProcCollect &&
+			collectType != PluginCollect &&
+			collectType != ApiCollect {
+			continue
+		}
+
 		for _, nameLetter := range collects[index]["name"] {
 			if nameLetter == '-' ||
 				(nameLetter >= 'a' && nameLetter <= 'z') ||
