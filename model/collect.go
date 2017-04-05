@@ -58,22 +58,32 @@ func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 	return resNames[:cnt], true
 }
 
-func GenCollectName(collectType, collectName string) string {
-	return collectType + "." + collectName
+func GenCollectName(res Resource) string {
+	if res["measurement_type"] == PortCollect {
+		return res["measurement_type"] + "." + res["name"] + "." + res["port"]
+	}
+
+	return res["measurement_type"] + "." + res["name"]
 }
 
 // collectTypeIllegle return true if collect type is illegal.
-func collectTypeIllegal(collectType string) bool {
+func collectTypeIllegal(res Resource) bool {
+	collectType, _ := res["measurement_type"]
 	if collectType == "" {
 		return true
+	}
+	switch collectType {
+	case PortCollect:
+		if port, _ := res["port"]; port == "" {
+			return true
+		}
 	}
 	return false
 }
 
 func UpdateCollectName(collects ...Resource) error {
 	for index := range collects {
-		collectType, _ := collects[index]["measurement_type"]
-		if collectTypeIllegal(collectType) {
+		if collectTypeIllegal(collects[index]) {
 			return ErrInvalidParam
 		}
 
@@ -86,7 +96,8 @@ func UpdateCollectName(collects ...Resource) error {
 			}
 			return ErrInvalidParam
 		}
-		collects[index]["name"] = GenCollectName(collectType, collects[index]["name"])
+
+		collects[index]["name"] = GenCollectName(collects[index])
 	}
 	return nil
 }
