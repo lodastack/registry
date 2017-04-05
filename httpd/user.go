@@ -165,7 +165,6 @@ func (s *Service) HandlerUpdateGroupItem(w http.ResponseWriter, r *http.Request,
 
 func (s *Service) HandlerUpdateGroupMember(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	gName := strings.ToLower(r.FormValue("gname"))
-	action := r.FormValue("action")
 	managerStr := r.FormValue("managers")
 	memberStr := r.FormValue("members")
 	managers, members := []string{}, []string{}
@@ -175,7 +174,7 @@ func (s *Service) HandlerUpdateGroupMember(w http.ResponseWriter, r *http.Reques
 	if memberStr != "" {
 		members = strings.Split(memberStr, ",")
 	}
-	if err := s.perm.UpdateMember(gName, managers, members, action); err != nil {
+	if err := s.perm.UpdateMember(gName, managers, members); err != nil {
 		ReturnServerError(w, err)
 		return
 	}

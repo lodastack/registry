@@ -46,7 +46,7 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatal("GetGroup fail:", err.Error())
 	}
 
-	err = perm.UpdateMember("group1", []string{"user1"}, []string{}, Add)
+	err = perm.UpdateMember("group1", []string{"user1"}, []string{})
 	if err != nil {
 		t.Fatal("TestUpdateGroupMember case1 fail", err)
 	}
@@ -59,12 +59,12 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatalf("TestUpdateGroupMember case1 fail, %v, group: %+v", err, group)
 	}
 
-	err = perm.UpdateMember("group1", []string{}, []string{"user2"}, Add)
+	err = perm.UpdateMember("group1", []string{}, []string{"user2"})
 	if err != nil {
 		t.Fatal("TestUpdateGroupMember case2 fail", err)
 	}
 	user, err = perm.GetUser("user1")
-	if err != nil || len(user.Groups) != 2 || user.Groups[1] != "group1" {
+	if err != nil || len(user.Groups) != 1 {
 		t.Fatalf("TestUpdateGroupMember case2 fail, %v, user: %+v", err, user)
 	}
 	user, err = perm.GetUser("user2")
@@ -72,24 +72,24 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatalf("TestUpdateGroupMember case2 fail, %v, user: %+v", err, user)
 	}
 	group, err = perm.GetGroup("group1")
-	if err != nil || len(group.Managers) != 1 || group.Managers[0] != "user1" || len(group.Members) != 1 || group.Members[0] != "user2" {
+	if err != nil || len(group.Managers) != 0 || len(group.Members) != 1 || group.Members[0] != "user2" {
 		t.Fatalf("TestUpdateGroupMember case2 fail, %v, group: %+v", err, group)
 	}
 
-	err = perm.UpdateMember("group1", []string{"user1"}, []string{"user2"}, Remove)
+	err = perm.UpdateMember("group1", []string{"user1"}, []string{"user2"})
 	if err != nil {
 		t.Fatal("TestUpdateGroupMember case3 fail", err)
 	}
 	user, err = perm.GetUser("user1")
-	if err != nil || len(user.Groups) != 1 {
+	if err != nil || len(user.Groups) != 2 {
 		t.Fatalf("TestUpdateGroupMember case3 fail, %v, user: %+v", err, user)
 	}
 	user, err = perm.GetUser("user2")
-	if err != nil || len(user.Groups) != 1 {
+	if err != nil || len(user.Groups) != 2 {
 		t.Fatalf("TestUpdateGroupMember case3 fail, %v, user: %+v", err, user)
 	}
 	group, err = perm.GetGroup("group1")
-	if err != nil || len(group.Managers) != 0 || len(group.Members) != 0 {
+	if err != nil || len(group.Managers) != 1 || len(group.Members) != 1 {
 		t.Fatalf("TestUpdateGroupMember case3 fail, %v, group: %+v", err, group)
 	}
 }
@@ -122,7 +122,7 @@ func TestRemoveUser(t *testing.T) {
 	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{""}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
-	if err = perm.UpdateMember("group1", []string{"user1", "user3"}, []string{"user2", "user3"}, Add); err != nil {
+	if err = perm.UpdateMember("group1", []string{"user1", "user3"}, []string{"user2", "user3"}); err != nil {
 		t.Fatal("TestUpdateGroupMember case3 fail", err)
 	}
 
@@ -201,13 +201,13 @@ func TestRemoveGroup(t *testing.T) {
 		t.Fatal("SetGroup fail:", err)
 	}
 
-	if err = perm.UpdateMember("group1", []string{"user1", "user3"}, []string{"user2", "user3"}, Add); err != nil {
+	if err = perm.UpdateMember("group1", []string{"user1", "user3"}, []string{"user2", "user3"}); err != nil {
 		t.Fatal("TestUpdateGroupMember case3 fail", err)
 	}
-	if err = perm.UpdateMember("group2", []string{"user2", "user3"}, []string{"user2", "user3"}, Add); err != nil {
+	if err = perm.UpdateMember("group2", []string{"user2", "user3"}, []string{"user2", "user3"}); err != nil {
 		t.Fatal("TestUpdateGroupMember case3 fail", err)
 	}
-	if err = perm.UpdateMember("group3", []string{"user1"}, []string{}, Add); err != nil {
+	if err = perm.UpdateMember("group3", []string{"user1"}, []string{}); err != nil {
 		t.Fatal("TestUpdateGroupMember case3 fail", err)
 	}
 	if user, err := perm.GetUser("user1"); err != nil || len(user.Groups) != 3 {
