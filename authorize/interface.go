@@ -53,7 +53,7 @@ type Perm interface {
 	CreateGroup(gName string, managers, members, items []string) error
 
 	// UpdateGroupMember update group member and user groups.
-	UpdateMember(group string, manager []string, members []string, action string) error
+	UpdateMember(group string, managers, members []string) error
 
 	// remove group.
 	RemoveUser(username string) error

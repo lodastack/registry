@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 )
@@ -182,73 +183,51 @@ func (p *perm) CreateGroup(gName string, managers, members, items []string) erro
 	return p.cluster.Batch(updateRows)
 }
 
-func (p *perm) UpdateMember(gName string, manager []string, members []string, action string) error {
+func (p *perm) UpdateMember(gName string, managers, members []string) error {
 	updateRows := []model.Row{}
 	p.Lock()
 	defer p.Unlock()
 
-	switch action {
-	case Add:
-		for _, username := range manager {
-			if username == "" {
-				continue
-			}
-			uRows, err := p.UpdateUser(username, gName, "")
-			if err != nil {
-				return err
-			}
-			updateRows = append(updateRows, uRows)
-		}
-		for _, username := range members {
-			if username == "" {
-				continue
-			}
-			uRows, err := p.UpdateUser(username, gName, "")
-			if err != nil {
-				return err
-			}
-			updateRows = append(updateRows, uRows)
-		}
-		if len(updateRows) == 0 {
-			return nil
-		}
-		gRows, err := p.UpdateGroupMember(gName, manager, members, []string{}, []string{})
-		if err != nil {
-			return err
-		}
-		updateRows = append(updateRows, gRows)
-	case Remove:
-		for _, username := range manager {
-			if username == "" {
-				continue
-			}
-			uRows, err := p.UpdateUser(username, "", gName)
-			if err != nil {
-				return err
-			}
-			updateRows = append(updateRows, uRows)
-		}
-		for _, username := range members {
-			if username == "" {
-				continue
-			}
-			uRows, err := p.UpdateUser(username, "", gName)
-			if err != nil {
-				return err
-			}
-			updateRows = append(updateRows, uRows)
-		}
-		if len(updateRows) == 0 {
-			return nil
-		}
-		gRows, err := p.UpdateGroupMember(gName, []string{}, []string{}, manager, members)
-		if err != nil {
-			return err
-		}
-		updateRows = append(updateRows, gRows)
-	default:
-		return ErrInvalidParam
+	group, err := p.GetGroup(gName)
+	if err != nil {
+		return err
 	}
+
+	removeManagers := genRemoveUsers(group.Managers, managers)
+	removeMembers := genRemoveUsers(group.Members, members)
+	removeUsers := append(removeManagers, removeMembers...)
+
+	addManagers := genAddUsers(group.Managers, managers)
+	addMembers := genAddUsers(group.Members, members)
+	addUsers := append(addManagers, addMembers...)
+
+	for _, username := range removeUsers {
+		if username == "" {
+			continue
+		}
+		uRows, err := p.UpdateUser(username, "", gName)
+		if err != nil {
+			return err
+		}
+		updateRows = append(updateRows, uRows)
+	}
+
+	for _, username := range addUsers {
+		if username == "" {
+			continue
+		}
+		uRows, err := p.UpdateUser(username, gName, "")
+		if err != nil {
+			return err
+		}
+		updateRows = append(updateRows, uRows)
+	}
+
+	gRows, err := p.UpdateGroupMember(gName, addManagers, addMembers, removeManagers, removeMembers)
+	if err != nil {
+		return err
+	}
+	updateRows = append(updateRows, gRows)
 
 	return p.cluster.Batch(updateRows)
 }
@@ -292,4 +271,32 @@ func (p *perm) RemoveGroup(gName string) error {
 		return nil
 	}
 	return p.cluster.Batch(updateGroupRows)
+}
+
+// genAddUsers return the user list which exist in newUsers but not in oldUsers.
+func genAddUsers(oldUsers, newUsers []string) []string {
+	addUsers := make([]string, len(newUsers))
+	var addCnt int
+	for _, user := range newUsers {
+		if _, contain := common.ContainString(oldUsers, user); !contain {
+			addUsers[addCnt] = user
+			addCnt++
+		}
+	}
+
+	return addUsers[:addCnt]
+}
+
+// genRemoveUsers return the user list which exist in oldUsers but not in newUsers.
+func genRemoveUsers(oldUsers, newUsers []string) []string {
+	removeUsers := make([]string, len(oldUsers))
+	var removeCnt int
+	for _, user := range oldUsers {
+		if _, contain := common.ContainString(newUsers, user); !contain {
+			removeUsers[removeCnt] = user
+			removeCnt++
+		}
+	}
+
+	return removeUsers[:removeCnt]
 }
