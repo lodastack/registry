@@ -97,10 +97,10 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
 
-	if res, err := tree.GetResourceList(rootNode, template+"collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResourceList(rootNode, template+"collect"); err != nil || len(*res) != 33 {
 		t.Fatalf("get root collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
-	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != 33 {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
 	if alarms, err := tree.GetResourceList("testnl.loda", template+model.Alarm); err != nil || len(*alarms) != 1 {
@@ -113,7 +113,7 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 		}
 	}
 
-	if res, err := tree.GetResourceList("testl.loda", "collect"); err != nil || len(*res) != 31 {
+	if res, err := tree.GetResourceList("testl.loda", "collect"); err != nil || len(*res) != 33 {
 		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
 	if alarms, err := tree.GetResourceList("testl.loda", model.Alarm); err != nil || len(*alarms) != 1 {
