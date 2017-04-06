@@ -205,4 +205,48 @@ func TestValueSearchHasKey(t *testing.T) {
 	if len(result) != 0 {
 		t.Fatal("key-value search result not match: ", err)
 	}
+
+	// case 6-1: search value without key
+	search = ResourceSearch{
+		Key:   "",
+		Value: []string{"res1_v1"},
+		Fuzzy: false,
+	}
+	search.Init()
+	result, err = search.Process(searchByte)
+	if err != nil || len(result) != 1 || result[0]["_id"] != "uuid1" {
+		t.Log("search case 6-1:res result:", result)
+	}
+
+	// case 6-2: search value without key
+	search = ResourceSearch{
+		Key:   "",
+		Value: []string{"res1_v2"},
+		Fuzzy: false,
+	}
+	search.Init()
+	result, err = search.Process(searchByte)
+	if err != nil || len(result) != 1 || result[0]["_id"] != "uuid1" {
+		t.Log("search case 6-2:res result:", result)
+	}
+
+	// case 6-3: search value without key
+	search = ResourceSearch{
+		Key:   "",
+		Value: []string{"res2_v2"},
+		Fuzzy: false,
+	}
+	if err != nil || len(result) != 1 || result[0]["_id"] != "uuid2" {
+		t.Log("search case 6-3:res result:", result)
+	}
+
+	// case 6-4: search value without key
+	search = ResourceSearch{
+		Key:   "",
+		Value: []string{"res"},
+		Fuzzy: false,
+	}
+	if err != nil || len(result) != 2 {
+		t.Log("search case 6-1:res result:", result)
+	}
 }
