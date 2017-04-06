@@ -528,7 +528,11 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 	}
 
 	// Check pk property.
-	pk := model.PkProperty[param.ResType]
+	resType := param.ResType
+	if strings.HasPrefix(param.ResType, model.TemplatePrefix) {
+		resType = param.ResType[len(model.TemplatePrefix):]
+	}
+	pk := model.PkProperty[resType]
 	pkValue, _ := param.R.ReadProperty(pk)
 	if pkValue == "" {
 		s.logger.Errorf("cannot append resource without pk: %+v", param.R)

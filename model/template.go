@@ -98,6 +98,16 @@ var (
 		"interval":         "10",
 		"measurement_type": "DISK",
 	}, Resource{
+		"comment":          "磁盘写IO",
+		"interval":         "10",
+		"measurement_type": "DISK",
+		"name":             "disk.io.write_requests",
+	}, Resource{
+		"comment":          "磁盘读IO",
+		"interval":         "10",
+		"measurement_type": "DISK",
+		"name":             "disk.io.read_requests",
+	}, Resource{
 		"collect_type":     "FLOW",
 		"degree":           "0",
 		"file_path":        "/var/log/kernel",
