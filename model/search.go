@@ -166,8 +166,8 @@ func (s *ResourceSearch) ValueSearch(raw []byte) (ResourceList, error) {
 				case len(deliProp):
 					kvFlag = propertyKey
 					tmpk = make([]byte, 0)
-					// If the value neet to search.
-					if matchValue {
+					// Check the value If need and the resource not matched.
+					if matchValue && !matchFlag {
 						matchValue = false
 						matchFlag = search(raw[vPos:index-deliLen], s.Value, s.Fuzzy)
 					}
