@@ -35,7 +35,7 @@ func (a *AlarmResource) SetID(id string) {
 }
 
 func (a *AlarmResource) SetQuery(function, rp, measurement, period, where,
-	expression, every, groupby, trigger, shift, value string) error {
+	expression, every, groupby, trigger, shift, value, stime, etime string) error {
 	a.Func = function
 	a.RP = rp
 	a.Measurement = measurement
@@ -47,6 +47,8 @@ func (a *AlarmResource) SetQuery(function, rp, measurement, period, where,
 	a.Shift = shift
 	a.Value = value
 	a.GroupBy = groupby
+	a.STime = stime
+	a.ETime = etime
 	return nil
 }
 
@@ -157,6 +159,9 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	alert, _ := data["alert"]
 	message, _ := data["message"]
 
+	stime, _ := data["starttime"]
+	etime, _ := data["endtime"]
+
 	HostBlockPeriod, _ := data["hostblockperiod"]
 	HostBlockTimes, _ := data["hostblocktimes"]
 	NsBlockPeriod, _ := data["nsblockperiod"]
@@ -175,7 +180,7 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	}
 
 	if err := alarm.SetQuery(function, rp, measurement, period,
-		where, expression, every, groupby, trigger, shift, value); err != nil {
+		where, expression, every, groupby, trigger, shift, value, stime, etime); err != nil {
 		return alarm, err
 	}
 	if err := alarm.SetAlert(level, groups, alert, message); err != nil {
