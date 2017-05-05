@@ -235,6 +235,7 @@ func (s *Service) initHandler() {
 	// For event, just allow Get method
 	s.router.GET("/api/v1/event/ns", s.handlerNsGet)
 	s.router.GET("/api/v1/event/resource", s.handlerResourceGet)
+	s.router.GET("/api/v1/event/resource/search", s.handlerSearch)
 	s.router.GET("/api/v1/event/user/list", s.HandlerUserListGet)
 
 	s.router.GET("/api/v1/peer", s.handlerPeers)
