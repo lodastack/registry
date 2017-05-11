@@ -44,6 +44,9 @@ func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceL
 	allRes := model.ResourceList{}
 	leafIDs, err := node.leafChildIDs()
 	if err != nil {
+		if err == ErrNoLeafChild {
+			return nil, nil
+		}
 		return nil, err
 	}
 
