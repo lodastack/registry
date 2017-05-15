@@ -246,6 +246,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/db/restore", s.handlerRestore)
 
 	s.initPermissionHandler()
+	s.initDashboardHandler()
 }
 
 func cors(inner http.Handler) http.Handler {
