@@ -97,4 +97,6 @@ type TreeMethod interface {
 
 	// Remove resource from one ns to another.
 	MoveResource(oldNs, newNs, resType string, resourceID ...string) error
+
+	DashboardInf
 }
