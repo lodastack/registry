@@ -126,12 +126,20 @@ func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ h
 	members := r.FormValue("members")
 
 	if ns != "" {
-		gName = authorize.GetGNameByNs(ns) + "-" + gName
+		gName = authorize.GetGNameByNs(ns, gName)
 	}
 	if gName == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
+	for _, gnameLetter := range gName {
+		if gnameLetter >= 'a' && gnameLetter <= 'z' {
+			continue
+		}
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
 	// TODO: auto members
 	err := s.perm.CreateGroup(gName,
 		strings.Split(managers, ","),

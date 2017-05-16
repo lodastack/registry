@@ -96,53 +96,35 @@ func TestListGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal("NewPerm fail:", err.Error())
 	}
-	nsList := []string{"server1.product1.com", "server2.product1.com", "server1.product2.com"}
+
+	// case 1
+	nsList := []string{"server1.product1.com", "server2.product1.com"}
 	for _, ns := range nsList {
-		if err := perm.CreateGroup(GetGNameByNs(ns)+"-group1", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
+		if err := perm.CreateGroup(GetGNameByNs(ns, "group1"), []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 			t.Fatal("SetGroup fail:", err)
 		}
 	}
-	if err := perm.CreateGroup(GetGNameByNs(nsList[0])+"-group2", []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
+	if err := perm.CreateGroup(GetGNameByNs(nsList[0], "group2"), []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
 		t.Fatal("SetGroup fail:", err)
 	}
-
-	// case 1
-	if gList, err := perm.ListNsGroup("com"); err != nil || len(gList) != 4 {
+	if gList, err := perm.ListNsGroup("server1.product1.com"); err != nil || len(gList) != 2 {
 		t.Fatalf("ListGroup not match with expect: %+v", gList)
-	} else {
-		for _, ns := range nsList {
-			match := false
-			for _, group := range gList {
-				if group.GName == GetGNameByNs(ns)+"-group1" {
-					match = true
-					break
-				}
-			}
-			if !match {
-				t.Fatalf("ListGroup not match with expect: %s, %+v", GetGNameByNs(ns)+"-group1", gList)
-			}
-
-		}
-
-		match := false
-		for _, group := range gList {
-			if group.GName == "com.product1.server1-group2" {
-				match = true
-				break
-			}
-		}
-		if !match {
-			t.Fatalf("ListGroup not match with expect: %+v", gList)
-		}
+	}
+	if gList, err := perm.ListNsGroup("server2.product1.com"); err != nil || len(gList) != 1 {
+		t.Fatalf("ListGroup not match with expect: %+v", gList)
 	}
 
 	// case 2
-	if gList, err := perm.ListNsGroup("product1.com"); err != nil || len(gList) != 3 {
+	nsList = []string{"server1.product2.com", "server11.product2.com", "server1-test.product2.com"}
+	for _, ns := range nsList {
+		if err := perm.CreateGroup(GetGNameByNs(ns, "group"), []string{}, []string{}, []string{"ns-resource-method"}); err != nil {
+			t.Fatal("SetGroup fail:", err)
+		}
+	}
+	if gList, err := perm.ListNsGroup("server1.product2.com"); err != nil || len(gList) != 1 {
 		t.Fatalf("ListGroup not match with expect: %+v", gList)
 	}
-
-	// case 3
-	if gList, err := perm.ListNsGroup("server1.product1.com"); err != nil || len(gList) != 2 {
+	if gList, err := perm.ListNsGroup("server1-test.product2.com"); err != nil || len(gList) != 1 {
 		t.Fatalf("ListGroup not match with expect: %+v", gList)
 	}
 }
