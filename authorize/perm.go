@@ -68,9 +68,6 @@ func (p *perm) DefaultGroupItems(rootNode string) []string {
 	for index, res := range model.Templates {
 		items[index] = fmt.Sprintf("%s-%s-%s", rootNode, res, "GET")
 	}
-	items[len(items)-3] = fmt.Sprintf("%s-%s-%s", rootNode, "group", "PUT")
-	items[len(items)-2] = fmt.Sprintf("%s-%s-%s", rootNode, "group", "POST")
-	items[len(items)-1] = fmt.Sprintf("%s-%s-%s", rootNode, "group", "DELETE")
 	return items
 }
 

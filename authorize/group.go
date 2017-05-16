@@ -13,7 +13,8 @@ var (
 	ErrGroupNotFound     = errors.New("group not found")
 	ErrGroupAlreadyExist = errors.New("group already exist")
 
-	nsSep = "."
+	nsSep        string = "."
+	groupNameSep byte   = '-'
 )
 
 type Group struct {
@@ -27,29 +28,28 @@ type Group struct {
 
 func getGKey(gName string) []byte { return []byte("g-" + gName) }
 
-// GetGNameByNs reverse the split of ns.
-// Reverse the ns to view the group by prefix,
-// so that can list the group under one ns.
-// e.g: server1.product1.loda -> loda.product1.server1
-func GetGNameByNs(ns string) string {
-	var gName string
-	gName = ""
+// GetGNameByNs reverse the ns and join the name.
+// The purpose of reverse the ns is list the group by prefix,
+// so that can list the group by ns.
+// e.g: server1.product1.loda, op -> loda.product1.server1-op
+func GetGNameByNs(ns, name string) string {
+	return reverseNs(ns) + string(groupNameSep) + name
+}
 
+func reverseNs(ns string) string {
 	nsSplit := strings.Split(ns, nsSep)
 	for i, j := 0, len(nsSplit)-1; i < j; i, j = i+1, j-1 {
 		nsSplit[i], nsSplit[j] = nsSplit[j], nsSplit[i]
 	}
-
-	gName = strings.Join(nsSplit, nsSep)
-	return gName
+	return strings.Join(nsSplit, nsSep)
 }
 
 func GetNsDevGName(ns string) string {
-	return GetGNameByNs(ns) + "-dev"
+	return GetGNameByNs(ns, "dev")
 }
 
 func GetNsOpGName(ns string) string {
-	return GetGNameByNs(ns) + "-op"
+	return GetGNameByNs(ns, "op")
 }
 
 func (g *Group) Byte() ([]byte, error) {
@@ -74,15 +74,13 @@ func (g *Group) GetGroup(gName string) (Group, error) {
 }
 
 func (g *Group) ListNsGroup(ns string) ([]Group, error) {
-	gKeyPrefix := getGKey(GetGNameByNs(ns))
-	groupMap, err := g.cluster.ViewPrefix([]byte(AuthBuck), gKeyPrefix)
+	gNamePrefix := GetGNameByNs(ns, "")
+	groupMap, err := g.cluster.ViewPrefix([]byte(AuthBuck), getGKey(gNamePrefix))
 	if err != nil {
 		return nil, err
 	}
 
-	var GroupList []Group
-	var i int
-	GroupList, i = make([]Group, len(groupMap)), 0
+	GroupList, i := make([]Group, len(groupMap)), 0
 	for _, gByte := range groupMap {
 		if len(gByte) == 0 {
 			continue
@@ -92,8 +90,12 @@ func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 		if err != nil {
 			return GroupList, err
 		}
-		GroupList[i] = group
-		i++
+
+		lastIndex := strings.LastIndexByte(group.GName, groupNameSep)
+		if lastIndex != -1 && gNamePrefix == group.GName[:lastIndex+1] {
+			GroupList[i] = group
+			i++
+		}
 	}
 	return GroupList[:i], nil
 }
