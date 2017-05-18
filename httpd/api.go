@@ -414,7 +414,7 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 		}
 	}
 
-	if err := s.tree.SetAgentInfo(report); err != nil {
+	if err := s.tree.AgentReport(report); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	}
@@ -801,5 +801,5 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 }
 
 func (s *Service) handlerAgents(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ReturnJson(w, 200, s.tree.GetAgents())
+	ReturnJson(w, 200, s.tree.GetReportInfo())
 }

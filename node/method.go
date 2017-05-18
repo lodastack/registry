@@ -45,10 +45,10 @@ type TreeMethod interface {
 	AllNodes() (*Node, error)
 
 	// SetAgentInfo set agent info
-	SetAgentInfo(info m.Report) error
+	AgentReport(info m.Report) error
 
 	// GetAgents return agent info
-	GetAgents() map[string]m.Report
+	GetReportInfo() map[string]m.Report
 
 	// GetNodesById return exact node by nodeid.
 	GetNode(id string) (*Node, error)
