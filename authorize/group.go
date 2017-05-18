@@ -13,6 +13,8 @@ var (
 	ErrGroupNotFound     = errors.New("group not found")
 	ErrGroupAlreadyExist = errors.New("group already exist")
 
+	OP                  = "op"
+	DEV                 = "dev"
 	nsSep        string = "."
 	groupNameSep byte   = '-'
 )
@@ -33,23 +35,30 @@ func getGKey(gName string) []byte { return []byte("g-" + gName) }
 // so that can list the group by ns.
 // e.g: server1.product1.loda, op -> loda.product1.server1-op
 func GetGNameByNs(ns, name string) string {
-	return reverseNs(ns) + string(groupNameSep) + name
+	return joinGroupName(reverceNs(ns), name)
 }
 
-func reverseNs(ns string) string {
+func reverceNs(ns string) string {
 	nsSplit := strings.Split(ns, nsSep)
-	for i, j := 0, len(nsSplit)-1; i < j; i, j = i+1, j-1 {
-		nsSplit[i], nsSplit[j] = nsSplit[j], nsSplit[i]
-	}
-	return strings.Join(nsSplit, nsSep)
+	return strings.Join(common.Reverse(nsSplit), nsSep)
+}
+
+func joinGroupName(ns, name string) string {
+	return ns + string(groupNameSep) + name
+}
+
+func readGName(gname string) (ns, name string) {
+	lastIndex := strings.LastIndexByte(gname, groupNameSep)
+	ns, name = gname[:lastIndex], gname[lastIndex:]
+	return
 }
 
 func GetNsDevGName(ns string) string {
-	return GetGNameByNs(ns, "dev")
+	return GetGNameByNs(ns, DEV)
 }
 
 func GetNsOpGName(ns string) string {
-	return GetGNameByNs(ns, "op")
+	return GetGNameByNs(ns, OP)
 }
 
 func (g *Group) Byte() ([]byte, error) {
@@ -75,6 +84,7 @@ func (g *Group) GetGroup(gName string) (Group, error) {
 
 func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 	gNamePrefix := GetGNameByNs(ns, "")
+	reverseNs := reverceNs(ns)
 	groupMap, err := g.cluster.ViewPrefix([]byte(AuthBuck), getGKey(gNamePrefix))
 	if err != nil {
 		return nil, err
@@ -91,8 +101,8 @@ func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 			return GroupList, err
 		}
 
-		lastIndex := strings.LastIndexByte(group.GName, groupNameSep)
-		if lastIndex != -1 && gNamePrefix == group.GName[:lastIndex+1] {
+		groupNs, _ := readGName(group.GName)
+		if reverseNs == groupNs {
 			GroupList[i] = group
 			i++
 		}
