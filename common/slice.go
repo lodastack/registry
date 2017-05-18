@@ -30,3 +30,14 @@ func RemoveIfContain(sl []string, v string) ([]string, bool) {
 	sl = sl[:len(sl)-1]
 	return sl, true
 }
+
+func Reverse(ori []string) []string {
+	if len(ori) == 0 {
+		return nil
+	}
+	result := make([]string, len(ori))
+	for i, j := 0, len(ori)-1; i <= j; i, j = i+1, j-1 {
+		result[i], result[j] = ori[j], ori[i]
+	}
+	return result
+}
