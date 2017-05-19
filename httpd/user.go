@@ -119,23 +119,25 @@ func (s *Service) HandlerGroupList(w http.ResponseWriter, r *http.Request, _ htt
 }
 
 func (s *Service) HandlerGroupCreate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	gName := strings.ToLower(r.FormValue("gname"))
+	name := strings.ToLower(r.FormValue("gname"))
 	ns := r.FormValue("ns")
 	itemStr := r.FormValue("items")
 	managers := r.FormValue("managers")
 	members := r.FormValue("members")
 
-	if ns != "" {
-		gName = authorize.GetGNameByNs(ns, gName)
-	}
-	if gName == "" {
-		ReturnBadRequest(w, ErrInvalidParam)
-		return
-	}
-	for _, gnameLetter := range gName {
+	for _, gnameLetter := range name {
 		if gnameLetter >= 'a' && gnameLetter <= 'z' {
 			continue
 		}
+		ReturnBadRequest(w, ErrInvalidParam)
+		return
+	}
+
+	gName := ""
+	if ns != "" {
+		gName = authorize.GetGNameByNs(ns, name)
+	}
+	if gName == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
