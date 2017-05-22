@@ -49,7 +49,13 @@ func joinGroupName(ns, name string) string {
 
 func readGName(gname string) (ns, name string) {
 	lastIndex := strings.LastIndexByte(gname, groupNameSep)
-	ns, name = gname[:lastIndex], gname[lastIndex:]
+	ns, name = gname[:lastIndex], gname[lastIndex+1:]
+	return
+}
+
+func (g *Group) ReadGName(gname string) (ns, name string) {
+	ns, name = readGName(gname)
+	ns = reverceNs(ns)
 	return
 }
 

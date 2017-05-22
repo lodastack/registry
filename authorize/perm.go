@@ -14,9 +14,11 @@ import (
 var (
 	AuthBuck = "authorize"
 
-	DefaultUser  = "loda-defaultuser"
-	defaultGName = "loda-defaultgroup"
-	adminGName   = "loda-admingroup"
+	DefaultUser      = "loda-defaultuser"
+	DefaultGName     = "defaultgroup"
+	AdminGName       = "admingroup"
+	lodaDefaultGName = "loda-" + DefaultGName
+	lodaAdminGName   = "loda-" + AdminGName
 
 	Add    = "add"
 	Remove = "remove"
@@ -101,7 +103,7 @@ func (p *perm) InitGroup(rootNode string) error {
 // checkDefaultGroup set default/admin group and set to default user.
 func (p *perm) checkDefaultGroup() error {
 	g := Group{
-		GName:    defaultGName,
+		GName:    lodaDefaultGName,
 		Managers: config.C.Admins,
 		Members:  config.C.Admins,
 		Items:    p.DefaultGroupItems(rootNode)}
@@ -111,7 +113,7 @@ func (p *perm) checkDefaultGroup() error {
 	}
 
 	g = Group{
-		GName:    adminGName,
+		GName:    lodaAdminGName,
 		Managers: config.C.Admins,
 		Members:  config.C.Admins,
 		Items:    p.AdminGroupItems(rootNode)}

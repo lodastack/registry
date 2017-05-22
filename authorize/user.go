@@ -81,9 +81,9 @@ func (u *User) SetUser(username, mobile string) error {
 		us.Username = username
 		us.Mobile = mobile
 		if _, ok := common.ContainString(config.C.Admins, username); ok {
-			us.Groups = []string{adminGName}
+			us.Groups = []string{lodaAdminGName}
 		} else {
-			us.Groups = []string{defaultGName}
+			us.Groups = []string{lodaDefaultGName}
 		}
 	} else {
 		// update the user.
