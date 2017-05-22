@@ -17,6 +17,9 @@ type GroupInf interface {
 
 	// UpdateGroup update the group.
 	UpdateItems(gName string, items []string) error
+
+	// GetGroupNs return which ns the ns belong to.
+	ReadGName(gname string) (ns, name string)
 }
 
 type UserInf interface {

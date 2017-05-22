@@ -667,7 +667,6 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 	var nodes *node.Node
 	var err error
 	ns := r.FormValue("ns")
-	// nodename := r.FormValue("nodename")
 
 	if ns == "" {
 		nodes, err = s.tree.AllNodes()
@@ -686,8 +685,67 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 		ReturnNotFound(w, "No node found.")
 		return
 	}
+	if r.Header.Get(`UID`) != "" {
+		u, err := s.perm.GetUser(r.Header.Get(`UID`))
+		if err != nil || &u == nil {
+			ReturnNotFound(w, "user not found")
+			return
+		}
+
+		nodeHasPermission := &node.Node{
+			node.NodeProperty{
+				ID:         (*nodes).ID,
+				Name:       (*nodes).Name,
+				Type:       (*nodes).Type,
+				MachineReg: (*nodes).MachineReg,
+			},
+			[]*node.Node{}}
+
+		for _, gName := range u.Groups {
+			_gNs, gName := s.perm.ReadGName(gName)
+			switch gName {
+			case authorize.AdminGName:
+				if _gNs == "loda" {
+					nodeHasPermission = nodes
+					break
+				}
+			case authorize.DefaultGName:
+				continue
+			default:
+				_gNsSplit := strings.Split(_gNs, ".")
+				_gNsLength, lenNsRoot := len(_gNsSplit), 1
+
+				nodePointer := nodeHasPermission
+				for i := 1 + lenNsRoot; i <= _gNsLength; i++ {
+					nsToCheck := strings.Join(_gNsSplit[_gNsLength-i:_gNsLength], ".")
+					nodeOnTree, err := nodes.Get(nsToCheck)
+					if err != nil {
+						break
+					}
+					if _node, err := nodeHasPermission.Get(nsToCheck); err != nil {
+						if i == _gNsLength {
+							nodePointer.Children = append(nodePointer.Children, nodeOnTree)
+							break
+						}
+						nodePointer := &node.Node{
+							node.NodeProperty{
+								ID:         nodeOnTree.ID,
+								Name:       nodeOnTree.Name,
+								Type:       nodeOnTree.Type,
+								MachineReg: nodeOnTree.MachineReg,
+							},
+							[]*node.Node{}}
+						nodePointer.Children = append(nodePointer.Children, nodePointer)
+					} else {
+						nodePointer = _node
+					}
+				}
+			}
+		}
+		nodes = nodeHasPermission
+	}
+
 	// leaf NS list format handler
-	// param["format"] = "list"
 	if r.FormValue("format") == "list" {
 		list, err := nodes.LeafNs()
 		if err != nil {
