@@ -714,7 +714,10 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			default:
 				_gNsSplit := strings.Split(_gNs, ".")
 				_gNsLength, lenNsRoot := len(_gNsSplit), 1
-
+				if _gNsLength == 1 && _gNsSplit[_gNsLength-1] == "loda" {
+					nodeHasPermission = nodes
+					break
+				}
 				nodePointer := nodeHasPermission
 				for i := 1 + lenNsRoot; i <= _gNsLength; i++ {
 					nsToCheck := strings.Join(_gNsSplit[_gNsLength-i:_gNsLength], ".")
@@ -727,7 +730,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 							nodePointer.Children = append(nodePointer.Children, nodeOnTree)
 							break
 						}
-						nodePointer := &node.Node{
+						newNode := &node.Node{
 							node.NodeProperty{
 								ID:         nodeOnTree.ID,
 								Name:       nodeOnTree.Name,
@@ -735,7 +738,8 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 								MachineReg: nodeOnTree.MachineReg,
 							},
 							[]*node.Node{}}
-						nodePointer.Children = append(nodePointer.Children, nodePointer)
+						nodePointer.Children = append(nodePointer.Children, newNode)
+						nodePointer = newNode
 					} else {
 						nodePointer = _node
 					}
