@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -692,6 +693,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			return
 		}
 
+		// init a nodes.
 		nodeHasPermission := &node.Node{
 			node.NodeProperty{
 				ID:         (*nodes).ID,
@@ -701,7 +703,10 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			},
 			[]*node.Node{}}
 
-		for _, gName := range u.Groups {
+		// check the group and set ns to nodeHasPermission.
+		var gNames sort.StringSlice = u.Groups
+		gNames.Sort()
+		for _, gName := range gNames {
 			_gNs, gName := s.perm.ReadGName(gName)
 			switch gName {
 			case authorize.AdminGName:
