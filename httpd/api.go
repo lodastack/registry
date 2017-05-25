@@ -370,6 +370,10 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 		return
 	}
 
+	// check the machine status.
+	if status, _ := machine.ReadProperty(node.HostStatusProp); status == "" {
+		machine.SetProperty(node.HostStatusProp, "online")
+	}
 	regMap, err := s.tree.RegisterMachine(machine)
 	if err != nil {
 		s.logger.Errorf("RegisterMachine fail, error: %s", err.Error())
@@ -526,6 +530,10 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		s.logger.Errorf("add invalid collect: %+v", param.R)
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
+	} else if param.ResType == "machine" {
+		if status, _ := param.R.ReadProperty(node.HostStatusProp); status == "" {
+			param.R.SetProperty(node.HostStatusProp, "online")
+		}
 	}
 
 	// Check pk property.

@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	HostnameProp = "hostname"
-	IpProp       = "ip"
+	HostnameProp   = "hostname"
+	HostStatusProp = "status"
+	IpProp         = "ip"
 
 	ErrInvalidMachine = errors.New("invalid machine resource")
 )
