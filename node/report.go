@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/json"
 	"sync"
 
 	m "github.com/lodastack/models"
@@ -8,7 +9,22 @@ import (
 
 type ReportInfo struct {
 	sync.RWMutex
-	ReportInfo map[string]m.Report
+	ReportInfo reportMap
+}
+
+type reportMap map[string]m.Report
+
+func (r *reportMap) Byte() ([]byte, error) {
+	return json.Marshal(*r)
+}
+
+func (r *reportMap) Unmarshal(data []byte) error {
+	return json.Unmarshal(data, r)
+}
+
+func newReportMap(data []byte) (reports reportMap, err error) {
+	err = reports.Unmarshal(data)
+	return
 }
 
 func (t *Tree) AgentReport(info m.Report) error {
@@ -32,4 +48,20 @@ func (t *Tree) GetReportInfo() map[string]m.Report {
 		reportInfo[k] = v
 	}
 	return reportInfo
+}
+
+func (t *Tree) setReport(reports reportMap) error {
+	reportByte, err := reports.Byte()
+	if err != nil {
+		return err
+	}
+	return t.Cluster.Update([]byte(reportBucket), []byte(reportBucket), reportByte)
+}
+
+func (t *Tree) readReport() (reportMap, error) {
+	reportByte, err := t.Cluster.View([]byte(reportBucket), []byte(reportBucket))
+	if err != nil {
+		return nil, err
+	}
+	return newReportMap(reportByte)
 }

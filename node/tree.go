@@ -22,10 +22,14 @@ var (
 const (
 	nodeDataKey = "node"
 	nodeIdKey   = "nodeid"
-	rootNode    = "loda"
-	rootID      = "0"
-	nodeDeli    = "."
-	poolNode    = "pool"
+
+	nodeBucket   = "loda"
+	reportBucket = "report"
+
+	rootNode = "loda"
+	poolNode = "pool"
+	rootID   = "0"
+	nodeDeli = "."
 
 	NsFormat = "ns"
 	IDFormat = "id"
@@ -58,9 +62,16 @@ func NewTree(cluster Cluster) (*Tree, error) {
 }
 
 func (t *Tree) init() error {
-	err := t.Cluster.CreateBucketIfNotExist([]byte(rootNode))
+	if err := t.initNodeBucket(); err != nil {
+		return err
+	}
+	return t.initReportBucket()
+}
+
+func (t *Tree) initNodeBucket() error {
+	err := t.Cluster.CreateBucketIfNotExist([]byte(nodeBucket))
 	if err != nil {
-		t.logger.Error("itree CreateBucketIfNotExist fail:", err.Error())
+		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", nodeBucket, err.Error())
 		return err
 	}
 	if err := t.initKey(nodeDataKey); err != nil {
@@ -92,6 +103,34 @@ func (t *Tree) init() error {
 		t.logger.Debugf("cache have %d item, init cost :%v",
 			t.Cache.Len(),
 			finishCacheInit.Sub(start))
+	}()
+	return nil
+}
+
+func (t *Tree) initReportBucket() error {
+	err := t.Cluster.CreateBucketIfNotExist([]byte(reportBucket))
+	if err != nil {
+		t.logger.Errorf("tree init %s CreateBucketIfNotExist fail: %s", reportBucket, err.Error())
+		return err
+	}
+	t.reports.ReportInfo, err = t.readReport()
+	if err != nil {
+		t.logger.Error("tree init report fail, set empty")
+		t.reports.ReportInfo = make(map[string]m.Report)
+	}
+	go func() {
+		if config.C.CommonConf.PersistReport < 1 {
+			config.C.CommonConf.PersistReport = 6
+		}
+		c := time.Tick(time.Duration(config.C.CommonConf.PersistReport) * time.Hour)
+		for {
+			select {
+			case <-c:
+				t.reports.Lock()
+				t.setReport(t.reports.ReportInfo)
+				t.reports.Unlock()
+			}
+		}
 	}()
 	return nil
 }

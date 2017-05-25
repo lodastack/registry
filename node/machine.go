@@ -12,6 +12,10 @@ var (
 	HostStatusProp = "status"
 	IpProp         = "ip"
 
+	Online  = "online"
+	Offline = "offline"
+	Dead    = "dead"
+
 	ErrInvalidMachine = errors.New("invalid machine resource")
 )
 
