@@ -37,7 +37,8 @@ type Config struct {
 }
 
 type CommonConfig struct {
-	PID string `toml:"pid"`
+	PersistReport int    `toml:"persistreport"`
+	PID           string `toml:"pid"`
 }
 
 type HTTPConfig struct {
