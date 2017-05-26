@@ -22,4 +22,4 @@ type Dashboard struct {
 	Panels []Panel `json:"panels"`
 }
 
-type DashboardData map[string]Dashboard
+type DashboardData []Dashboard
