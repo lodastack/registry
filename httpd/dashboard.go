@@ -15,6 +15,7 @@ func (s *Service) initDashboardHandler() {
 	s.router.GET("/api/v1/dashboard", s.handlerDashboardGet)
 	s.router.POST("/api/v1/dashboard", s.handlerDashboardSet)
 	s.router.PUT("/api/v1/dashboard", s.handlerDashboardPut)
+	s.router.POST("/api/v1/dashboard/add", s.handlerDashboardAdd)
 	s.router.DELETE("/api/v1/dashboard", s.handlerDashboardDel)
 
 	s.router.POST("/api/v1/dashboard/panel", s.handlerPanelPost)
@@ -42,13 +43,35 @@ func (s *Service) handlerDashboardGet(w http.ResponseWriter, r *http.Request, _ 
 	ReturnJson(w, 200, dashboards)
 }
 
+func (s *Service) handlerDashboardAdd(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(r.Body); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	var dashboard model.Dashboard
+	if err := json.Unmarshal(buf.Bytes(), &dashboard); err != nil {
+		s.logger.Errorf("unmarshal dashboard fail: %s", err.Error())
+		ReturnBadRequest(w, err)
+		return
+	}
+
+	ns := r.FormValue("ns")
+	if err := s.tree.AddDashboard(ns, dashboard); err != nil {
+		s.logger.Errorf("handlerDashboardGet SetDashboard fail: %s", err.Error())
+		ReturnServerError(w, err)
+		return
+	}
+	ReturnJson(w, 200, "OK")
+}
+
 func (s *Service) handlerDashboardSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r.Body); err != nil {
 		ReturnBadRequest(w, err)
 		return
 	}
-	dashboards := make(map[string]model.Dashboard)
+	var dashboards []model.Dashboard
 	if err := json.Unmarshal(buf.Bytes(), &dashboards); err != nil {
 		s.logger.Errorf("unmarshal dashboard fail: %s", err.Error())
 		ReturnBadRequest(w, err)
@@ -65,12 +88,14 @@ func (s *Service) handlerDashboardSet(w http.ResponseWriter, r *http.Request, _ 
 }
 
 func (s *Service) handlerDashboardPut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ns, name, title := r.FormValue("ns"), r.FormValue("name"), r.FormValue("title")
-	if ns == "" || name == "" || title == "" {
+	ns, dIndex, title := r.FormValue("ns"), r.FormValue("dindex"), r.FormValue("title")
+	i, err := strconv.Atoi(dIndex)
+	if ns == "" || title == "" || err != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.UpdateDashboard(ns, name, title); err != nil {
+
+	if err := s.tree.UpdateDashboard(ns, i, title); err != nil {
 		s.logger.Errorf("handlerDashboardPut GetDashboard fail: %s", err.Error())
 		ReturnServerError(w, err)
 		return
@@ -79,12 +104,13 @@ func (s *Service) handlerDashboardPut(w http.ResponseWriter, r *http.Request, _ 
 }
 
 func (s *Service) handlerDashboardDel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ns, name := r.FormValue("ns"), r.FormValue("name")
-	if ns == "" || name == "" {
+	ns, dIndex := r.FormValue("ns"), r.FormValue("dindex")
+	i, err := strconv.Atoi(dIndex)
+	if ns == "" || err != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.DeleteDashboard(ns, name); err != nil {
+	if err := s.tree.DeleteDashboard(ns, i); err != nil {
 		s.logger.Errorf("delete dashboard fail: %s", err.Error())
 		ReturnBadRequest(w, err)
 		return
@@ -105,12 +131,13 @@ func (s *Service) handlerPanelPost(w http.ResponseWriter, r *http.Request, _ htt
 		return
 	}
 
-	ns, name := r.FormValue("ns"), r.FormValue("name")
-	if ns == "" || name == "" {
+	ns, dIndex := r.FormValue("ns"), r.FormValue("dindex")
+	i, err := strconv.Atoi(dIndex)
+	if ns == "" || err != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.AddPanel(ns, name, panel); err != nil {
+	if err := s.tree.AddPanel(ns, i, panel); err != nil {
 		s.logger.Errorf("AddPanel fail: %s", err.Error())
 		ReturnServerError(w, err)
 		return
@@ -119,15 +146,16 @@ func (s *Service) handlerPanelPost(w http.ResponseWriter, r *http.Request, _ htt
 }
 
 func (s *Service) handlerPanelPut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ns, name, title, graphType, index :=
-		r.FormValue("ns"), r.FormValue("name"), r.FormValue("title"), r.FormValue("type"), r.FormValue("index")
-	i, err := strconv.Atoi(index)
-	if ns == "" || name == "" || err != nil {
+	ns, dIndex, title, graphType, pIndex :=
+		r.FormValue("ns"), r.FormValue("dindex"), r.FormValue("title"), r.FormValue("type"), r.FormValue("pindex")
+	dI, errD := strconv.Atoi(dIndex)
+	pI, errP := strconv.Atoi(pIndex)
+	if ns == "" || errD != nil || errP != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 
-	if err := s.tree.UpdatePanel(ns, name, i, title, graphType); err != nil {
+	if err := s.tree.UpdatePanel(ns, dI, pI, title, graphType); err != nil {
 		s.logger.Errorf("AddPanel fail: %s", err.Error())
 		ReturnBadRequest(w, err)
 		return
@@ -148,13 +176,14 @@ func (s *Service) handlerPanelReorder(w http.ResponseWriter, r *http.Request, _ 
 		return
 	}
 
-	ns, name := r.FormValue("ns"), r.FormValue("name")
-	if ns == "" || name == "" {
+	ns, dIndex := r.FormValue("ns"), r.FormValue("dindex")
+	i, err := strconv.Atoi(dIndex)
+	if ns == "" || err != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 
-	if err := s.tree.ReorderPanel(ns, name, newOrder); err != nil {
+	if err := s.tree.ReorderPanel(ns, i, newOrder); err != nil {
 		s.logger.Errorf("AddPanel fail: %s", err.Error())
 		ReturnServerError(w, err)
 		return
@@ -163,13 +192,14 @@ func (s *Service) handlerPanelReorder(w http.ResponseWriter, r *http.Request, _ 
 }
 
 func (s *Service) handlerPanelDel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ns, name, index := r.FormValue("ns"), r.FormValue("name"), r.FormValue("index")
-	i, err := strconv.Atoi(index)
-	if ns == "" || name == "" || err != nil {
+	ns, dIndex, pIndex := r.FormValue("ns"), r.FormValue("dindex"), r.FormValue("pindex")
+	dI, errD := strconv.Atoi(dIndex)
+	pI, errP := strconv.Atoi(pIndex)
+	if ns == "" || errD != nil || errP != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.DelPanel(ns, name, i); err != nil {
+	if err := s.tree.DelPanel(ns, dI, pI); err != nil {
 		s.logger.Errorf("AddPanel fail: %s", err.Error())
 		ReturnServerError(w, err)
 		return
@@ -190,21 +220,20 @@ func (s *Service) handlerTargetPost(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	ns, name, panelIndex := r.FormValue("ns"), r.FormValue("name"), r.FormValue("pIndex")
-	if ns == "" || name == "" {
+	ns, dIndex, pIndex := r.FormValue("ns"), r.FormValue("dindex"), r.FormValue("pindex")
+	dI, errD := strconv.Atoi(dIndex)
+	pI, errP := strconv.Atoi(pIndex)
+	if ns == "" || errD != nil || errP != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	pIndex, err := strconv.Atoi(panelIndex)
-	if err != nil {
-		ReturnBadRequest(w, ErrInvalidParam)
-		return
-	}
-	if err := s.tree.AppendTarget(ns, name, pIndex, target); err != nil {
+
+	if err := s.tree.AppendTarget(ns, dI, pI, target); err != nil {
 		ReturnServerError(w, err)
 	}
 	ReturnJson(w, 200, "OK")
 }
+
 func (s *Service) handlerTargetPut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(r.Body); err != nil {
@@ -218,43 +247,31 @@ func (s *Service) handlerTargetPut(w http.ResponseWriter, r *http.Request, _ htt
 		return
 	}
 
-	ns, name, panelIndex, targetIndex := r.FormValue("ns"), r.FormValue("name"), r.FormValue("pIndex"), r.FormValue("tIndex")
-	if ns == "" || name == "" {
+	ns, dIndex, pIndex, tIndex := r.FormValue("ns"), r.FormValue("dindex"), r.FormValue("pindex"), r.FormValue("tindex")
+	dI, errD := strconv.Atoi(dIndex)
+	pI, errP := strconv.Atoi(pIndex)
+	tI, errT := strconv.Atoi(tIndex)
+	if ns == "" || errD != nil || errP != nil || errT != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	pIndex, err := strconv.Atoi(panelIndex)
-	if err != nil {
-		ReturnBadRequest(w, ErrInvalidParam)
-		return
-	}
-	tIndex, err := strconv.Atoi(targetIndex)
-	if err != nil {
-		ReturnBadRequest(w, ErrInvalidParam)
-		return
-	}
-	if err := s.tree.UpdateTarget(ns, name, pIndex, tIndex, target); err != nil {
+
+	if err := s.tree.UpdateTarget(ns, dI, pI, tI, target); err != nil {
 		ReturnServerError(w, err)
 	}
 	ReturnJson(w, 200, "OK")
 }
+
 func (s *Service) handlerTargetDelete(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ns, name, panelIndex, targetIndex := r.FormValue("ns"), r.FormValue("name"), r.FormValue("pIndex"), r.FormValue("tIndex")
-	if ns == "" || name == "" {
+	ns, dIndex, pIndex, tIndex := r.FormValue("ns"), r.FormValue("dindex"), r.FormValue("pindex"), r.FormValue("tindex")
+	dI, errD := strconv.Atoi(dIndex)
+	pI, errP := strconv.Atoi(pIndex)
+	tI, errT := strconv.Atoi(tIndex)
+	if ns == "" || errD != nil || errP != nil || errT != nil {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	pIndex, err := strconv.Atoi(panelIndex)
-	if err != nil {
-		ReturnBadRequest(w, ErrInvalidParam)
-		return
-	}
-	tIndex, err := strconv.Atoi(targetIndex)
-	if err != nil {
-		ReturnBadRequest(w, ErrInvalidParam)
-		return
-	}
-	if err := s.tree.DelTarget(ns, name, pIndex, tIndex); err != nil {
+	if err := s.tree.DelTarget(ns, dI, pI, tI); err != nil {
 		ReturnServerError(w, err)
 	}
 	ReturnJson(w, 200, "OK")
