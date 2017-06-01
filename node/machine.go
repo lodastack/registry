@@ -3,7 +3,9 @@ package node
 import (
 	"errors"
 	"regexp"
+	"time"
 
+	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
 )
 
@@ -15,6 +17,9 @@ var (
 	Online  = "online"
 	Offline = "offline"
 	Dead    = "dead"
+
+	MachineReportTimeout float64 = 4
+	MachineReportAlive   float64 = 1
 
 	ErrInvalidMachine = errors.New("invalid machine resource")
 )
@@ -134,4 +139,55 @@ func (t *Tree) RegisterMachine(newMachine model.Resource) (map[string]string, er
 		NsIDMap[ns] = UUID
 	}
 	return NsIDMap, nil
+}
+
+func (t *Tree) UpdateMachineStatus(reports map[string]m.Report) error {
+	nodes, err := t.AllNodes()
+	if err != nil {
+		return err
+	}
+	allLeaf, err := nodes.LeafNs()
+	if err != nil {
+		return err
+	}
+
+	for _, _ns := range allLeaf {
+		machineList, err := t.GetResourceList(_ns, "machine")
+		if err != nil {
+			t.logger.Errorf("get machine of ns %s status fail", _ns)
+			continue
+		}
+
+		var update bool
+		for i := range *machineList {
+			hostname, _ := (*machineList)[i].ReadProperty(HostnameProp)
+			hostStatus, _ := (*machineList)[i].ReadProperty(HostStatusProp)
+			if hostStatus == Offline {
+				// t.logger.Errorf("invalid hostname or status in ns %s, hostname %s, status %s", _ns, hostname, hostStatus)
+				continue
+			}
+
+			reportInfo, ok := reports[hostname]
+			if !ok {
+				// set dead if not report.
+				if hostStatus != Dead {
+					update = true
+					(*machineList)[i].SetProperty(HostStatusProp, Dead)
+				}
+			} else {
+				// set Online/Dead status by report time.
+				if time.Now().Sub(reportInfo.UpdateTime).Hours() >= MachineReportTimeout && hostStatus != Dead {
+					update = true
+					(*machineList)[i].SetProperty(HostStatusProp, Dead)
+				} else if time.Now().Sub(reportInfo.UpdateTime).Hours() < MachineReportAlive && hostStatus != Online {
+					update = true
+					(*machineList)[i].SetProperty(HostStatusProp, Online)
+				}
+			}
+		}
+		if update {
+			err = t.SetResource(_ns, "machine", *machineList)
+		}
+	}
+	return nil
 }

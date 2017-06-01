@@ -118,9 +118,11 @@ func (t *Tree) initReportBucket() error {
 		t.logger.Error("tree init report fail, set empty")
 		t.reports.ReportInfo = make(map[string]m.Report)
 	}
+
+	// Persistent report data.
 	go func() {
-		if config.C.CommonConf.PersistReport < 1 {
-			config.C.CommonConf.PersistReport = 6
+		if config.C.CommonConf.PersistReport <= 0 {
+			return
 		}
 		c := time.Tick(time.Duration(config.C.CommonConf.PersistReport) * time.Hour)
 		for {
@@ -129,6 +131,20 @@ func (t *Tree) initReportBucket() error {
 				t.reports.Lock()
 				t.setReport(t.reports.ReportInfo)
 				t.reports.Unlock()
+			}
+		}
+	}()
+
+	// Update machine status based on the report。
+	go func() {
+		c := time.Tick(time.Hour)
+		for {
+			select {
+			case <-c:
+				reports := t.GetReportInfo()
+				if err := t.UpdateMachineStatus(reports); err != nil {
+					t.logger.Error("UpdateMachineStatus fail:", err.Error())
+				}
 			}
 		}
 	}()
