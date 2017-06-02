@@ -184,6 +184,26 @@ func (s *Service) HandlerUpdateGroupMember(w http.ResponseWriter, r *http.Reques
 	if memberStr != "" {
 		members = strings.Split(memberStr, ",")
 	}
+
+	allUser := append(managers, members...)
+	for _, user := range allUser {
+		ok, err := s.perm.CheckUserExist(user)
+		if err != nil {
+			ReturnNotFound(w, "check user fail")
+			return
+		} else if !ok {
+			if ldapExist := LDAPUserExist(user); !ldapExist {
+				ReturnNotFound(w, "unknow user "+user)
+				return
+			}
+			if err = s.perm.SetUser(user, ""); err != nil {
+				s.logger.Errorf("set user fail: %s", err.Error())
+				ReturnNotFound(w, "set user fail")
+				return
+			}
+		}
+	}
+
 	if err := s.perm.UpdateMember(gName, managers, members); err != nil {
 		ReturnServerError(w, err)
 		return

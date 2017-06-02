@@ -64,6 +64,7 @@ func (u *User) CheckUserExist(username string) (bool, error) {
 		if err == ErrUserNotFound {
 			return false, nil
 		}
+		log.Errorf("GetUser %s fail: %s", username, err.Error())
 		return false, err
 	}
 	return true, nil
