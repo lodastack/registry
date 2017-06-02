@@ -53,3 +53,38 @@ func LDAPAuth(username string, password string) error {
 	}
 	return nil
 }
+
+func LDAPUserExist(username string) bool {
+	if username == "" {
+		return false
+	}
+
+	l, err := ldap.Dial("tcp", fmt.Sprintf("%s", config.C.LDAPConf.Server))
+	if err != nil {
+		return false
+	}
+	defer l.Close()
+
+	// First bind with a read only user
+	if err = l.Bind(config.C.LDAPConf.Binddn, config.C.LDAPConf.Password); err != nil {
+		return false
+	}
+
+	// Search for the given username
+	searchRequest := ldap.NewSearchRequest(
+		config.C.LDAPConf.Base,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		fmt.Sprintf("((%s=%s))", config.C.LDAPConf.UID, username),
+		[]string{""},
+		nil,
+	)
+
+	sr, err := l.Search(searchRequest)
+	if err != nil {
+		return false
+	}
+	if len(sr.Entries) != 1 {
+		return false
+	}
+	return true
+}
