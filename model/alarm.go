@@ -175,7 +175,7 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	}
 
 	if (trigger == models.ThresHold && value == "") ||
-		(trigger == models.Relative && shift == "") {
+		(trigger == models.Relative && value == "") {
 		return &AlarmResource{}, ErrInvalidParam
 	}
 
