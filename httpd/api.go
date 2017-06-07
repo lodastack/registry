@@ -769,6 +769,12 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			ReturnServerError(w, err)
 			return
 		}
+		if nsSplit := strings.Split(ns, "."); len(nsSplit) > 1 {
+			nsSurfix := strings.Join(nsSplit[1:], ".")
+			for i := range list {
+				list[i] = list[i] + "." + nsSurfix
+			}
+		}
 		ReturnJson(w, 200, list)
 		return
 	}
