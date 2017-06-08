@@ -18,8 +18,9 @@ var (
 	Offline = "offline"
 	Dead    = "dead"
 
-	MachineReportTimeout float64 = 4
-	MachineReportAlive   float64 = 1
+	// unit: hour
+	MachineReportTimeout float64 = 48
+	MachineReportAlive   float64 = 24
 
 	ErrInvalidMachine = errors.New("invalid machine resource")
 )
@@ -162,8 +163,7 @@ func (t *Tree) UpdateMachineStatus(reports map[string]m.Report) error {
 		for i := range *machineList {
 			hostname, _ := (*machineList)[i].ReadProperty(HostnameProp)
 			hostStatus, _ := (*machineList)[i].ReadProperty(HostStatusProp)
-			if hostStatus == Offline {
-				// t.logger.Errorf("invalid hostname or status in ns %s, hostname %s, status %s", _ns, hostname, hostStatus)
+			if hostStatus != Online || hostStatus != Dead {
 				continue
 			}
 
