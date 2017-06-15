@@ -455,9 +455,12 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return err
 	}
-	newNs := strings.Join(append([]string{name}, strings.Split(ns, nodeDeli)[1:]...), nodeDeli)
-	if exist := allNodes.Exist(newNs); exist {
-		return ErrNodeAlreadyExist
+
+	if oldNsSplit := strings.Split(ns, nodeDeli); name != oldNsSplit[0] {
+		newNs := strings.Join(append([]string{name}, oldNsSplit[1:]...), nodeDeli)
+		if exist := allNodes.Exist(newNs); exist {
+			return ErrNodeAlreadyExist
+		}
 	}
 
 	node, err := allNodes.Get(ns)
