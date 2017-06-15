@@ -238,6 +238,7 @@ func TestTreeUpdateNode(t *testing.T) {
 		t.Fatal("saveTree error")
 	}
 
+	// case 1 : update leaf node name and machineReg.
 	if err := tree.UpdateNode("0-4.loda", "0-5", "test update"); err != nil {
 		t.Fatalf("tree UpdateNode error: %s", err.Error())
 	}
@@ -245,6 +246,15 @@ func TestTreeUpdateNode(t *testing.T) {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 
+	// case 2 : update leaf machineReg.
+	if err := tree.UpdateNode("0-5.loda", "0-5", "test update-2"); err != nil {
+		t.Fatalf("tree UpdateNode error: %s", err.Error())
+	}
+	if node, err := tree.GetNode("0-5.loda"); err != nil || node.MachineReg != "test update-2" {
+		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
+	}
+
+	// case 3: update nonleaf node name.
 	if err := tree.UpdateNode("0-3.loda", "0-6", "test update"); err != nil {
 		t.Fatalf("tree UpdateNode error: %s", err.Error())
 	}
@@ -255,6 +265,7 @@ func TestTreeUpdateNode(t *testing.T) {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 
+	// case 4: update node name to a already exist node.
 	if err := tree.UpdateNode("0-2-1.0-2.loda", "0-2-2", "test update"); err == nil {
 		t.Fatal("tree UpdateNode 0-2-1.0-2.loda success, not match with expect")
 	}
