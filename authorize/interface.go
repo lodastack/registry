@@ -44,7 +44,11 @@ type Perm interface {
 	// group interface
 	GroupInf
 
-	AdminGroupItems(rootNode string) []string
+	// DefaultGroupItems return the default permission of the ns.
+	DefaultGroupItems(ns string) []string
+
+	// DefaultGroupItems return the admin permission of the ns.
+	AdminGroupItems(ns string) []string
 
 	// check whether one query has the permission.
 	Check(username, ns, resource, method string) (bool, error)

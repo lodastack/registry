@@ -837,7 +837,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		devs = []string{creater}
 	}
 	gDevName = authorize.GetNsDevGName(ns)
-	err = s.perm.CreateGroup(gDevName, devs, devs, s.perm.AdminGroupItems(ns))
+	err = s.perm.CreateGroup(gDevName, devs, devs, s.perm.DefaultGroupItems(ns))
 	if err != nil {
 		ReturnServerError(w, fmt.Errorf("Create dev group %s fail: %s", gDevName, err.Error()))
 		return
