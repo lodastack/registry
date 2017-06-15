@@ -65,22 +65,22 @@ func (p *perm) Check(username, ns, resource, method string) (bool, error) {
 // defaultGroupItems return the item of default group.
 // default user could get all resource,
 // could get/post/put/delete the group which user is the group manager.
-func (p *perm) DefaultGroupItems(rootNode string) []string {
+func (p *perm) DefaultGroupItems(ns string) []string {
 	items := make([]string, len(model.Templates)+3)
 	for index, res := range model.Templates {
-		items[index] = fmt.Sprintf("%s-%s-%s", rootNode, res, "GET")
+		items[index] = fmt.Sprintf("%s-%s-%s", ns, res, "GET")
 	}
 	return items
 }
 
 // adminGroupItems return the items of admin group.
-func (p *perm) AdminGroupItems(rootNode string) []string {
+func (p *perm) AdminGroupItems(ns string) []string {
 	items := make([]string, len(model.Templates)*4)
 	for index, res := range model.Templates {
-		items[index*4] = fmt.Sprintf("%s-%s-%s", rootNode, res, "GET")
-		items[index*4+1] = fmt.Sprintf("%s-%s-%s", rootNode, res, "PUT")
-		items[index*4+2] = fmt.Sprintf("%s-%s-%s", rootNode, res, "POST")
-		items[index*4+3] = fmt.Sprintf("%s-%s-%s", rootNode, res, "DELETE")
+		items[index*4] = fmt.Sprintf("%s-%s-%s", ns, res, "GET")
+		items[index*4+1] = fmt.Sprintf("%s-%s-%s", ns, res, "PUT")
+		items[index*4+2] = fmt.Sprintf("%s-%s-%s", ns, res, "POST")
+		items[index*4+3] = fmt.Sprintf("%s-%s-%s", ns, res, "DELETE")
 	}
 	return items
 }
