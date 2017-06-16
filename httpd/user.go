@@ -257,7 +257,8 @@ func (s *Service) HandlerUserListGet(w http.ResponseWriter, r *http.Request, _ h
 func (s *Service) HandlerUserSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	username := strings.ToLower(r.FormValue("username"))
 	mobile := r.FormValue("mobile")
-	if username == "" {
+	if username == "" ||
+		(r.Header.Get(`UID`) != "" && username != r.Header.Get(`UID`)) {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
