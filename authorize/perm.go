@@ -107,6 +107,7 @@ func (p *perm) checkDefaultGroup() error {
 		Managers: config.C.Admins,
 		Members:  config.C.Admins,
 		Items:    p.DefaultGroupItems(rootNode)}
+	g.Items = append(g.Items, fmt.Sprintf("%s-%s-%s", rootNode, "user", "PUT"))
 	if err := p.createGroupIfNotExist(g); err != nil {
 		fmt.Printf("init default group error: %s\n", err.Error())
 		return err

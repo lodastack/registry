@@ -285,7 +285,7 @@ func TestNewPerm(t *testing.T) {
 	g, err := perm.GetGroup(lodaDefaultGName)
 	if err != nil {
 		t.Fatal("GetGroup fail:", err.Error())
-	} else if len(g.Items) != len(model.Templates)+3 {
+	} else if len(g.Items) != len(model.Templates)+4 {
 		t.Fatal("default Group items not match with expect, %+v:", g)
 	}
 	g, err = perm.GetGroup(lodaAdminGName)

@@ -6,7 +6,7 @@ var (
 	Alarm   = "alarm"
 
 	Templates []string = []string{
-		Machine, Alarm, Collect, "group", "ns",
+		Machine, Alarm, Collect, "group", "ns", "user",
 	}
 
 	PkProperty = map[string]string{
