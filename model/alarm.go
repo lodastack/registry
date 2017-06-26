@@ -52,20 +52,17 @@ func (a *AlarmResource) SetQuery(function, rp, measurement, period, where,
 	return nil
 }
 
-func (a *AlarmResource) SetBlock(HostBlockPeriod, HostBlockTimes, NsBlockPeriod, NsBlockTimes string) {
-	if HostBlockTimes == "" || HostBlockTimes == "" {
-		a.HostBlockPeriod = _defaultHostBlockPeriod
-		a.HostBlockTimes = _defaultHostBlockTimes
+func (a *AlarmResource) SetBlock(data Resource) {
+	if blockStep, ok := data["blockstep"]; !ok || blockStep == "" {
+		a.BlockStep = "5"
 	} else {
-		a.HostBlockPeriod = HostBlockPeriod
-		a.HostBlockTimes = HostBlockTimes
+		a.BlockStep = blockStep
 	}
-	if NsBlockPeriod == "" || NsBlockTimes == "" {
-		a.NsBlockPeriod = _defaultNsBlockPeriod
-		a.NsBlockTimes = _defaultNsBlockTimes
+
+	if maxBlockTime, ok := data["maxblocktime"]; !ok || maxBlockTime == "" {
+		a.MaxBlockTime = "60"
 	} else {
-		a.NsBlockPeriod = NsBlockPeriod
-		a.NsBlockTimes = NsBlockTimes
+		a.MaxBlockTime = maxBlockTime
 	}
 }
 
@@ -162,11 +159,6 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	stime, _ := data["starttime"]
 	etime, _ := data["endtime"]
 
-	HostBlockPeriod, _ := data["hostblockperiod"]
-	HostBlockTimes, _ := data["hostblocktimes"]
-	NsBlockPeriod, _ := data["nsblockperiod"]
-	NsBlockTimes, _ := data["nsblocktimes"]
-
 	if measurement == "" || period == "" || expression == "" ||
 		every == "" || trigger == "" || level == "" ||
 		alert == "" || function == "" ||
@@ -186,10 +178,10 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	if err := alarm.SetAlert(level, groups, alert, message); err != nil {
 		return alarm, err
 	}
+	alarm.SetBlock(data)
 	if err := alarm.SetMD5AndVersion(); err != nil {
 		return alarm, err
 	}
-	alarm.SetBlock(HostBlockPeriod, HostBlockTimes, NsBlockPeriod, NsBlockTimes)
 
 	return alarm, nil
 }
