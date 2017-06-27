@@ -576,6 +576,15 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 	if err := s.tree.AppendResource(param.Ns, param.ResType, param.R); err != nil {
 		ReturnServerError(w, err)
 	} else {
+		if param.ResType == "collect" {
+			gDevName := authorize.GetNsDevGName(param.Ns)
+			gOpName := authorize.GetNsOpGName(param.Ns)
+			if alarm, err := model.GetAlarmFromCollect(param.R, param.Ns, gDevName+","+gOpName); err == nil && alarm != nil {
+				if err := s.tree.AppendResource(param.Ns, model.Alarm, alarm); err != nil {
+					ReturnServerError(w, err)
+				}
+			}
+		}
 		ReturnOK(w, "success")
 	}
 }
