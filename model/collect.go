@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/lodastack/log"
+	"github.com/lodastack/models"
+	"github.com/lodastack/registry/common"
 )
 
 var (
@@ -109,4 +111,40 @@ func UpdateCollectName(collects ...Resource) error {
 		collects[index]["name"] = GenCollectName(collects[index])
 	}
 	return nil
+}
+
+func getCollectMeasurement(collectName, collectType string) string {
+	switch collectType {
+	case PortCollect:
+		return collectName
+	case ProcCollect:
+		return collectName + ".procnum"
+	default:
+		return ""
+	}
+}
+
+func GetAlarmFromCollect(res Resource, ns, groups string) (Resource, error) {
+	alarm := NewAlarm(ns, "")
+	collectType, _ := res["measurement_type"]
+	alarmName := getCollectMeasurement(res["name"], collectType)
+	// return none if not need add alarm.
+	if alarmName == "" {
+		return nil, nil
+	}
+
+	if err := alarm.SetQuery("mean", rp, alarmName, "2m",
+		"", ">", "1m", "*", models.Relative, "", "0", "0", "0"); err != nil {
+		return nil, err
+	}
+	if err := alarm.SetAlert("2", groups, "mail", ""); err != nil {
+		return nil, err
+	}
+	alarm.Name, alarm.BlockStep, alarm.MaxBlockTime = alarmName+" change alert", "10", "60"
+	alarm.SetID(common.GenUUID())
+	if err := alarm.SetMD5AndVersion(); err != nil {
+		return nil, err
+	}
+
+	return TransAlarmToResource(*alarm)
 }
