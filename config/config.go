@@ -34,6 +34,15 @@ type Config struct {
 	DataConf   DataConfig   `toml:"data"`
 	LDAPConf   LDAPConfig   `toml:"ldap"`
 	LogConf    LogConfig    `toml:"log"`
+	PluginConf PluginConfig `toml:"plugin"`
+}
+
+type PluginConfig struct {
+	AlarmFile    string `toml:"alarmfile"`
+	Branch       string `toml:"branch"`
+	GitlabDomain string `toml:"gitlab"`
+	Token        string `toml:"token"`
+	Group        string `toml:"group"`
 }
 
 type CommonConfig struct {

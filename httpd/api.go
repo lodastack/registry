@@ -579,8 +579,8 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		if param.ResType == "collect" {
 			gDevName := authorize.GetNsDevGName(param.Ns)
 			gOpName := authorize.GetNsOpGName(param.Ns)
-			if alarm, err := model.GetAlarmFromCollect(param.R, param.Ns, gDevName+","+gOpName); err == nil && alarm != nil {
-				if err := s.tree.AppendResource(param.Ns, model.Alarm, alarm); err != nil {
+			if alarms, err := model.GetAlarmFromCollect(param.R, param.Ns, gDevName+","+gOpName); err == nil && len(alarms) != 0 {
+				if err := s.tree.AppendResource(param.Ns, model.Alarm, alarms...); err != nil {
 					ReturnServerError(w, err)
 				}
 			}
