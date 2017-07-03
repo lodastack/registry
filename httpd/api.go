@@ -419,6 +419,12 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 			ReturnServerError(w, err)
 			return
 		}
+		if report.NewHostname != "" {
+			if err := clearMachineStatus(report.NewHostname, report.Ns...); err != nil {
+				log.Errorf("clearMachineStatus ns %v hostname %s fail: %s",
+					report.Ns, report.NewHostname, err.Error())
+			}
+		}
 	}
 
 	if err := s.tree.AgentReport(report); err != nil {
@@ -521,6 +527,21 @@ func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ ht
 	if err := s.tree.UpdateResource(param.Ns, param.ResType, param.ResId, param.UpdateMap); err != nil {
 		ReturnBadRequest(w, err)
 		return
+	} else if param.ResType == "machine" {
+		machines, err := s.tree.GetResource(param.Ns, param.ResType, param.ResId)
+		if len(machines) == 0 && err != nil {
+			log.Error("clear ns %s machine %s fail", param.Ns, param.ResId)
+		} else {
+			hostname, _ := machines[0].ReadProperty(model.PkProperty["machine"])
+			if hostname == "" {
+				log.Error("clear ns %s machine %s fail: have no hostname", param.Ns, param.ResId)
+			} else {
+				if err := clearMachineStatus(hostname, param.Ns); err != nil {
+					log.Errorf("clearMachineStatus ns %s hostname %s fail: %s",
+						param.Ns, hostname, err.Error())
+				}
+			}
+		}
 	}
 	ReturnOK(w, "success")
 }
