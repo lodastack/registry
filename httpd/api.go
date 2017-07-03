@@ -210,6 +210,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/resource/search", s.handlerSearch)
 	s.router.PUT("/api/v1/resource", s.handleResourcePut)
 	s.router.PUT("/api/v1/resource/move", s.handleResourceMove)
+	s.router.PUT("/api/v1/resource/copy", s.handleResourceCopy)
 	s.router.DELETE("/api/v1/resource", s.handleResourceDel)
 	s.router.DELETE("/api/v1/resource/collect", s.handleCollectDel)
 
@@ -422,6 +423,18 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 
 	if err := s.tree.AgentReport(report); err != nil {
 		ReturnBadRequest(w, err)
+		return
+	}
+	ReturnOK(w, "success")
+}
+
+func (s *Service) handleResourceCopy(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fromNs := r.FormValue("from")
+	toNs := r.FormValue("to")
+	resType := r.FormValue("type")
+	resId := r.FormValue("resourceid")
+	if err := s.tree.CopyResource(fromNs, toNs, resType, strings.Split(resId, ",")...); err != nil {
+		ReturnServerError(w, err)
 		return
 	}
 	ReturnOK(w, "success")

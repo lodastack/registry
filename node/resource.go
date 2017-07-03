@@ -159,10 +159,10 @@ func (t *Tree) DeleteResource(ns, resType string, resId ...string) error {
 	return t.setByteToStore(nodeId, resType, resNewByte)
 }
 
-func (t *Tree) MoveResource(oldNs, newNs, resType string, resourceIDs ...string) error {
-	rs, err := t.GetResource(oldNs, resType, resourceIDs...)
+func (t *Tree) CopyResource(fromNs, toNs, resType string, resourceIDs ...string) error {
+	rs, err := t.GetResource(fromNs, resType, resourceIDs...)
 	if err != nil || rs == nil {
-		t.logger.Errorf("GetResource fail, ns: %s, error: %s", newNs, err)
+		t.logger.Errorf("GetResource fail, ns: %s, error: %s", toNs, err)
 		return err
 	}
 
@@ -179,15 +179,15 @@ func (t *Tree) MoveResource(oldNs, newNs, resType string, resourceIDs ...string)
 	// CHeck pk in new ns.
 	searchPk, err := model.NewSearch(false, model.PkProperty[resType], pkValueList...)
 	if err != nil {
-		t.logger.Errorf("search resource in new ns before move to ns %s fail: %s", newNs, err.Error())
+		t.logger.Errorf("search resource in new ns before move to ns %s fail: %s", toNs, err.Error())
 		return err
 	}
-	searchInNewNs, err := t.SearchResource(newNs, resType, searchPk)
+	searchInNewNs, err := t.SearchResource(toNs, resType, searchPk)
 	if err != nil {
 		t.logger.Errorf("check the addend resource fail: %s", err.Error())
 		return err
 	}
-	if rl, ok := searchInNewNs[newNs]; ok {
+	if rl, ok := searchInNewNs[toNs]; ok {
 		alreadyExist := []string{}
 		for _, r := range *rl {
 			pkV, _ := r.ReadProperty(model.PkProperty[resType])
@@ -197,9 +197,16 @@ func (t *Tree) MoveResource(oldNs, newNs, resType string, resourceIDs ...string)
 		return errors.New("resource pk " + strings.Join(alreadyExist, ",") + " already in new ns")
 	}
 
-	if err := t.AppendResource(newNs, resType, rs...); err != nil {
+	if err := t.AppendResource(toNs, resType, rs...); err != nil {
 		t.logger.Errorf("AppendResource resource fail, ns %s, resource type: %s, resourceID: %v, error: %s",
-			newNs, resType, rs[0], err.Error())
+			toNs, resType, rs[0], err.Error())
+		return err
+	}
+	return nil
+}
+
+func (t *Tree) MoveResource(oldNs, newNs, resType string, resourceIDs ...string) error {
+	if err := t.CopyResource(oldNs, newNs, resType, resourceIDs...); err != nil {
 		return err
 	}
 	if err := t.DeleteResource(oldNs, resType, resourceIDs...); err != nil {
