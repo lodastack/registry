@@ -35,6 +35,7 @@ type Config struct {
 	LDAPConf   LDAPConfig   `toml:"ldap"`
 	LogConf    LogConfig    `toml:"log"`
 	PluginConf PluginConfig `toml:"plugin"`
+	EventConf  EventConfig  `toml:"event"`
 }
 
 type PluginConfig struct {
@@ -43,6 +44,10 @@ type PluginConfig struct {
 	GitlabDomain string `toml:"gitlab"`
 	Token        string `toml:"token"`
 	Group        string `toml:"group"`
+}
+
+type EventConfig struct {
+	ClearURL string `toml:"clearURL"`
 }
 
 type CommonConfig struct {
