@@ -92,6 +92,9 @@ type TreeMethod interface {
 	// Append resource to ns.
 	AppendResource(ns, resType string, appendRes ...model.Resource) error
 
+	// CopyResource copy resource from fromNs to toNs.
+	CopyResource(fromNs, toNs, resType string, resID ...string) error
+
 	// Delete resource from ns.
 	DeleteResource(ns, resType string, resId ...string) error
 

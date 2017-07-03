@@ -350,3 +350,96 @@ func TestMoveResource(t *testing.T) {
 		t.Fatalf("move reource success, not match with expect")
 	}
 }
+
+func TestCopyResource(t *testing.T) {
+
+	s := mustNewStore(t)
+	defer os.RemoveAll(s.Path())
+
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, _ := NewTree(s)
+
+	machine1 := model.NewResource(map[string]string{"hostname": "host1"})
+	machine2 := model.NewResource(map[string]string{"hostname": "host2"})
+
+	if _, err := tree.NewNode("testMove1", rootNode, Leaf); err != nil {
+		t.Fatalf("create testMove1 fail: %s", err.Error())
+	}
+	if _, err := tree.NewNode("testMove2", rootNode, Leaf); err != nil {
+		t.Fatalf("create testMove2 fail: %s", err.Error())
+	}
+	if _, err := tree.NewNode("testMove3", rootNode, Leaf); err != nil {
+		t.Fatalf("create testMove3 fail: %s", err.Error())
+	}
+	if err := tree.AppendResource("testMove1.loda", "machine", machine1, machine2); err != nil {
+		t.Fatalf("app resource fail: %s", err.Error())
+	}
+	rs, err := tree.GetResourceList("testMove1.loda", "machine")
+	if err != nil || len(*rs) != 2 {
+		t.Fatalf("get resource fail after set: %s\n", err.Error())
+	}
+	ids := []string{}
+	for _, r := range *rs {
+		id, _ := r.ID()
+		ids = append(ids, id)
+	}
+
+	// case 1: move one resource to empty ns
+	if err := tree.CopyResource("testMove1.loda", "testMove2.loda", "machine", ids[0]); err != nil {
+		t.Fatalf("copy one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move one: %s\n", err.Error())
+		}
+		if rs, err := tree.GetResourceList("testMove2.loda", "machine"); err != nil || len(*rs) != 1 {
+			t.Fatalf("get resource fail after move one: %s\n", err.Error())
+		}
+	}
+
+	// case 2: move resource to the ns already has a resource has the pk
+	if err := tree.CopyResource("testMove1.loda", "testMove2.loda", "machine", ids[0]); err == nil {
+		t.Fatalf("copy one reource not match with expect")
+	}
+
+	// case 3: move resource to a ns already have some resource
+	if err := tree.CopyResource("testMove1.loda", "testMove2.loda", "machine", ids[1]); err != nil {
+		t.Fatalf("copy one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move the last one: %v %+v\n", err, *rs)
+		}
+		if rs, err := tree.GetResourceList("testMove2.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move the last one: %v %+v\n", err, *rs)
+		}
+	}
+
+	// case 4: move multi resouce to an empty ns.
+	if err := tree.CopyResource("testMove2.loda", "testMove3.loda", "machine", ids...); err != nil {
+		t.Fatalf("copy one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove3.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move all: %s\n", err.Error())
+		}
+	}
+
+	// case 5: move multi resource which contain not exist id to another ns.
+	if err := tree.CopyResource("testMove1.loda", "testMove2.loda", "machine", "not exist"); err == nil {
+		t.Fatalf("copy one reource fail: %s", err.Error())
+	} else {
+		if rs, err := tree.GetResourceList("testMove2.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move all: %s\n", err.Error())
+		}
+		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 2 {
+			t.Fatalf("get resource fail after move all: %s\n", err.Error())
+		}
+	}
+
+	// case 6: move multi reosurce to another ns which already has a pk.
+	if err := tree.CopyResource("testMove2.loda", "testMove1.loda", "machine", ids...); err == nil {
+		t.Fatalf("copy reource success, not match with expect")
+	}
+}
