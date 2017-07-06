@@ -677,13 +677,13 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 	}
 
 	// delete collect data
-	for _, measurement := range strings.Split(measurements, ",") {
+	for _, resName := range resNames {
 		go func() {
 			time.Sleep(90 * time.Second)
 			req := utils.HttpQuery{
 				Method: http.MethodDelete,
-				Url: fmt.Sprintf("http://%s?ns=collect.%s&name=%s",
-					config.C.RouterAddr, ns, measurement),
+				Url: fmt.Sprintf("http://%s?ns=collect.%s&name=%s&regexp=true",
+					config.C.RouterAddr, ns, resName),
 				BodyType: utils.Form,
 				Timeout:  10}
 			if err := req.DoQuery(); err != nil || req.Result.Status > 299 {
