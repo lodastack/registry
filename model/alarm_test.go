@@ -15,7 +15,7 @@ var testNewAlarmMap map[string]string = map[string]string{
 	"every":       "1m",
 	"period":      "1m",
 	"measurement": "cpu.idle",
-	"function":    "mean",
+	"func":        "mean",
 	"expression":  "<",
 	"value":       "10",
 	"groupby":     "host",
@@ -26,7 +26,13 @@ var testNewAlarmMap map[string]string = map[string]string{
 	"rp":          "loda",
 	"shift":       "5",
 	"alert":       "sms",
-	"where":       ""}
+	"where":       "",
+
+	"blockstep":    "10",
+	"maxblocktime": "60",
+	"starttime":    "0",
+	"endtime":      "0",
+}
 
 func TestNewAlarmByRes(t *testing.T) {
 	// case1

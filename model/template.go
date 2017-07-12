@@ -216,7 +216,27 @@ var (
 	}
 
 	alarmTemplate ResourceList = ResourceList{
-		Resource{"name": "todo", "default": "true", "trigger": "threshold", "enable": "true", "every": "1m", "period": "1m", "measurement": "cpu.idle", "function": "mean", "expression": "<", "value": "10", "groupby": "todo", "groups": "todo", "level": "2", "message": "todo", "md5": "todo", "rp": "loda", "shift": "5", "alert": "todo", "where": ""},
+		Resource{
+			"name":         "alert name",
+			"trigger":      "threshold",
+			"enable":       "true",
+			"every":        "1m",
+			"period":       "1m",
+			"measurement":  "cpu.idle",
+			"func":         "mean",
+			"expression":   "<",
+			"value":        "10",
+			"groupby":      "*",
+			"groups":       "groups",
+			"level":        "2",
+			"md5":          "md5",
+			"rp":           "loda",
+			"alert":        "mail,sms,wechat",
+			"where":        "",
+			"blockstep":    "10",
+			"maxblocktime": "60",
+			"starttime":    "0",
+			"endtime":      "0"},
 	}
 	RootTemplate map[string]ResourceList
 )
