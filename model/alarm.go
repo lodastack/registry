@@ -140,7 +140,7 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 		alarm.SetDefault()
 	}
 
-	function, _ := data["function"]
+	function, _ := data["func"]
 	measurement, _ := data["measurement"]
 	period, _ := data["period"]
 	where, _ := data["where"]

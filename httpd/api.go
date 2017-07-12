@@ -517,7 +517,7 @@ func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	if param.ResType == model.Alarm {
+	if param.ResType == model.Alarm || param.ResType == model.TemplatePrefix+model.Alarm {
 		if param.UpdateMap, err = model.NewAlarmResourceByMap(param.Ns, param.UpdateMap, param.ResId); err != nil {
 			ReturnBadRequest(w, err)
 			return
@@ -562,7 +562,7 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
-	if param.ResType == "collect" && model.UpdateCollectName(param.R) != nil {
+	if (param.ResType == model.Collect || param.ResType == model.TemplatePrefix+model.Collect) && model.UpdateCollectName(param.R) != nil {
 		s.logger.Errorf("add invalid collect: %+v", param.R)
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
@@ -598,13 +598,13 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 
-	if param.ResType != model.Alarm {
-		delete(param.R, model.IdKey)
-	} else {
+	if param.ResType == model.Alarm || param.ResType == model.TemplatePrefix+model.Alarm {
 		if param.R, err = model.NewAlarmResourceByMap(param.Ns, param.R, ""); err != nil {
 			ReturnBadRequest(w, err)
 			return
 		}
+	} else {
+		delete(param.R, model.IdKey)
 	}
 
 	if err := s.tree.AppendResource(param.Ns, param.ResType, param.R); err != nil {
