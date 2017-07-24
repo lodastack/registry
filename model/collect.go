@@ -25,7 +25,7 @@ var (
 // PROC.bin.cpu.idle -> PROC.bin
 // PLUGIN.name.cpu.idle -> PLUGIN.name
 // PORT.service.xx -> PORT.service.xx
-// RUN.API.Ping.xx -> RUN.API.Ping
+// RUN.API.Ping.xx -> Run.API.Ping.xx
 func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 	resNames := make([]string, len(measurements))
 	cnt := 0
@@ -43,14 +43,10 @@ func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 			} else if len(nameSplit) == 2 {
 				resNames[cnt] = measurement
 			}
+		case RunPrefix:
+			fallthrough
 		case PortCollect:
 			resNames[cnt] = measurement
-		case RunPrefix:
-			if len(nameSplit) > 3 {
-				resNames[cnt] = strings.Join(nameSplit[1:3], ".")
-			} else {
-				log.Errorf("invalid collect name %s, skip", measurement)
-			}
 		default:
 			continue
 		}
