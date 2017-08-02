@@ -672,6 +672,9 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 	resIDs := make([]string, 0)
 	// search collect resource and get the ID.
 	for _, resName := range resNames {
+		if strings.HasPrefix(resName, model.RunPrefix) {
+			resName = strings.TrimLeft(resName, model.RunPrefix+".")
+		}
 		search, _ := model.NewSearch(false, model.PkProperty[model.Collect], resName)
 		res, err := s.tree.SearchResource(ns, model.Collect, search)
 		if err != nil {
