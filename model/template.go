@@ -4,6 +4,7 @@ var (
 	Machine = "machine"
 	Collect = "collect"
 	Alarm   = "alarm"
+	Deploy  = "deploy"
 
 	Templates []string = []string{
 		Machine, Alarm, Collect, "group", "ns", "user",
@@ -13,6 +14,7 @@ var (
 		Machine: "hostname",
 		Collect: "name",
 		Alarm:   "name",
+		Deploy:  "name",
 		"doc":   "name",
 	}
 
