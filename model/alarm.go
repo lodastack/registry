@@ -159,14 +159,14 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	stime, _ := data["starttime"]
 	etime, _ := data["endtime"]
 
-	if measurement == "" || period == "" || expression == "" ||
+	if measurement == "" || period == "" ||
 		every == "" || trigger == "" || level == "" ||
 		alert == "" || function == "" || groups == "" {
 		return &AlarmResource{}, ErrInvalidParam
 	}
 
-	if (trigger == models.ThresHold && value == "") ||
-		(trigger == models.Relative && value == "") {
+	if (trigger == models.ThresHold && (value == "" || expression == "")) ||
+		(trigger == models.Relative && (value == "" || expression == "")) {
 		return &AlarmResource{}, ErrInvalidParam
 	}
 
