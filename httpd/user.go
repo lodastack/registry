@@ -34,6 +34,12 @@ func (s *Service) initPermissionHandler() {
 	s.router.GET("/api/v1/perm/user/list", s.HandlerUserListGet)
 	s.router.PUT("/api/v1/perm/user", s.HandlerUserSet)
 	s.router.DELETE("/api/v1/perm/user", s.HandlerRemoveUser)
+
+	// response ok if the request pass permission check.
+	s.router.GET("/api/v1/perm/check", s.nilHandler)
+	s.router.POST("/api/v1/perm/check", s.nilHandler)
+	s.router.PUT("/api/v1/perm/check", s.nilHandler)
+	s.router.DELETE("/api/v1/perm/check", s.nilHandler)
 }
 
 // SigninHandler handler signin request
@@ -282,5 +288,9 @@ func (s *Service) HandlerRemoveUser(w http.ResponseWriter, r *http.Request, _ ht
 		ReturnServerError(w, err)
 		return
 	}
+	ReturnJson(w, 200, "success")
+}
+
+func (s *Service) nilHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ReturnJson(w, 200, "success")
 }
