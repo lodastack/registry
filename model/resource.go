@@ -397,10 +397,17 @@ func (r *Resource) SetProperty(k, v string) {
 
 // InitID create ID for the resource if not have, and return ID.
 func (r *Resource) InitID() string {
-	if id, _ := r.ID(); id == "" {
-		(*r)[IdKey] = common.GenUUID()
+	id, _ := r.ID()
+	if id == "" {
+		return r.NewID()
 	}
-	return (*r)[IdKey]
+	return id
+}
+
+func (r *Resource) NewID() string {
+	id := common.GenUUID()
+	r.SetProperty(IdKey, id)
+	return id
 }
 
 func (r *Resource) ID() (string, bool) {
