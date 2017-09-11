@@ -176,7 +176,7 @@ func (t *Tree) CopyResource(fromNs, toNs, resType string, resourceIDs ...string)
 		pkValueList = append(pkValueList, pkValue)
 		continue
 	}
-	// CHeck pk in new ns.
+	// Check pk in new ns.
 	searchPk, err := model.NewSearch(false, model.PkProperty[resType], pkValueList...)
 	if err != nil {
 		t.logger.Errorf("search resource in new ns before move to ns %s fail: %s", toNs, err.Error())
@@ -195,6 +195,11 @@ func (t *Tree) CopyResource(fromNs, toNs, resType string, resourceIDs ...string)
 		}
 		t.logger.Errorf("resource pk %v already exist in the ns, data: %+v", alreadyExist, rl)
 		return errors.New("resource pk " + strings.Join(alreadyExist, ",") + " already in new ns")
+	}
+
+	// set new resID to rs.
+	for i := range rs {
+		rs[i].NewID()
 	}
 
 	if err := t.AppendResource(toNs, resType, rs...); err != nil {
