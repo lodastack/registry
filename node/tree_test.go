@@ -200,13 +200,7 @@ func TestTreeGetLeaf(t *testing.T) {
 	if err := tree.saveTree(); err != nil {
 		t.Fatal("saveTree error")
 	}
-	allNodes, err := tree.AllNodes()
-	if err != nil {
-		t.Fatal("AllNodes fail")
-	}
-	if tree.Cache, err = allNodes.initNsCache(); err != nil {
-		t.Fatal("initNsCache fail")
-	}
+
 	childIDs, err := tree.LeafChildIDs(rootNode)
 	t.Log("result of ID LeafIDs:", childIDs)
 	if err != nil || len(childIDs) != 4 {

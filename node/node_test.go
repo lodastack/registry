@@ -267,10 +267,3 @@ func BenchmarkNodeFFJsonUnmarshal(b *testing.B) {
 		}
 	}
 }
-
-func TestInitNsCache(t *testing.T) {
-	_, err := nodes.initNsCache()
-	if err != nil {
-		t.Fatalf("nodes initNsCache fail: %s", err.Error())
-	}
-}
