@@ -3,7 +3,6 @@ package node
 import (
 	"errors"
 	"strings"
-	"sync"
 )
 
 const (
@@ -255,85 +254,6 @@ func (n *Node) Get(ns string) (*Node, error) {
 		}
 	}
 	return checkNode, nil
-}
-
-type nodeCache struct {
-	sync.RWMutex
-	Data map[string]string
-}
-
-func (i *nodeCache) Len() int {
-	return len(i.Data)
-}
-func (i *nodeCache) Get(name string) (string, bool) {
-	i.RLock()
-	defer i.RUnlock()
-	v, ok := i.Data[name]
-	return v, ok
-}
-
-func (i *nodeCache) Set(name, v string) {
-	i.Lock()
-	defer i.Unlock()
-	i.Data[name] = v
-}
-
-func (i *nodeCache) Del(keyList ...string) {
-	i.Lock()
-	defer i.Unlock()
-	for _, key := range keyList {
-		delete(i.Data, key)
-	}
-}
-
-func (i *nodeCache) Purge() {
-	i.Lock()
-	defer i.Unlock()
-	for k := range i.Data {
-		delete((i.Data), k)
-	}
-}
-
-// AddNode add a node to NS_ID and child cache.
-func (i *nodeCache) Add(parentId, parentNs string, newNode *Node) {
-	ns := newNode.Name + nodeDeli + parentNs
-	i.Set(newNode.ID, ns)
-	i.Set(ns, newNode.ID)
-
-}
-
-// DelNode delete a node from cache.
-func (i *nodeCache) Delete(delId string) {
-	delNs, _ := i.Get(delId)
-	i.Del(delNs, delId)
-	i.Del(delId, delNs)
-}
-
-// initCache return the cache of ID-NS/NS-ID ang ID-childIDs.
-func (n *Node) initNsCache() (*nodeCache, error) {
-	// get ns-id from walk return, and set all id-ns pairs to idCache.
-	idCache := map[string]string{}
-	nsCache, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
-		result := map[string]string{}
-		result[node.Name] = node.ID
-		idCache[node.ID] = node.Name
-		if node.Type == NonLeaf {
-			for relativeNs, NodeId := range childReturn {
-				result[relativeNs+nodeDeli+node.Name] = NodeId
-				idCache[NodeId] = relativeNs + nodeDeli + node.Name
-			}
-		}
-		return result, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	for id, ns := range idCache {
-		nsCache[id] = ns
-	}
-
-	return &nodeCache{Data: nsCache}, nil
 }
 
 // return nodeID-childIDs map of the node.

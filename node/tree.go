@@ -41,8 +41,7 @@ type Tree struct {
 	Nodes   *Node
 	Cluster Cluster
 
-	Cache *nodeCache
-	Mu    sync.RWMutex
+	Mu sync.RWMutex
 
 	reports ReportInfo
 	logger  *log.Logger
@@ -55,7 +54,6 @@ func NewTree(cluster Cluster) (*Tree, error) {
 		Mu:      sync.RWMutex{},
 		logger:  log.New(config.C.LogConf.Level, "tree", model.LogBackend),
 		reports: ReportInfo{sync.RWMutex{}, make(map[string]m.Report)},
-		Cache:   &nodeCache{Data: map[string]string{}},
 	}
 	err := t.init()
 	return &t, err
@@ -82,28 +80,6 @@ func (t *Tree) initNodeBucket() error {
 		t.logger.Error("init nodeidKey fail:", err.Error())
 		return err
 	}
-	go func() {
-		start := time.Now()
-		allNodes, err := t.AllNodes()
-		if err != nil {
-			panic(err)
-		}
-
-		initCache, err := allNodes.initNsCache()
-		if err != nil {
-			panic(err)
-		}
-		t.Cache.Lock()
-		for k, v := range t.Cache.Data {
-			initCache.Set(k, v)
-		}
-		t.Cache.Data = initCache.Data
-		t.Cache.Unlock()
-		finishCacheInit := time.Now()
-		t.logger.Debugf("cache have %d item, init cost :%v",
-			t.Cache.Len(),
-			finishCacheInit.Sub(start))
-	}()
 	return nil
 }
 
@@ -242,22 +218,16 @@ func (t *Tree) AllNodes() (*Node, error) {
 
 // getNsByID return id of node with name nodeName.
 func (t *Tree) getNs(id string) (string, error) {
-	ns, ok := t.Cache.Get(id)
-	if ok && ns != "" {
-		return ns, nil
-	}
-
 	nodes, err := t.AllNodes()
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return "", err
 	}
-	_, ns, err = nodes.GetByID(id)
+	_, ns, err := nodes.GetByID(id)
 	if err != nil {
 		t.logger.Errorf("get node by ID fail: %s.", err.Error())
 		return "", err
 	}
-	t.Cache.Set(id, ns)
 	return ns, nil
 }
 
@@ -276,18 +246,11 @@ func (t *Tree) GetNode(ns string) (*Node, error) {
 }
 
 func (t *Tree) getID(ns string) (string, error) {
-	id, ok := t.Cache.Get(ns)
-	// If cannot get Node from cache, get from tree and set cache.
-	if ok && id != "" {
-		return id, nil
-	}
-
 	node, err := t.GetNode(ns)
 	if err != nil {
 		t.logger.Errorf("GetNodeByNs fail when get ns:%s, error: %s\n", ns, err.Error)
 		return "", err
 	}
-	t.Cache.Set(ns, node.ID)
 	return node.ID, nil
 }
 
@@ -359,10 +322,6 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			return "", ErrCreateNodeUnderLeaf
 		}
 		parent.Children = append(parent.Children, &newNode)
-		// if not create root/pool node, add node to cache.
-		if newNode.Name != rootNode {
-			t.Cache.Add(parent.ID, parentNs, &newNode)
-		}
 	}
 	t.Nodes = nodes
 
@@ -372,7 +331,6 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 	}
 	// Create a now bucket fot this node.
 	if err := t.createBucketForNode(nodeId); err != nil {
-		t.Cache.Delete(newNode.ID)
 		t.logger.Errorf("NewNode createNodeBucket fail, nodeid:%s, error: %s\n", nodeId, err.Error())
 		// Delete the new node in tree to rollback.
 		parent.Children = parent.Children[:len(parent.Children)-1]
@@ -475,7 +433,6 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 		t.logger.Error("NewNode save tree node fail,", err.Error())
 		return err
 	}
-	t.Cache.Delete(node.ID)
 	return nil
 }
 
@@ -528,6 +485,5 @@ func (t *Tree) DelNode(ns string) error {
 		t.logger.Error("NewNode save tree node fail,", err.Error())
 		return err
 	}
-	t.Cache.Delete(delID)
 	return nil
 }
