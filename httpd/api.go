@@ -306,7 +306,6 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		}
 		key := r.Header.Get("AuthToken")
 		v := s.cluster.GetSession(key)
-		s.logger.Infof("Header AuthToken: %s - %s", key, v)
 		if v == nil {
 			ReturnJson(w, 401, "Not Authorized. Please login.")
 			return
@@ -319,6 +318,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 
 		ns := r.Header.Get("NS")
 		res := r.Header.Get("Resource")
+		s.logger.Infof("[%s] access %s path %s NS:%s Res:%s", uid, r.Method, r.URL.Path, ns, res)
 		if ok, err := s.perm.Check(uid, ns, res, r.Method); err != nil {
 			s.logger.Errorf("check permission fail, error: %s", err.Error())
 			ReturnServerError(w, err)
