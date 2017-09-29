@@ -1,0 +1,12 @@
+[
+    {
+        "application":"loda",
+        "host":"127.0.0.2",
+        "hostname":"127.0.0.2"
+        },
+    {
+        "application":"loda",
+        "host":"127.0.0.3",
+        "hostname":"127.0.0.3"
+        }
+]

@@ -89,7 +89,7 @@ func (t *Tree) MatchNs(hostname string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	leafReg, err := nodes.leafMachineReg()
+	leafReg, err := nodes.LeafMachineReg()
 	if err != nil {
 		return nil, err
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
+	"github.com/lodastack/registry/node/cluster"
+	n "github.com/lodastack/registry/node/node"
 
 	m "github.com/lodastack/models"
 )
@@ -38,8 +40,9 @@ const (
 )
 
 type Tree struct {
-	Nodes   *Node
-	Cluster Cluster
+	Nodes *n.Node
+	c     cluster.ClusterInf
+	n     n.NodeInf
 
 	Mu sync.RWMutex
 
@@ -47,10 +50,11 @@ type Tree struct {
 	logger  *log.Logger
 }
 
-func NewTree(cluster Cluster) (*Tree, error) {
+func NewTree(cluster cluster.ClusterInf) (*Tree, error) {
 	t := Tree{
-		Nodes:   &Node{NodeProperty{ID: rootID, Name: rootNode, Type: NonLeaf, MachineReg: NoMachineMatch}, []*Node{}},
-		Cluster: cluster,
+		Nodes:   &n.Node{n.NodeProperty{ID: rootID, Name: rootNode, Type: n.NonLeaf, MachineReg: NoMachineMatch}, []*n.Node{}},
+		c:       cluster,
+		n:       n.NewNodeMethod(cluster),
 		Mu:      sync.RWMutex{},
 		logger:  log.New(config.C.LogConf.Level, "tree", model.LogBackend),
 		reports: ReportInfo{sync.RWMutex{}, make(map[string]m.Report)},
@@ -67,7 +71,7 @@ func (t *Tree) init() error {
 }
 
 func (t *Tree) initNodeBucket() error {
-	err := t.Cluster.CreateBucketIfNotExist([]byte(nodeBucket))
+	err := t.c.CreateBucketIfNotExist([]byte(nodeBucket))
 	if err != nil {
 		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", nodeBucket, err.Error())
 		return err
@@ -84,7 +88,7 @@ func (t *Tree) initNodeBucket() error {
 }
 
 func (t *Tree) initReportBucket() error {
-	err := t.Cluster.CreateBucketIfNotExist([]byte(reportBucket))
+	err := t.c.CreateBucketIfNotExist([]byte(reportBucket))
 	if err != nil {
 		t.logger.Errorf("tree init %s CreateBucketIfNotExist fail: %s", reportBucket, err.Error())
 		return err
@@ -129,7 +133,7 @@ func (t *Tree) initReportBucket() error {
 
 // initKey initialization tree data and idmap if they are nil.
 func (t *Tree) initKey(key string) error {
-	v, err := t.Cluster.View([]byte(rootNode), []byte(key))
+	v, err := t.c.View([]byte(rootNode), []byte(key))
 	if err != nil {
 		return err
 	}
@@ -141,21 +145,21 @@ func (t *Tree) initKey(key string) error {
 	switch key {
 	case nodeDataKey:
 		// Create rootNode map/bucket and init template.
-		if _, err := t.NewNode("", "", Root); err != nil {
+		if _, err := t.NewNode("", "", n.Root); err != nil {
 			panic("create root node fail: " + err.Error())
 		}
 		// Create root pool node.
-		if _, err := t.NewNode(poolNode, rootNode, Leaf, NoMachineMatch); err != nil {
+		if _, err := t.NewNode(poolNode, rootNode, n.Leaf, NoMachineMatch); err != nil {
 			panic("create root pool node fail: " + err.Error())
 		}
 	case nodeIdKey:
 		// Initialization NodeId Map to store.
 		initByte, _ := json.Marshal(map[string]string{rootID: rootNode})
 		if err != nil {
-			return ErrInitNodeKey
+			return common.ErrInitNodeKey
 		}
-		if err = t.Cluster.Update([]byte(rootNode), []byte(nodeIdKey), initByte); err != nil {
-			return ErrInitNodeKey
+		if err = t.c.Update([]byte(rootNode), []byte(nodeIdKey), initByte); err != nil {
+			return common.ErrInitNodeKey
 		}
 	}
 	return nil
@@ -169,107 +173,74 @@ func (t *Tree) saveTree() error {
 		return err
 	}
 	// TODO: purge cache or not
-	return t.Cluster.Update([]byte(rootNode), []byte(nodeDataKey), treeByte)
+	return t.c.Update([]byte(rootNode), []byte(nodeDataKey), treeByte)
 }
 
 // Create bucket for node.
 func (t *Tree) createBucketForNode(nodeId string) error {
-	return t.Cluster.CreateBucket([]byte(nodeId))
+	return t.c.CreateBucket([]byte(nodeId))
 }
 
 // Get type resType resource of node with ID bucketId.
 func (t *Tree) getByteFromStore(bucketId, resType string) ([]byte, error) {
-	return t.Cluster.View([]byte(bucketId), []byte(resType))
+	return t.c.View([]byte(bucketId), []byte(resType))
 }
 
 func (t *Tree) removeNodeFromStore(bucketId string) error {
-	return t.Cluster.RemoveBucket([]byte(bucketId))
-}
-
-// Get []byte of allnodes.
-func (t *Tree) allNodeByte() ([]byte, error) {
-	return t.getByteFromStore(rootNode, nodeDataKey)
+	return t.c.RemoveBucket([]byte(bucketId))
 }
 
 // Set resource to node bucket.
 func (t *Tree) setByteToStore(nodeId, resType string, resByte []byte) error {
-	return t.Cluster.Update([]byte(nodeId), []byte(resType), resByte)
+	return t.c.Update([]byte(nodeId), []byte(resType), resByte)
 }
 
 func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
-	return t.Cluster.ViewPrefix([]byte(nodeId), []byte(template))
+	return t.c.ViewPrefix([]byte(nodeId), []byte(template))
 }
 
 // GetAllNodes return the whole nodes.
-func (t *Tree) AllNodes() (*Node, error) {
-	v, err := t.allNodeByte()
-	if err != nil || len(v) == 0 {
-		t.logger.Errorf("get allNode fail: %v", err)
-		return nil, ErrGetNode
+func (t *Tree) AllNodes() (n *n.Node, err error) {
+	if n, err = t.n.AllNodes(); err != nil {
+		t.logger.Errorf("AllNodes fail, node %v, error: %s", *n, err.Error())
 	}
+	return
+}
 
-	var allNode Node
-	if err := allNode.UnmarshalJSON(v); err != nil {
-		t.logger.Errorf("GetAllNodes unmarshal byte to node fail: %s", err.Error())
-		return nil, ErrGetNode
+// GetNode return exact node by node NS.
+func (t *Tree) GetNodeByNS(ns string) (n *n.Node, err error) {
+	if ns == "" {
+		t.logger.Errorf("GetNodeByNS donot allow to query empty ns")
+		return nil, common.ErrInvalidParam
 	}
-	return &allNode, nil
+	if n, err = t.n.GetNodeByNS(ns); err != nil {
+		t.logger.Errorf("GetNode fail, ns: %s, node: %v, err: %s", ns, n, err.Error())
+		return nil, common.ErrInvalidParam
+	}
+	return
 }
 
 // getNsByID return id of node with name nodeName.
-func (t *Tree) getNs(id string) (string, error) {
-	nodes, err := t.AllNodes()
-	if err != nil {
-		t.logger.Error("get all nodes error when GetNodesById")
-		return "", err
+func (t *Tree) getNodeNSByID(id string) (ns string, err error) {
+	if ns, err = t.n.GetNodeNSByID(id); err != nil {
+		t.logger.Errorf("GetNodeByNS fail: %s", err.Error())
 	}
-	_, ns, err := nodes.GetByID(id)
-	if err != nil {
-		t.logger.Errorf("get node by ID fail: %s.", err.Error())
-		return "", err
-	}
-	return ns, nil
+	return
 }
 
-// GetNodesById return exact node with name.
-func (t *Tree) GetNode(ns string) (*Node, error) {
-	if ns == "" {
-		return nil, ErrInvalidParam
+func (t *Tree) getNodeIDByNS(ns string) (id string, err error) {
+	if id, err = t.n.GetNodeIDByNS(ns); err != nil {
+		t.logger.Errorf("GetNodeIDByNS fail: %s", err.Error())
 	}
-	// TODO: use nodeidKey as cache
-	nodes, err := t.AllNodes()
-	if err != nil {
-		t.logger.Error("get all nodes error when GetNodesById")
-		return nil, err
-	}
-	return nodes.Get(ns)
-}
-
-func (t *Tree) getID(ns string) (string, error) {
-	node, err := t.GetNode(ns)
-	if err != nil {
-		t.logger.Errorf("GetNodeByNs fail when get ns:%s, error: %s\n", ns, err.Error)
-		return "", err
-	}
-	return node.ID, nil
+	return
 }
 
 // Return leaf node of the ns.
-func (t *Tree) LeafChildIDs(ns string) ([]string, error) {
-	nodeId, err := t.getID(ns)
-	if nodeId == "" || err != nil {
-		return nil, err
+func (t *Tree) LeafChildIDs(ns string) (l []string, err error) {
+	if l, err = t.n.LeafChildIDs(ns); err != nil {
+		t.logger.Errorf("LeafChildIDs fail: %s", err.Error())
 	}
-
-	// read the tree if not get from cache.
-	node, err := t.GetNode(ns)
-	if err != nil {
-		return nil, err
-	}
-	if node.Type == Leaf {
-		return []string{node.ID}, nil
-	}
-	return node.leafChildIDs()
+	return
 }
 
 // NewNode create a node, return a pointer which point to node, and it bucketId. Property is preserved.
@@ -277,9 +248,9 @@ func (t *Tree) LeafChildIDs(ns string) ([]string, error) {
 // TODO: Permission Check
 func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) (string, error) {
 	var nodeId, matchReg string
-	var newNode Node
-	if nodeType == Root {
-		nodeId, name, nodeType, matchReg = rootID, rootNode, NonLeaf, NoMachineMatch
+	var newNode n.Node
+	if nodeType == n.Root {
+		nodeId, name, nodeType, matchReg = rootID, rootNode, n.NonLeaf, NoMachineMatch
 		parentNs = "-"
 	} else {
 		if len(property) > 0 && property[0] != "" {
@@ -289,9 +260,9 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 		}
 		nodeId = common.GenUUID()
 	}
-	newNode = Node{NodeProperty{ID: nodeId, Name: name, Type: nodeType, MachineReg: matchReg}, []*Node{}}
+	newNode = n.Node{n.NodeProperty{ID: nodeId, Name: name, Type: nodeType, MachineReg: matchReg}, []*n.Node{}}
 
-	var nodes, parent *Node
+	var nodes, parent *n.Node
 	var err error
 	// Create Pool node not lock the tree, because create leaf will lock the tree.
 	t.Mu.Lock()
@@ -307,19 +278,19 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			t.logger.Errorf("get all nodes error, parent ns: %s, error: %s", parentNs, err.Error())
 			return "", err
 		}
-		parent, err = nodes.Get(parentNs)
+		parent, err = nodes.GetByNS(parentNs)
 		if err != nil {
 			t.logger.Errorf("get parent id ns: %s, error: %v", parentNs, err)
-			return "", ErrGetParent
+			return "", common.ErrGetParent
 		}
 
 		// If the newnode alread exist, return err.
 		if exist := nodes.Exist(newNode.Name + nodeDeli + parentNs); exist {
-			return "", ErrNodeAlreadyExist
+			return "", common.ErrNodeAlreadyExist
 		}
 		if parent.IsLeaf() {
 			t.logger.Error("cannot create node under leaf, leaf node:", parentNs)
-			return "", ErrCreateNodeUnderLeaf
+			return "", common.ErrCreateNodeUnderLeaf
 		}
 		parent.Children = append(parent.Children, &newNode)
 	}
@@ -354,7 +325,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			return "", err
 		}
 		for k, resStore := range templateRes {
-			if nodeType == Leaf {
+			if nodeType == n.Leaf {
 				k = k[len(template):]
 			}
 			if len(resStore) == 0 {
@@ -393,18 +364,6 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 	return nodeId, nil
 }
 
-// Return  pool nodeID if create a pool node.
-func (t *Tree) NewPool(parentId, offlineMatch string) (string, error) {
-	poolId, ErrCreatePool := t.NewNode(poolNode, parentId, Leaf, offlineMatch)
-	if ErrCreatePool == nil {
-		return poolId, nil
-	} else if ErrCreatePool == ErrNodeAlreadyExist {
-		return "", nil
-	}
-	t.logger.Errorf("Create pool node fail:%s", ErrCreatePool.Error())
-	return "", ErrCreatePool
-}
-
 func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
@@ -417,16 +376,16 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 	if oldNsSplit := strings.Split(ns, nodeDeli); name != oldNsSplit[0] {
 		newNs := strings.Join(append([]string{name}, oldNsSplit[1:]...), nodeDeli)
 		if exist := allNodes.Exist(newNs); exist {
-			return ErrNodeAlreadyExist
+			return common.ErrNodeAlreadyExist
 		}
 	}
 
-	node, err := allNodes.Get(ns)
+	node, err := allNodes.GetByNS(ns)
 	if err != nil {
 		t.logger.Errorf("GetByNs %s fail, error: %s", ns, err.Error())
 		return err
 	}
-	node.update(name, machineReg)
+	node.Update(name, machineReg)
 
 	t.Nodes = allNodes
 	if err := t.saveTree(); err != nil {
@@ -440,10 +399,10 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 func (t *Tree) DelNode(ns string) error {
 	nsSplit := strings.Split(ns, nodeDeli)
 	if len(nsSplit) < 2 {
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 	parentNs := strings.Join(nsSplit[1:], nodeDeli)
-	delID, err := t.getID(ns)
+	delID, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return err
@@ -451,10 +410,10 @@ func (t *Tree) DelNode(ns string) error {
 
 	// Not allow delete node which still has child node or machine.
 	rl, err := t.GetResourceList(ns, "machine")
-	if (err != nil && err != ErrNoLeafChild) ||
+	if (err != nil && err != common.ErrNoLeafChild) ||
 		(rl != nil && len(*rl) != 0) {
 		t.logger.Errorf("not allow delete ns %s, error: %v", ns, err)
-		return ErrNotAllowDel
+		return common.ErrNotAllowDel
 	}
 
 	t.Mu.Lock()
@@ -464,13 +423,13 @@ func (t *Tree) DelNode(ns string) error {
 		t.logger.Error("get all nodes error when GetNodesById")
 		return err
 	}
-	parentNode, err := allNodes.Get(parentNs)
+	parentNode, err := allNodes.GetByNS(parentNs)
 	if err != nil {
 		t.logger.Errorf("GetByNs fail, error: %s", err.Error())
 		return err
 	}
 
-	if err := parentNode.delChild(delID); err != nil {
+	if err := parentNode.DelChild(delID); err != nil {
 		t.logger.Errorf("delete node fail, parent ns: %s, delete ID: %s, error: %s", parentNs, delID, err.Error())
 		return err
 	}

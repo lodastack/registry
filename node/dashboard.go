@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
 )
 
@@ -59,7 +60,7 @@ type PanelInf interface {
 //  u.cluster.View([]byte(AuthBuck), getUKey(username))
 // GetDashboard return the dashboard under the ns.
 func (t *Tree) GetDashboard(ns string) (model.DashboardData, error) {
-	nodeId, err := t.getID(ns)
+	nodeId, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return nil, err
@@ -83,7 +84,7 @@ func (t *Tree) GetDashboard(ns string) (model.DashboardData, error) {
 
 // GetDashboard return the dashboard under the ns.
 func (t *Tree) SetDashboard(ns string, dashboards model.DashboardData) error {
-	nodeId, err := t.getID(ns)
+	nodeId, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return err
@@ -112,7 +113,7 @@ func (t *Tree) UpdateDashboard(ns string, dIndex int, title string) error {
 		return err
 	}
 	if dIndex >= len(dashboards) {
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	} else {
 		dashboards[dIndex].Title = title
 	}
@@ -135,7 +136,7 @@ func (t *Tree) ReorderPanel(ns string, dIndex int, newOrder []int) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) {
 		t.logger.Errorf("ReorderPanel error, data: %+v, error: %v", dashboards, err)
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 	if len(dashboards[dIndex].Panels) != len(newOrder) {
 		return errors.New("dashboard name or new order invalid")
@@ -156,7 +157,7 @@ func (t *Tree) AddPanel(ns string, dIndex int, panel model.Panel) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) {
 		t.logger.Errorf("AddPanel error, data: %+v, error: %v", dashboards, err)
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 
 	dashboards[dIndex].Panels = append(dashboards[dIndex].Panels, panel)
@@ -167,7 +168,7 @@ func (t *Tree) UpdatePanel(ns string, dIndex int, panelIndex int, title, graphTy
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || len(dashboards[dIndex].Panels) <= panelIndex {
 		t.logger.Errorf("AddPanel error, data: %+v, dindex %d, pindex %d, error: %v", dashboards, dIndex, panelIndex, err)
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 
 	if title != "" {
@@ -183,7 +184,7 @@ func (t *Tree) DelPanel(ns string, dIndex int, panelIndex int) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || panelIndex >= len(dashboards[dIndex].Panels) {
 		t.logger.Errorf("AddPanel error, data: %+v, dindex %d, pindex %d, error: %v", dashboards, dIndex, panelIndex, err)
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 
 	// TODO: check
@@ -209,7 +210,7 @@ func (t *Tree) AppendTarget(ns string, dIndex int, panelIndex int, target model.
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || panelIndex >= len(dashboards[dIndex].Panels) {
 		t.logger.Errorf("AddPanel error, data: %+v, dindex %d, pindex %d, error: %v", dashboards, dIndex, panelIndex, err)
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 
 	dashboards[dIndex].Panels[panelIndex].Targets = append(dashboards[dIndex].Panels[panelIndex].Targets, target)
@@ -221,7 +222,7 @@ func (t *Tree) UpdateTarget(ns string, dIndex int, panelIndex, targetIndex int, 
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || panelIndex >= len(dashboards[dIndex].Panels) || targetIndex >= len(dashboards[dIndex].Panels[panelIndex].Targets) {
 		t.logger.Errorf("AddPanel error, data: %+v, dindex %d, pindex %d, error: %v", dashboards, dIndex, panelIndex, err)
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 
 	dashboards[dIndex].Panels[panelIndex].Targets[targetIndex] = target
@@ -233,7 +234,7 @@ func (t *Tree) DelTarget(ns string, dIndex int, panelIndex, targetIndex int) err
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || panelIndex >= len(dashboards[dIndex].Panels) || targetIndex >= len(dashboards[dIndex].Panels[panelIndex].Targets) {
 		t.logger.Errorf("AddPanel error, data: %+v, dindex %d, pindex %d, error: %v", dashboards, dIndex, panelIndex, err)
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 	if targetIndex+1 < len(dashboards[dIndex].Panels[panelIndex].Targets) {
 		copy(dashboards[dIndex].Panels[panelIndex].Targets[targetIndex:], dashboards[dIndex].Panels[panelIndex].Targets[targetIndex+1:])

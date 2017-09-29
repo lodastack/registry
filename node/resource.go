@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/limit"
 	"github.com/lodastack/registry/model"
 )
@@ -30,7 +31,7 @@ func (t *Tree) getResFromStore(nodeId, resourceType string) (*model.ResourceList
 // GetResource return the ResourceType resource belong to the node with NodeName.
 // TODO: Permission Check
 func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceList, error) {
-	node, err := t.GetNode(ns)
+	node, err := t.GetNodeByNS(ns)
 	if err != nil {
 		// t.logger.Errorf("get resource fail because get node by ns fail, ns: %s, resource: %s", ns, resourceType)
 		return nil, err
@@ -42,9 +43,9 @@ func (t *Tree) GetResourceList(ns string, resourceType string) (*model.ResourceL
 
 	// Return all resource of the node's child leaf if get resource from NonLeaf.
 	allRes := model.ResourceList{}
-	leafIDs, err := node.leafChildIDs()
+	leafIDs, err := node.LeafChildIDs()
 	if err != nil {
-		if err == ErrNoLeafChild {
+		if err == common.ErrNoLeafChild {
 			return nil, nil
 		}
 		return nil, err
@@ -75,7 +76,7 @@ func (t *Tree) GetResource(ns, resType string, resID ...string) ([]model.Resourc
 
 // Update One Resource by ns/resource type/resource ID/update map.
 func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
-	nodeId, err := t.getID(ns)
+	nodeId, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return err
@@ -97,7 +98,7 @@ func (t *Tree) UpdateResource(ns, resType, resID string, updateMap map[string]st
 
 // Append one resource to ns.
 func (t *Tree) AppendResource(ns, resType string, appendRes ...model.Resource) error {
-	nodeID, err := t.getID(ns)
+	nodeID, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Errorf("getID of ns %s fail when appendResource, error: %+v", ns, err)
 		return err
@@ -121,13 +122,13 @@ func (t *Tree) AppendResource(ns, resType string, appendRes ...model.Resource) e
 
 // Set ResourceList to ns.
 func (t *Tree) SetResource(ns, resType string, rl model.ResourceList) error {
-	node, err := t.GetNode(ns)
+	node, err := t.GetNodeByNS(ns)
 	if err != nil || node.ID == "" {
 		t.logger.Error("Get node by ns(%s) fail\n", ns)
-		return ErrGetNode
+		return common.ErrGetNode
 	}
 	if !node.AllowResource(resType) {
-		return ErrSetResourceToLeaf
+		return common.ErrSetResourceToLeaf
 	}
 
 	var resStore []byte
@@ -141,7 +142,7 @@ func (t *Tree) SetResource(ns, resType string, rl model.ResourceList) error {
 }
 
 func (t *Tree) DeleteResource(ns, resType string, resId ...string) error {
-	nodeId, err := t.getID(ns)
+	nodeId, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return err
@@ -227,7 +228,7 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 	leafIDs, err := t.LeafChildIDs(ns)
 	if err != nil && len(leafIDs) == 0 {
 		t.logger.Errorf("node has none leaf, ns: %s, error: %v", ns, err)
-		return nil, ErrNilChildNode
+		return nil, common.ErrNilChildNode
 	}
 
 	var fail bool
@@ -283,7 +284,7 @@ func (t *Tree) SearchResource(ns, resType string, search model.ResourceSearch) (
 				return
 			}
 			if len(resOfOneNs) != 0 {
-				ns, err := t.getNs(leafID)
+				ns, err := t.getNodeNSByID(leafID)
 				if err != nil {
 					t.logger.Errorf("getNsByID favil, getNsByID error: %s", err.Error())
 					limit.Error(err)

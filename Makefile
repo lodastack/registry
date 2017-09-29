@@ -14,3 +14,6 @@ install: fmt
 
 clean:
 	cd cmd/registry && go clean
+
+test:
+	go test ./...

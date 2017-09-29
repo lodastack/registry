@@ -45,6 +45,9 @@ func (u *User) GetUser(username string) (User, error) {
 func (u *User) GetUserList(usernames []string) (map[string]User, error) {
 	Users := make(map[string]User, len(usernames))
 	for _, username := range usernames {
+		if username == "" {
+			continue
+		}
 		user, err := u.GetUser(username)
 		if err != nil {
 			log.Errorf("GetUser %s error: %s", username, user)

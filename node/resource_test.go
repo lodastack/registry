@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/lodastack/registry/model"
+	n "github.com/lodastack/registry/node/node"
 )
 
 func TestSetResourceByID(t *testing.T) {
@@ -22,7 +23,7 @@ func TestSetResourceByID(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	_, err = tree.NewNode("test", rootNode, Leaf)
+	_, err = tree.NewNode("test", rootNode, n.Leaf)
 	if err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
@@ -39,7 +40,7 @@ func TestSetResourceByID(t *testing.T) {
 	}
 
 	// Set resource to nonLeaf.
-	_, err = tree.NewNode("testNonLeaf", rootNode, NonLeaf)
+	_, err = tree.NewNode("testNonLeaf", rootNode, n.NonLeaf)
 	if err != nil {
 		t.Fatalf("create nonLeaf behind root fail: %s", err.Error())
 	}
@@ -62,7 +63,7 @@ func TestSetResourceByNs(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("test", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("test", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResource("test."+rootNode, "machine", *resource)
@@ -78,7 +79,7 @@ func TestSetResourceByNs(t *testing.T) {
 	}
 
 	// Set resource to nonLeaf.
-	if _, err := tree.NewNode("testNonLeaf", rootNode, NonLeaf); err != nil {
+	if _, err := tree.NewNode("testNonLeaf", rootNode, n.NonLeaf); err != nil {
 		t.Fatalf("create nonLeaf behind root fail: %s", err.Error())
 	}
 	if err = tree.SetResource("testNonLeaf."+rootNode, "machine", *resource); err == nil {
@@ -101,14 +102,14 @@ func TestSearchResource(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("test1", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("test1", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResource("test1."+rootNode, "machine", *resource1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
-	if _, err := tree.NewNode("test2", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("test2", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResource("test2."+rootNode, "machine", *resource2)
@@ -116,10 +117,10 @@ func TestSearchResource(t *testing.T) {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 
-	if _, err := tree.NewNode("nl", rootNode, NonLeaf); err != nil {
+	if _, err := tree.NewNode("nl", rootNode, n.NonLeaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	if _, err := tree.NewNode("l", "nl."+rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("l", "nl."+rootNode, n.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResource("l.nl."+rootNode, "machine", *resource2)
@@ -204,7 +205,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	tree, err := NewTree(s)
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("leaf1", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("leaf1", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResource("leaf1."+rootNode, "machine", *resource1)
@@ -220,7 +221,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	}
 
 	// Set resource to leaf.
-	if _, err := tree.NewNode("leaf2", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("leaf2", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	err = tree.SetResource("leaf2."+rootNode, "machine", *resource2)
@@ -270,10 +271,10 @@ func TestMoveResource(t *testing.T) {
 	machine1 := model.NewResource(map[string]string{"hostname": "host1"})
 	machine2 := model.NewResource(map[string]string{"hostname": "host2"})
 
-	if _, err := tree.NewNode("testMove1", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("testMove1", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create testMove1 fail: %s", err.Error())
 	}
-	if _, err := tree.NewNode("testMove2", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("testMove2", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create testMove2 fail: %s", err.Error())
 	}
 	if err := tree.AppendResource("testMove1.loda", "machine", machine1, machine2); err != nil {
@@ -375,13 +376,13 @@ func TestCopyResource(t *testing.T) {
 	machine1 := model.NewResource(map[string]string{"hostname": "host1"})
 	machine2 := model.NewResource(map[string]string{"hostname": "host2"})
 
-	if _, err := tree.NewNode("testMove1", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("testMove1", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create testMove1 fail: %s", err.Error())
 	}
-	if _, err := tree.NewNode("testMove2", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("testMove2", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create testMove2 fail: %s", err.Error())
 	}
-	if _, err := tree.NewNode("testMove3", rootNode, Leaf); err != nil {
+	if _, err := tree.NewNode("testMove3", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create testMove3 fail: %s", err.Error())
 	}
 	if err := tree.AppendResource("testMove1.loda", "machine", machine1, machine2); err != nil {
