@@ -41,3 +41,12 @@ func Reverse(ori []string) []string {
 	}
 	return result
 }
+
+func CheckStringInList(sl []string, v string) bool {
+	for _, item := range sl {
+		if item == v {
+			return true
+		}
+	}
+	return false
+}

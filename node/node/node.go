@@ -1,30 +1,36 @@
 package node
 
 import (
-	"errors"
+	"github.com/lodastack/registry/common"
+	"github.com/lodastack/registry/model"
 	"strings"
 )
+
+//
+const (
+	nodeDataKey = "node"
+	nodeIdKey   = "nodeid"
+
+	nodeBucket   = "loda"
+	reportBucket = "report"
+
+	rootNode = "loda"
+	poolNode = "pool"
+	rootID   = "0"
+	nodeDeli = "."
+
+	NsFormat = "ns"
+	IDFormat = "id"
+
+	NoMachineMatch = "^$"
+)
+
+//
 
 const (
 	Leaf    = iota // leaf type of node
 	NonLeaf        // non-leaf type of node
 	Root
-)
-
-var (
-	ErrInitNodeBucket      = errors.New("init node bucket fail")
-	ErrInitNodeKey         = errors.New("init node bucket k-v fail")
-	ErrGetNode             = errors.New("get node fail")
-	ErrNodeNotFound        = errors.New("node not found")
-	ErrGetParent           = errors.New("get parent node error")
-	ErrCreateNodeUnderLeaf = errors.New("can not create node under leaf node")
-	ErrSetResourceToLeaf   = errors.New("can not set resource to leaf node")
-	ErrGetNodeID           = errors.New("get nodeid fail")
-	ErrInvalidParam        = errors.New("invalid param")
-	ErrNilChildNode        = errors.New("get none child node")
-	ErrNodeAlreadyExist    = errors.New("node already exist")
-	ErrNoLeafChild         = errors.New("have no leaf child node")
-	ErrNotAllowDel         = errors.New("not allow to be delete")
 )
 
 type NodeProperty struct {
@@ -47,14 +53,14 @@ func (n *Node) IsLeaf() bool {
 }
 
 func (n *Node) Exist(ns string) bool {
-	if _, err := n.Get(ns); err == nil {
+	if _, err := n.GetByNS(ns); err == nil {
 		return true
 	}
 	return false
 }
 
-// update node property, do not change children.
-func (n *Node) update(name, machineReg string) {
+// Update update node machineReg propertyn.
+func (n *Node) Update(name, machineReg string) {
 	if name != "" {
 		n.Name = name
 	}
@@ -76,19 +82,19 @@ func (n *Node) allowDel() bool {
 }
 
 // delChild delete one child node by ID.
-func (n *Node) delChild(childId string) error {
+func (n *Node) DelChild(childId string) error {
 	for index, child := range n.Children {
 		if child.ID != childId {
 			continue
 		}
 		if !child.allowDel() {
-			return ErrNotAllowDel
+			return common.ErrNotAllowDel
 		}
 		copy(n.Children[index:], n.Children[index+1:])
 		n.Children = n.Children[:len(n.Children)-1]
 		return nil
 	}
-	return ErrNodeNotFound
+	return common.ErrNodeNotFound
 }
 
 // AllowSetResource checks if the node could be set a resource.
@@ -101,8 +107,8 @@ func (n *Node) AllowResource(resType string) bool {
 	if n.IsLeaf() {
 		return true
 	}
-	if len(resType) > len(template) &&
-		string(resType[:len(template)]) == template {
+	if len(resType) > len(model.TemplatePrefix) &&
+		string(resType[:len(model.TemplatePrefix)]) == model.TemplatePrefix {
 		return true
 	}
 	return false
@@ -162,8 +168,8 @@ func (n *Node) LeafNs() ([]string, error) {
 	return getKeysOfMap(nsMap), nil
 }
 
-// getLeafChild return the leaf id list of the Node.
-func (n *Node) leafChildIDs() ([]string, error) {
+// LeafChildIDs return the leaf id list of this Node.
+func (n *Node) LeafChildIDs() ([]string, error) {
 	IDMap, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {
@@ -178,13 +184,13 @@ func (n *Node) leafChildIDs() ([]string, error) {
 	if err != nil {
 		return nil, err
 	} else if len(IDMap) == 0 {
-		return nil, ErrNoLeafChild
+		return nil, common.ErrNoLeafChild
 	}
 	return getKeysOfMap(IDMap), nil
 }
 
-// leafMachineReg return the ns-MachineReg Map.
-func (n *Node) leafMachineReg() (map[string]string, error) {
+// LeafMachineReg return the ns-MachineReg Map.
+func (n *Node) LeafMachineReg() (map[string]string, error) {
 	return n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
 		if node.Type == Leaf {
@@ -209,18 +215,18 @@ func (n *Node) GetByID(nodeId string) (*Node, string, error) {
 			}
 		}
 	}
-	return nil, "", ErrNodeNotFound
+	return nil, "", common.ErrNodeNotFound
 }
 
-// GetByName return exact node by nodename.
-func (n *Node) Get(ns string) (*Node, error) {
+// GetByNS return exact node by nodename.
+func (n *Node) GetByNS(ns string) (*Node, error) {
 	nsSplit := strings.Split(ns, nodeDeli)
 	if len(nsSplit) == 1 && ns == rootNode {
 		// return tree if get root.
 		return n, nil
 	} else if len(nsSplit) < 2 {
 		// the query is invalid.
-		return nil, ErrNodeNotFound
+		return nil, common.ErrNodeNotFound
 	}
 
 	// Func to check if children node match the ns.
@@ -236,7 +242,7 @@ func (n *Node) Get(ns string) (*Node, error) {
 	}
 
 	if rootNode != nsSplit[len(nsSplit)-1] {
-		return nil, ErrNodeNotFound
+		return nil, common.ErrNodeNotFound
 	}
 
 	checkNode := n
@@ -246,7 +252,7 @@ func (n *Node) Get(ns string) (*Node, error) {
 		checkNode, ok = checkChild(checkNode, nsSplit[0:len(nsSplit)-index])
 		// Return error if not match.
 		if !ok {
-			return nil, ErrNodeNotFound
+			return nil, common.ErrNodeNotFound
 		}
 		// If each part of the ns is match, return.
 		if index+1 == len(nsSplit)-1 {
@@ -256,7 +262,8 @@ func (n *Node) Get(ns string) (*Node, error) {
 	return checkNode, nil
 }
 
-// return nodeID-childIDs map of the node.
+// TODO: finish the comment
+// get nodeID-childIDs map of this node.
 func (n *Node) getChildMap() (map[string]string, error) {
 	leafCache := map[string]string{}
 	_, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	n "github.com/lodastack/registry/node/node"
 	fflib "github.com/pquerna/ffjson/fflib/v1"
 )
 
@@ -47,12 +48,6 @@ func (mj *Tree) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	} else {
 		buf.WriteString(`{"Nodes":null`)
 	}
-	buf.WriteString(`,"Cluster":`)
-	/* Interface types must use runtime reflection. type=node.Cluster kind=interface */
-	err = buf.Encode(mj.Cluster)
-	if err != nil {
-		return err
-	}
 	/* Struct fall back. type=sync.RWMutex kind=struct */
 	buf.WriteString(`,"Mu":`)
 	err = buf.Encode(&mj.Mu)
@@ -69,14 +64,10 @@ const (
 
 	ffj_t_Tree_Nodes
 
-	ffj_t_Tree_Cluster
-
 	ffj_t_Tree_Mu
 )
 
 var ffj_key_Tree_Nodes = []byte("Nodes")
-
-var ffj_key_Tree_Cluster = []byte("Cluster")
 
 var ffj_key_Tree_Mu = []byte("Mu")
 
@@ -139,14 +130,6 @@ mainparse:
 			} else {
 				switch kn[0] {
 
-				case 'C':
-
-					if bytes.Equal(ffj_key_Tree_Cluster, kn) {
-						currentKey = ffj_t_Tree_Cluster
-						state = fflib.FFParse_want_colon
-						goto mainparse
-					}
-
 				case 'M':
 
 					if bytes.Equal(ffj_key_Tree_Mu, kn) {
@@ -167,12 +150,6 @@ mainparse:
 
 				if fflib.SimpleLetterEqualFold(ffj_key_Tree_Mu, kn) {
 					currentKey = ffj_t_Tree_Mu
-					state = fflib.FFParse_want_colon
-					goto mainparse
-				}
-
-				if fflib.EqualFoldRight(ffj_key_Tree_Cluster, kn) {
-					currentKey = ffj_t_Tree_Cluster
 					state = fflib.FFParse_want_colon
 					goto mainparse
 				}
@@ -202,9 +179,6 @@ mainparse:
 
 				case ffj_t_Tree_Nodes:
 					goto handle_Nodes
-
-				case ffj_t_Tree_Cluster:
-					goto handle_Cluster
 
 				case ffj_t_Tree_Mu:
 					goto handle_Mu
@@ -237,7 +211,7 @@ handle_Nodes:
 		}
 
 		if uj.Nodes == nil {
-			uj.Nodes = new(Node)
+			uj.Nodes = new(n.Node)
 		}
 
 		err = uj.Nodes.UnmarshalJSONFFLexer(fs, fflib.FFParse_want_key)
@@ -245,26 +219,6 @@ handle_Nodes:
 			return err
 		}
 		state = fflib.FFParse_after_value
-	}
-
-	state = fflib.FFParse_after_value
-	goto mainparse
-
-handle_Cluster:
-
-	/* handler: uj.Cluster type=node.Cluster kind=interface quoted=false*/
-
-	{
-		/* Falling back. type=node.Cluster kind=interface */
-		tbuf, err := fs.CaptureField(tok)
-		if err != nil {
-			return fs.WrapErr(err)
-		}
-
-		err = json.Unmarshal(tbuf, &uj.Cluster)
-		if err != nil {
-			return fs.WrapErr(err)
-		}
 	}
 
 	state = fflib.FFParse_after_value
