@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	m "github.com/lodastack/models"
+	"github.com/lodastack/registry/common"
 )
 
 type ReportInfo struct {
@@ -31,7 +32,7 @@ func (t *Tree) AgentReport(info m.Report) error {
 	t.reports.Lock()
 	defer t.reports.Unlock()
 	if info.NewHostname == "" {
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 	if info.OldHostname != info.NewHostname {
 		delete(t.reports.ReportInfo, info.OldHostname)
@@ -55,11 +56,11 @@ func (t *Tree) setReport(reports reportMap) error {
 	if err != nil {
 		return err
 	}
-	return t.Cluster.Update([]byte(reportBucket), []byte(reportBucket), reportByte)
+	return t.c.Update([]byte(reportBucket), []byte(reportBucket), reportByte)
 }
 
 func (t *Tree) readReport() (reportMap, error) {
-	reportByte, err := t.Cluster.View([]byte(reportBucket), []byte(reportBucket))
+	reportByte, err := t.c.View([]byte(reportBucket), []byte(reportBucket))
 	if err != nil {
 		return nil, err
 	}

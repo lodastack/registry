@@ -2,55 +2,36 @@ package node
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
+
+	"github.com/lodastack/registry/common"
+	"github.com/lodastack/registry/node/test_sample"
 )
 
-var nodes Node = Node{
-	NodeProperty{ID: rootNode, Name: rootNode, Type: NonLeaf, MachineReg: "*"},
-	[]*Node{
-		{NodeProperty{ID: "0-1", Name: "0-1", Type: NonLeaf, MachineReg: "0-1"}, []*Node{}},
-		{NodeProperty{ID: "0-2", Name: "0-2", Type: NonLeaf, MachineReg: "0-2"}, []*Node{
-			{NodeProperty{ID: "0-2-1", Name: "0-2-1", Type: Leaf, MachineReg: "0-2-"}, []*Node{}},
-			{NodeProperty{ID: "0-2-2", Name: "0-2-2", Type: NonLeaf, MachineReg: "0-2-2"}, []*Node{
-				{NodeProperty{ID: "0-2-2-1", Name: "0-2-2-1", Type: Leaf, MachineReg: "0-2-2-1"}, []*Node{}},
-				{NodeProperty{ID: "0-2-2-2", Name: "0-2-2-2", Type: NonLeaf, MachineReg: "0-2-2-2"}, []*Node{}},
-				{NodeProperty{ID: "0-2-2-3", Name: "0-2-2-3", Type: NonLeaf, MachineReg: "0-2-2-3"}, []*Node{}},
-				{NodeProperty{ID: "0-2-2-4", Name: "0-2-2-4", Type: NonLeaf, MachineReg: "0-2-2-4"}, []*Node{}},
-			}},
-		}},
-		{NodeProperty{ID: "0-3", Name: "0-3", Type: NonLeaf, MachineReg: "0-3"}, []*Node{
-			{NodeProperty{ID: "0-3-1", Name: "0-3-1", Type: NonLeaf, MachineReg: "0-3-1"}, []*Node{}},
-			{NodeProperty{ID: "0-3-2", Name: "0-3-2", Type: NonLeaf, MachineReg: "0-3-2"}, []*Node{
-				{NodeProperty{ID: "0-3-2-1", Name: "0-3-2-1", Type: Leaf, MachineReg: "0-3-2-1"}, []*Node{}},
-			}},
-		}},
-		{NodeProperty{ID: "0-4", Name: "0-4", Type: Leaf, MachineReg: "0-4"}, []*Node{}},
-	},
+var testPath string = "../test_sample/"
+var nodes Node
+var nodeMap, nodeNsMap map[string]int
+var leafMachineReg map[string]string
+
+func init() {
+	if err := test_sample.LoadJsonFromFile(testPath+"node.json", &nodes); err != nil {
+		fmt.Println("load node.json fail:", err.Error())
+	}
+	if err := test_sample.LoadJsonFromFile(testPath+"nodemap.json", &nodeMap); err != nil {
+		fmt.Println("load nodemap.json fail:", err.Error())
+	}
+	if err := test_sample.LoadJsonFromFile(testPath+"nodeNsMap.json", &nodeNsMap); err != nil {
+		fmt.Println("load nodeNsMap.json fail:", err.Error())
+	}
+	if err := test_sample.LoadJsonFromFile(testPath+"leafMachineReg.json", &leafMachineReg); err != nil {
+		fmt.Println("load leafMachineReg.json fail:", err.Error())
+	}
 }
-
-var nodeMap map[string]int = map[string]int{rootNode: 4, "0-1": 0,
-	"0-2": 2, "0-2-1": 0, "0-2-2": 4, "0-2-2-1": 0, "0-2-2-2": 0, "0-2-2-3": 0, "0-2-2-4": 0,
-	"0-3": 2, "0-3-1": 0, "0-3-2": 1, "0-3-2-1": 0,
-	"0-4": 0}
-var nodeNsMap map[string]int = map[string]int{"0-1." + rootNode: 0,
-	"0-2." + rootNode: 2, "0-2-1.0-2." + rootNode: 0, "0-2-2.0-2." + rootNode: 4, "0-2-2-1.0-2-2.0-2." + rootNode: 0, "0-2-2-2.0-2-2.0-2." + rootNode: 0, "0-2-2-3.0-2-2.0-2." + rootNode: 0, "0-2-2-4.0-2-2.0-2." + rootNode: 0,
-	"0-3." + rootNode: 2, "0-3-1.0-3." + rootNode: 0, "0-3-2.0-3." + rootNode: 1, "0-3-2-1.0-3-2.0-3." + rootNode: 0,
-	"0-4." + rootNode: 0}
-var leafMachineReg map[string]string = map[string]string{
-	"0-2-1.0-2." + rootNode: "0-2-", "0-2-2-1.0-2-2.0-2." + rootNode: "0-2-2-1",
-	"0-3-2-1.0-3-2.0-3." + rootNode: "0-3-2-1", "0-4." + rootNode: "0-4"}
-
-var resMap1 []map[string]string = []map[string]string{
-	{"host": "127.0.0.1", "hostname": "127.0.0.1", "application": "loda"},
-	{"host": "127.0.0.2", "hostname": "127.0.0.2", "application": "loda"}}
-var resMap2 []map[string]string = []map[string]string{
-	{"host": "127.0.0.2", "hostname": "127.0.0.2", "application": "loda"},
-	{"host": "127.0.0.3", "hostname": "127.0.0.3", "application": "loda"}}
 
 func getNodesByte() ([]byte, error) {
 	return nodes.MarshalJSON()
 }
-
 func TestNodeMarshalJSON(t *testing.T) {
 	if byteData, err := nodes.MarshalJSON(); err != nil || len(byteData) == 0 {
 		t.Fatalf("nodes MarshalJSON fail")
@@ -59,25 +40,25 @@ func TestNodeMarshalJSON(t *testing.T) {
 
 // Test get node by ns.
 func TestGet(t *testing.T) {
-	if node, err := nodes.Get(rootNode); err != nil || node == nil {
+	if node, err := nodes.GetByNS(rootNode); err != nil || node == nil {
 		t.Fatalf("nodes Get \"root\" is valid, not match with expect\n")
 	}
-	if node, err := nodes.Get("0-1." + rootNode); err != nil || node.ID != "0-1" {
+	if node, err := nodes.GetByNS("0-1." + rootNode); err != nil || node.ID != "0-1" {
 		t.Fatalf("nodes Get \"0-1.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get Get \"0-1.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.Get("0-2." + rootNode); err != nil || node.ID != "0-2" || len(node.Children) != 2 {
+	if node, err := nodes.GetByNS("0-2." + rootNode); err != nil || node.ID != "0-2" || len(node.Children) != 2 {
 		t.Fatalf("nodes Get \"0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get GetByNs \"0-2.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.Get("0-2-1.0-2." + rootNode); err != nil || node.ID != "0-2-1" {
+	if node, err := nodes.GetByNS("0-2-1.0-2." + rootNode); err != nil || node.ID != "0-2-1" {
 		t.Fatalf("nodes Get \"0-2-1.0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get Get \"0-2-1.0-2.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.Get("0-2-2-2.0-2-2.0-2." + rootNode); err != nil || node.ID != "0-2-2-2" {
+	if node, err := nodes.GetByNS("0-2-2-2.0-2-2.0-2." + rootNode); err != nil || node.ID != "0-2-2-2" {
 		t.Fatalf("nodes Get \"0-2-2-2.0-2-2.0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get Get \"0-2-2-2.0-2-2.0-2.root\" return right: %+v\n", node)
@@ -141,7 +122,7 @@ func checkNodeForUnmarshal(allNode Node, nodeMap map[string]int, t *testing.T) b
 	}
 	for name, childNum := range nodeNsMap {
 		t.Log("GetByName", name, childNum)
-		n, err := allNode.Get(name)
+		n, err := allNode.GetByNS(name)
 		if err != nil || n == nil || len(n.Children) != childNum {
 			t.Log("unmarshal result not match witch expect", name, childNum)
 			return false
@@ -150,31 +131,22 @@ func checkNodeForUnmarshal(allNode Node, nodeMap map[string]int, t *testing.T) b
 	return true
 }
 
-func checkStringInList(ori []string, dest string) bool {
-	for _, item := range ori {
-		if item == dest {
-			return true
-		}
-	}
-	return false
-}
-
 func TestNodeGetLeafChild(t *testing.T) {
 	childNs, err := nodes.LeafNs()
 	t.Log("result of GetLeafChild:", childNs)
 	if err != nil || len(childNs) != 4 {
 		t.Fatal("GetLeafChild not match with expect")
 	}
-	if !checkStringInList(childNs, "0-2-1.0-2.loda") ||
-		!checkStringInList(childNs, "0-2-2-1.0-2-2.0-2.loda") ||
-		!checkStringInList(childNs, "0-3-2-1.0-3-2.0-3.loda") ||
-		!checkStringInList(childNs, "0-4.loda") {
+	if !common.CheckStringInList(childNs, "0-2-1.0-2.loda") ||
+		!common.CheckStringInList(childNs, "0-2-2-1.0-2-2.0-2.loda") ||
+		!common.CheckStringInList(childNs, "0-3-2-1.0-3-2.0-3.loda") ||
+		!common.CheckStringInList(childNs, "0-4.loda") {
 		t.Fatal("GetLeafChild not match with expect")
 	}
 }
 
 func TestLeafMachineReg(t *testing.T) {
-	machineRegMap, err := nodes.leafMachineReg()
+	machineRegMap, err := nodes.LeafMachineReg()
 	if err != nil {
 		t.Fatal("leafMachineReg error:", err.Error())
 	}
@@ -191,7 +163,7 @@ func TestLeafMachineReg(t *testing.T) {
 func TestUpdateNode(t *testing.T) {
 	testNode := new(Node)
 	*testNode = nodes
-	testNode.update("newname", "*")
+	testNode.Update("newname", "*")
 	if testNode.Name != "newname" || len(testNode.Children) != 4 {
 		t.Fatalf("node update not match with expect: %v", testNode)
 	}
@@ -208,25 +180,25 @@ func TestDeleteNode(t *testing.T) {
 		},
 	}
 
-	if err := nodeTest.delChild("noChild"); err != nil {
+	if err := nodeTest.DelChild("noChild"); err != nil {
 		t.Fatal("node delChild return false")
 	}
 	if nodeTest.Children[0].ID != "haveChild" {
 		t.Fatalf("node after del children node not match with expect: %+v", nodeTest)
 	}
 
-	if err := nodeTest.delChild("haveChild"); err == nil {
+	if err := nodeTest.DelChild("haveChild"); err == nil {
 		t.Fatal("node delChild success, not match with expect")
 	}
 
-	nodeParent, err := nodeTest.Get("haveChild." + rootNode)
+	nodeParent, err := nodeTest.GetByNS("haveChild." + rootNode)
 	if err != nil || nodeParent == nil {
 		t.Fatalf("get node haveChild fail, error: %v", err)
 	}
-	if err := nodeParent.delChild("child"); err != nil {
+	if err := nodeParent.DelChild("child"); err != nil {
 		t.Fatalf("del node child return false, error:%s", err.Error())
 	}
-	if err := nodeTest.delChild("haveChild"); err != nil {
+	if err := nodeTest.DelChild("haveChild"); err != nil {
 		t.Fatal("del node haveChild fail")
 	}
 }

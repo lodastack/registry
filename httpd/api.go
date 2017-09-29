@@ -16,9 +16,11 @@ import (
 	"github.com/lodastack/log"
 	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/authorize"
+	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/node"
+	n "github.com/lodastack/registry/node/node"
 	"github.com/lodastack/registry/utils"
 
 	"github.com/julienschmidt/httprouter"
@@ -720,7 +722,7 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 }
 
 func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var nodes *node.Node
+	var nodes *n.Node
 	var err error
 	ns := r.FormValue("ns")
 
@@ -731,9 +733,9 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			return
 		}
 	} else {
-		nodes, err = s.tree.GetNode(ns)
+		nodes, err = s.tree.GetNodeByNS(ns)
 	}
-	if err != nil && err != node.ErrNodeNotFound {
+	if err != nil && err != common.ErrNodeNotFound {
 		ReturnServerError(w, err)
 		return
 	}
@@ -749,14 +751,14 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 		}
 
 		// init a nodes.
-		nodeHasPermission := &node.Node{
-			node.NodeProperty{
+		nodeHasPermission := &n.Node{
+			n.NodeProperty{
 				ID:         (*nodes).ID,
 				Name:       (*nodes).Name,
 				Type:       (*nodes).Type,
 				MachineReg: (*nodes).MachineReg,
 			},
-			[]*node.Node{}}
+			[]*n.Node{}}
 
 		// check the group and set ns to nodeHasPermission.
 		var gNames sort.StringSlice = u.Groups
@@ -781,23 +783,23 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 				nodePointer := nodeHasPermission
 				for i := 1 + lenNsRoot; i <= _gNsLength; i++ {
 					nsToCheck := strings.Join(_gNsSplit[_gNsLength-i:_gNsLength], ".")
-					nodeOnTree, err := nodes.Get(nsToCheck)
+					nodeOnTree, err := nodes.GetByNS(nsToCheck)
 					if err != nil {
 						break
 					}
-					if _node, err := nodeHasPermission.Get(nsToCheck); err != nil {
+					if _node, err := nodeHasPermission.GetByNS(nsToCheck); err != nil {
 						if i == _gNsLength {
 							nodePointer.Children = append(nodePointer.Children, nodeOnTree)
 							break
 						}
-						newNode := &node.Node{
-							node.NodeProperty{
+						newNode := &n.Node{
+							n.NodeProperty{
 								ID:         nodeOnTree.ID,
 								Name:       nodeOnTree.Name,
 								Type:       nodeOnTree.Type,
 								MachineReg: nodeOnTree.MachineReg,
 							},
-							[]*node.Node{}}
+							[]*n.Node{}}
 						nodePointer.Children = append(nodePointer.Children, newNode)
 						nodePointer = newNode
 					} else {
@@ -839,7 +841,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	opStr := r.FormValue("ops")
 
 	nodeT, err := strconv.Atoi(nodeType)
-	if name == "" || parentNs == "" || err != nil || (nodeT != node.Leaf && nodeT != node.NonLeaf) {
+	if name == "" || parentNs == "" || err != nil || (nodeT != n.Leaf && nodeT != n.NonLeaf) {
 		ReturnServerError(w, ErrInvalidParam)
 		return
 	}
