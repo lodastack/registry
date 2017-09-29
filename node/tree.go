@@ -209,8 +209,12 @@ func (t *Tree) AllNodes() (n *n.Node, err error) {
 
 // GetNode return exact node by node NS.
 func (t *Tree) GetNodeByNS(ns string) (n *n.Node, err error) {
-	if n, err = t.n.GetNodeByNS(ns); ns == "" || err != nil {
-		t.logger.Errorf("GetNode fail, node: %v, err: %s", *n, err.Error())
+	if ns == "" {
+		t.logger.Errorf("GetNodeByNS donot allow to query empty ns")
+		return nil, common.ErrInvalidParam
+	}
+	if n, err = t.n.GetNodeByNS(ns); err != nil {
+		t.logger.Errorf("GetNode fail, ns: %s, node: %v, err: %s", ns, n, err.Error())
 		return nil, common.ErrInvalidParam
 	}
 	return
