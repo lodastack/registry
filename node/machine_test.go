@@ -6,8 +6,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
+	n "github.com/lodastack/registry/node/node"
+	"github.com/lodastack/registry/node/test_sample"
 )
+
+var testPath string = "./test_sample/"
+var nodes n.Node
+var resMap1, resMap2 []map[string]string
+
+func init() {
+	if err := test_sample.LoadJsonFromFile(testPath+"node.json", &nodes); err != nil {
+		fmt.Println("load node.json fail:", err.Error())
+	}
+	if err := test_sample.LoadJsonFromFile(testPath+"resMap1.json", &resMap1); err != nil {
+		fmt.Println("load resMap1.json fail:", err.Error())
+	}
+	if err := test_sample.LoadJsonFromFile(testPath+"resMap2.json", &resMap2); err != nil {
+		fmt.Println("load resMap2.json fail:", err.Error())
+	}
+}
 
 func TestMatchNs(t *testing.T) {
 	s := mustNewStore(t)
@@ -48,8 +67,8 @@ func TestMatchNs(t *testing.T) {
 	if nsList, err := tree.MatchNs("0-2-2-1-host"); err != nil || len(nsList) != 2 {
 		t.Fatalf("match ns 0-2-2-1-host not match with expect, error, %v, result %+v ", err, nsList)
 	} else {
-		if !checkStringInList(nsList, "0-2-1.0-2."+rootNode) ||
-			!checkStringInList(nsList, "0-2-2-1.0-2-2.0-2."+rootNode) {
+		if !common.CheckStringInList(nsList, "0-2-1.0-2."+rootNode) ||
+			!common.CheckStringInList(nsList, "0-2-2-1.0-2-2.0-2."+rootNode) {
 			t.Fatalf("match ns 0-2-2-1-host not match with expect, error, %v, result %+v ", err, nsList)
 		}
 	}
@@ -74,11 +93,11 @@ func TestSearchMachine(t *testing.T) {
 		t.Fatal("NewTree error")
 	}
 
-	_, err = tree.NewNode("test1", rootNode, Leaf, "test1")
+	_, err = tree.NewNode("test1", rootNode, n.Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", rootNode, Leaf, "test2")
+	_, err = tree.NewNode("test2", rootNode, n.Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -139,19 +158,19 @@ func TestRegisterMachine(t *testing.T) {
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
-	_, err = tree.NewNode("test1", rootNode, Leaf, "test1")
+	_, err = tree.NewNode("test1", rootNode, n.Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", rootNode, Leaf, "test2")
+	_, err = tree.NewNode("test2", rootNode, n.Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test3", rootNode, Leaf, "test-mu")
+	_, err = tree.NewNode("test3", rootNode, n.Leaf, "test-mu")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test4", rootNode, Leaf, "test-multi")
+	_, err = tree.NewNode("test4", rootNode, n.Leaf, "test-multi")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -270,7 +289,7 @@ func BenchmarkRegisterNewMachine(b *testing.B) {
 	cnt := 100
 	for i := 0; i < cnt; i++ {
 		nodeName := fmt.Sprintf("test-%d", i)
-		_, err = tree.NewNode(nodeName, rootNode, Leaf, nodeName)
+		_, err = tree.NewNode(nodeName, rootNode, n.Leaf, nodeName)
 		if err != nil {
 			b.Fatalf("create leaf fail: %s", err.Error())
 		}
