@@ -18,7 +18,8 @@ var (
 		"doc":   "name",
 	}
 
-	TemplatePrefix string = "_template_"
+	TemplatePrefix     string = "_template_"
+	TemplateCollectNum int    = len(collectTemplate)
 )
 
 var (
@@ -61,6 +62,21 @@ var (
 	}, Resource{
 		"comment":          "文件系统空间使用率",
 		"name":             "fs.space.used.percent",
+		"interval":         "120",
+		"measurement_type": "FS",
+	}, Resource{
+		"comment":          "文件系统空间使用量",
+		"name":             "fs.space.used",
+		"interval":         "120",
+		"measurement_type": "FS",
+	}, Resource{
+		"comment":          "文件系统空间剩余量",
+		"name":             "fs.space.free",
+		"interval":         "120",
+		"measurement_type": "FS",
+	}, Resource{
+		"comment":          "文件系统空间总量",
+		"name":             "fs.space.total",
 		"interval":         "120",
 		"measurement_type": "FS",
 	}, Resource{
