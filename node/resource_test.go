@@ -1,16 +1,33 @@
 package node
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/lodastack/registry/model"
 	n "github.com/lodastack/registry/node/node"
+	"github.com/lodastack/registry/node/test_sample"
 )
 
+var nodeMap, nodeNsMap map[string]int
+var leafMachineReg map[string]string
+
+func init() {
+	if err := test_sample.LoadJsonFromFile(testPath+"nodemap.json", &nodeMap); err != nil {
+		fmt.Println("load nodemap.json fail:", err.Error())
+	}
+	if err := test_sample.LoadJsonFromFile(testPath+"nodeNsMap.json", &nodeNsMap); err != nil {
+		fmt.Println("load nodeNsMap.json fail:", err.Error())
+	}
+	if err := test_sample.LoadJsonFromFile(testPath+"leafMachineReg.json", &leafMachineReg); err != nil {
+		fmt.Println("load leafMachineReg.json fail:", err.Error())
+	}
+}
+
 func TestSetResourceByID(t *testing.T) {
-	s := mustNewStore(t)
+	s := test_sample.MustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
 	resource, _ := model.NewResourceList(resMap1)
@@ -50,7 +67,7 @@ func TestSetResourceByID(t *testing.T) {
 }
 
 func TestSetResourceByNs(t *testing.T) {
-	s := mustNewStore(t)
+	s := test_sample.MustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
 	resource, _ := model.NewResourceList(resMap1)
@@ -88,7 +105,7 @@ func TestSetResourceByNs(t *testing.T) {
 }
 
 func TestSearchResource(t *testing.T) {
-	s := mustNewStore(t)
+	s := test_sample.MustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
 	resource1, _ := model.NewResourceList(resMap1)
@@ -136,7 +153,7 @@ func TestSearchResource(t *testing.T) {
 	}
 	search1_2 := search1_1
 	search1_2.Fuzzy = true
-	res, err := tree.SearchResource(rootNode, "machine", search1_1)
+	res, err := tree.r.SearchResource(rootNode, "machine", search1_1)
 	if resMachine, ok := res["test1."+rootNode]; err != nil || len(res) != 1 || !ok {
 		t.Fatalf("search host 127.0.0.1 by not fuzzy type not match with expect, error: %v", err)
 	} else {
@@ -144,7 +161,7 @@ func TestSearchResource(t *testing.T) {
 			t.Fatalf("search host 127.0.0.1 by not fuzzy type not match with expect")
 		}
 	}
-	res, err = tree.SearchResource(rootNode, "machine", search1_2)
+	res, err = tree.r.SearchResource(rootNode, "machine", search1_2)
 	if resMachine, ok := res["test1."+rootNode]; err != nil || len(res) != 1 || !ok {
 		t.Fatalf("search host 127.0.0.1 by fuzzy type not match with expect")
 	} else {
@@ -161,10 +178,10 @@ func TestSearchResource(t *testing.T) {
 	}
 	search2_2 := search2_1
 	search2_2.Fuzzy = true
-	if res, err = tree.SearchResource(rootNode, "machine", search2_1); err != nil || len(res) != 3 {
+	if res, err = tree.r.SearchResource(rootNode, "machine", search2_1); err != nil || len(res) != 3 {
 		t.Fatalf("search host 127.0.0.2 by not fuzzy type not match with expect")
 	}
-	if res, err = tree.SearchResource(rootNode, "machine", search2_2); err != nil || len(res) != 3 {
+	if res, err = tree.r.SearchResource(rootNode, "machine", search2_2); err != nil || len(res) != 3 {
 		t.Fatalf("search host 127.0.0.2 by fuzzy type not match with expect")
 	}
 
@@ -177,10 +194,10 @@ func TestSearchResource(t *testing.T) {
 	// search 127.0.0. with fuzzy type should get two node, and each has two resource.
 	search3_2 := search3_1
 	search3_2.Fuzzy = true
-	if res, err = tree.SearchResource(rootNode, "machine", search3_1); err != nil || len(res) != 0 {
+	if res, err = tree.r.SearchResource(rootNode, "machine", search3_1); err != nil || len(res) != 0 {
 		t.Fatalf("search host 127.0.0. by not fuzzy type not match with expect")
 	}
-	if res, err = tree.SearchResource(rootNode, "machine", search3_2); len(res) != 3 {
+	if res, err = tree.r.SearchResource(rootNode, "machine", search3_2); len(res) != 3 {
 		t.Fatalf("search host 127.0.0. by fuzzy type not match with expect")
 	}
 	for _, resMachine := range res {
@@ -191,7 +208,7 @@ func TestSearchResource(t *testing.T) {
 }
 
 func TestGetResAfterSetOtherNs(t *testing.T) {
-	s := mustNewStore(t)
+	s := test_sample.MustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
 	resource1, _ := model.NewResourceList(resMap1)
@@ -253,12 +270,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 }
 
 func TestMoveResource(t *testing.T) {
-	// MoveResource(oldNs, newNs, resType string, resourceIDs ...string)
-	// AppendResource(ns, resType string, appendRes ...model.Resource)
-	// DeleteResource(ns, resType string, resId ...string
-	// func NewResource(resMap map[string]string) Resource {
-
-	s := mustNewStore(t)
+	s := test_sample.MustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
 	if err := s.Open(true); err != nil {
@@ -277,8 +289,9 @@ func TestMoveResource(t *testing.T) {
 	if _, err := tree.NewNode("testMove2", rootNode, n.Leaf); err != nil {
 		t.Fatalf("create testMove2 fail: %s", err.Error())
 	}
-	if err := tree.AppendResource("testMove1.loda", "machine", machine1, machine2); err != nil {
-		t.Fatalf("app resource fail: %s", err.Error())
+
+	if err := tree.r.AppendResource("testMove1.loda", "machine", machine1, machine2); err != nil {
+		t.Fatalf("append resource fail: %s", err.Error())
 	}
 
 	GetMachineIdsFunc := func(ns string) []string {
@@ -296,7 +309,7 @@ func TestMoveResource(t *testing.T) {
 
 	ids1 := GetMachineIdsFunc("testMove1.loda")
 	// case 1: move one resource to empty ns
-	if err := tree.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids1[0]); err != nil {
+	if err := tree.r.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids1[0]); err != nil {
 		t.Fatalf("move one reource fail: %s", err.Error())
 	} else {
 		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 1 {
@@ -314,7 +327,7 @@ func TestMoveResource(t *testing.T) {
 	// }
 
 	// case 3: move resource to a ns already has some resources.
-	if err := tree.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids1[1]); err != nil {
+	if err := tree.r.MoveResource("testMove1.loda", "testMove2.loda", "machine", ids1[1]); err != nil {
 		t.Fatalf("move one reource fail: %s", err.Error())
 	} else {
 		if rs, err := tree.GetResourceList("testMove1.loda", "machine"); err != nil || len(*rs) != 0 {
@@ -362,8 +375,7 @@ func TestMoveResource(t *testing.T) {
 }
 
 func TestCopyResource(t *testing.T) {
-
-	s := mustNewStore(t)
+	s := test_sample.MustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
 	if err := s.Open(true); err != nil {

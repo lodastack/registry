@@ -36,3 +36,13 @@ type ClusterInf interface {
 	// ViewPrefix returns the value for the keys has the keyPrefix.
 	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
 }
+
+// Get type resType resource of node with ID bucketId.
+func GetByte(c ClusterInf, bucket, resType string) ([]byte, error) {
+	return c.View([]byte(bucket), []byte(resType))
+}
+
+// Set resource to node bucket.
+func SetByte(c ClusterInf, bucket, resType string, resByte []byte) error {
+	return c.Update([]byte(bucket), []byte(resType), resByte)
+}

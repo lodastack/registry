@@ -9,10 +9,6 @@ import (
 //
 const (
 	nodeDataKey = "node"
-	nodeIdKey   = "nodeid"
-
-	nodeBucket   = "loda"
-	reportBucket = "report"
 
 	rootNode = "loda"
 	poolNode = "pool"
@@ -24,8 +20,6 @@ const (
 
 	NoMachineMatch = "^$"
 )
-
-//
 
 const (
 	Leaf    = iota // leaf type of node

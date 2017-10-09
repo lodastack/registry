@@ -16,4 +16,6 @@ var (
 	ErrNodeAlreadyExist    = errors.New("node already exist")
 	ErrNoLeafChild         = errors.New("have no leaf child node")
 	ErrNotAllowDel         = errors.New("not allow to be delete")
+
+	ErrEmptyResource error = errors.New("empty resources")
 )
