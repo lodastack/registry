@@ -259,7 +259,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	}
 
 	// case 4: get template from NonLeaf
-	if res, err := tree.GetResourceList(rootNode, model.TemplatePrefix+"collect"); err != nil || len(*res) != 33 {
+	if res, err := tree.GetResourceList(rootNode, model.TemplatePrefix+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
 		t.Fatalf("get template from NonLeaf fail, length of return: %d, error: %v\n", len(*res), err)
 	}
 
