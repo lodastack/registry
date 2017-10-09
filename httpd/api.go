@@ -653,7 +653,7 @@ func (s *Service) handleResourceDel(w http.ResponseWriter, r *http.Request, _ ht
 	ns := r.FormValue("ns")
 	resType := r.FormValue("type")
 	resIDs := r.FormValue("resourceid")
-	if err := s.tree.DeleteResource(ns, resType, strings.Split(resIDs, ",")...); err != nil {
+	if err := s.tree.RemoveResource(ns, resType, strings.Split(resIDs, ",")...); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
@@ -696,7 +696,7 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 	}
 
 	if len(resIDs) != 0 {
-		if err := s.tree.DeleteResource(ns, model.Collect, resIDs...); err != nil {
+		if err := s.tree.RemoveResource(ns, model.Collect, resIDs...); err != nil {
 			ReturnServerError(w, err)
 			return
 		}

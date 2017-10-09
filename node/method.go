@@ -62,8 +62,8 @@ type TreeMethod interface {
 	// CopyResource copy resource from fromNs to toNs.
 	CopyResource(fromNs, toNs, resType string, resID ...string) error
 
-	// Delete resource from ns.
-	DeleteResource(ns, resType string, resId ...string) error
+	// Remove resource from ns.
+	RemoveResource(ns, resType string, resId ...string) error
 
 	// Remove resource from one ns to another.
 	MoveResource(oldNs, newNs, resType string, resourceID ...string) error

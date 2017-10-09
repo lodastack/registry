@@ -27,8 +27,8 @@ var (
 )
 
 var (
-	ErrResMarshal   error = errors.New("marshal resources fail")
-	ErrEmptyRes     error = errors.New("empty resources")
+	ErrResMarshal error = errors.New("marshal resources fail")
+
 	ErrResFormat    error = errors.New("invalid resource format")
 	ErrInvalidParam error = errors.New("invalid param")
 	ErrInvalidUUID  error = errors.New("invalid uuid")
@@ -239,7 +239,7 @@ func (rl *ResourceList) Size() int {
 func (rl *ResourceList) Marshal() ([]byte, error) {
 	// return error when resource is empty.
 	if len(*rl) == 0 {
-		return nil, ErrEmptyRes
+		return nil, common.ErrEmptyResource
 	}
 
 	totalSize := rl.Size()

@@ -12,29 +12,26 @@ import (
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/node/cluster"
 	n "github.com/lodastack/registry/node/node"
+	r "github.com/lodastack/registry/node/resource"
 
 	m "github.com/lodastack/models"
 )
 
 var (
-	template    string = model.TemplatePrefix
-	ErrEmptyRes        = model.ErrEmptyRes
+	template string = model.TemplatePrefix
 )
 
 const (
-	nodeDataKey = "node"
-	nodeIdKey   = "nodeid"
-
 	nodeBucket   = "loda"
 	reportBucket = "report"
+
+	nodeDataKey = "node"
+	nodeIdKey   = "nodeid"
 
 	rootNode = "loda"
 	poolNode = "pool"
 	rootID   = "0"
 	nodeDeli = "."
-
-	NsFormat = "ns"
-	IDFormat = "id"
 
 	NoMachineMatch = "^$"
 )
@@ -43,20 +40,23 @@ type Tree struct {
 	Nodes *n.Node
 	c     cluster.ClusterInf
 	n     n.NodeInf
-
-	Mu sync.RWMutex
+	r     r.ResourceInf
+	Mu    sync.RWMutex
 
 	reports ReportInfo
 	logger  *log.Logger
 }
 
 func NewTree(cluster cluster.ClusterInf) (*Tree, error) {
+	nodeInf := n.NewNodeMethod(cluster)
+	logger := log.New(config.C.LogConf.Level, "tree", model.LogBackend)
 	t := Tree{
 		Nodes:   &n.Node{n.NodeProperty{ID: rootID, Name: rootNode, Type: n.NonLeaf, MachineReg: NoMachineMatch}, []*n.Node{}},
 		c:       cluster,
-		n:       n.NewNodeMethod(cluster),
+		n:       nodeInf,
+		r:       r.NewResourceMethod(cluster, nodeInf, logger),
 		Mu:      sync.RWMutex{},
-		logger:  log.New(config.C.LogConf.Level, "tree", model.LogBackend),
+		logger:  logger,
 		reports: ReportInfo{sync.RWMutex{}, make(map[string]m.Report)},
 	}
 	err := t.init()
@@ -182,8 +182,8 @@ func (t *Tree) createBucketForNode(nodeId string) error {
 }
 
 // Get type resType resource of node with ID bucketId.
-func (t *Tree) getByteFromStore(bucketId, resType string) ([]byte, error) {
-	return t.c.View([]byte(bucketId), []byte(resType))
+func (t *Tree) getByteFromStore(bucket, resType string) ([]byte, error) {
+	return t.c.View([]byte(bucket), []byte(resType))
 }
 
 func (t *Tree) removeNodeFromStore(bucketId string) error {
@@ -191,8 +191,8 @@ func (t *Tree) removeNodeFromStore(bucketId string) error {
 }
 
 // Set resource to node bucket.
-func (t *Tree) setByteToStore(nodeId, resType string, resByte []byte) error {
-	return t.c.Update([]byte(nodeId), []byte(resType), resByte)
+func (t *Tree) setByteToStore(bucket, resType string, resByte []byte) error {
+	return t.c.Update([]byte(bucket), []byte(resType), resByte)
 }
 
 func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
@@ -337,7 +337,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 			if k == model.Alarm {
 				rl := new(model.ResourceList)
 				err = rl.Unmarshal([]byte(resStore))
-				if err != nil && err != ErrEmptyRes {
+				if err != nil && err != common.ErrEmptyResource {
 					t.logger.Errorf("unmarshal alarm resource fail, parent ns: %s, error: %s, data: %s:",
 						parentNs, err, string(resStore))
 					return "", err
