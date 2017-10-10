@@ -68,5 +68,7 @@ type TreeMethod interface {
 	// Remove resource from one ns to another.
 	MoveResource(oldNs, newNs, resType string, resourceID ...string) error
 
+	// UpdateStatusByHostname update machine status.
+	UpdateStatusByHostname(hostname string, updateMap map[string]string) error
 	DashboardInf
 }

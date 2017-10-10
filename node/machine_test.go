@@ -145,6 +145,86 @@ func TestSearchMachine(t *testing.T) {
 	}
 }
 
+func TestUpdateStatusByHostname(t *testing.T) {
+	s := mustNewStore(t)
+	defer os.RemoveAll(s.Path())
+
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, err := NewTree(s)
+	if err != nil {
+		t.Fatalf("create leaf fail: %s", err.Error())
+	}
+	_, err = tree.NewNode("test1", rootNode, n.Leaf, "test1")
+	if err != nil {
+		t.Fatalf("create leaf fail: %s", err.Error())
+	}
+	_, err = tree.NewNode("test2", rootNode, n.Leaf, "test2")
+	if err != nil {
+		t.Fatalf("create leaf fail: %s", err.Error())
+	}
+
+	// 127.0.0.1 and 127.0.0.2
+	resourceByte1, _ := model.NewResourceList(resMap1)
+	// 127.0.0.2 and 127.0.0.3
+	resourceByte2, _ := model.NewResourceList(resMap2)
+
+	// test1.loda have 127.0.0.1 and 127.0.0.2
+	err = tree.SetResource("test1."+rootNode, model.Machine, *resourceByte1)
+	if err != nil {
+		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
+	}
+	// test2.loda have 127.0.0.2 and 127.0.0.3
+	err = tree.SetResource("test2."+rootNode, model.Machine, *resourceByte2)
+	if err != nil {
+		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
+	}
+
+	if err := tree.UpdateStatusByHostname("127.0.0.1", map[string]string{HostStatusProp: "test"}); err != nil {
+		t.Fatalf("UpdateStatusByHostname 127.0.0.1 fail: %s, ", err.Error())
+	}
+	if err := tree.UpdateStatusByHostname("127.0.0.2", map[string]string{HostStatusProp: "test"}); err != nil {
+		t.Fatalf("UpdateStatusByHostname 127.0.0.2 fail: %s, ", err.Error())
+	}
+	if err := tree.UpdateStatusByHostname("127.0.0.3", map[string]string{HostStatusProp: "test"}); err != nil {
+		t.Fatalf("UpdateStatusByHostname 127.0.0.3 fail: %s, ", err.Error())
+	}
+
+	if l, err := tree.r.GetResourceList("test1."+rootNode, model.Machine); err != nil {
+		t.Fatalf("read node test1 fail: %s ", err.Error())
+	} else {
+		for _, r := range *l {
+			hostname, _ := r.ReadProperty(HostnameProp)
+			status, _ := r.ReadProperty(HostStatusProp)
+			if hostname != "127.0.0.1" && hostname != "127.0.0.2" {
+				t.Fatalf("read node test1.loda machine not match as expect")
+			}
+			if status != "test" {
+				t.Fatalf("read node test1.loda machine not match as expect")
+			}
+		}
+	}
+
+	if l, err := tree.r.GetResourceList("test2."+rootNode, model.Machine); err != nil {
+		t.Fatalf("read node test1 fail: %s ", err.Error())
+	} else {
+		for _, r := range *l {
+			hostname, _ := r.ReadProperty(HostnameProp)
+			status, _ := r.ReadProperty(HostStatusProp)
+			if hostname != "127.0.0.2" && hostname != "127.0.0.3" {
+				t.Fatalf("read node test1.loda machine not match as expect")
+			}
+			if status != "test" {
+				t.Fatalf("read node test1.loda machine not match as expect")
+			}
+		}
+	}
+
+}
+
 func TestRegisterMachine(t *testing.T) {
 	s := mustNewStore(t)
 	defer os.RemoveAll(s.Path())

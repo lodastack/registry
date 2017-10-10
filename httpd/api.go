@@ -211,6 +211,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/resource", s.handlerResourceGet)
 	s.router.GET("/api/v1/resource/search", s.handlerSearch)
 	s.router.PUT("/api/v1/resource", s.handleResourcePut)
+	s.router.PUT("/api/v1/resource/list", s.handleUpdateResourceList)
 	s.router.PUT("/api/v1/resource/move", s.handleResourceMove)
 	s.router.PUT("/api/v1/resource/copy", s.handleResourceCopy)
 	s.router.DELETE("/api/v1/resource", s.handleResourceDel)
@@ -504,6 +505,36 @@ func (s *Service) handlerResourceGet(w http.ResponseWriter, r *http.Request, _ h
 		return
 	}
 	ReturnJson(w, 200, resList)
+}
+
+func (s *Service) handleUpdateResourceList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var err error
+	buf := new(bytes.Buffer)
+	if _, err = buf.ReadFrom(r.Body); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	params := []bodyParam{}
+	if err := json.Unmarshal(buf.Bytes(), &params); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+
+	for _, _param := range params {
+		if _param.ResType == model.Machine {
+			hostname := _param.ResId
+			if err := s.tree.UpdateStatusByHostname(hostname, _param.UpdateMap); err != nil {
+				ReturnServerError(w, err)
+				return
+			}
+		} else {
+			if err := s.tree.UpdateResource(_param.Ns, _param.ResType, _param.ResId, _param.UpdateMap); err != nil {
+				ReturnBadRequest(w, err)
+				return
+			}
+		}
+	}
+	ReturnJson(w, 200, "OK")
 }
 
 func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

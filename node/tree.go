@@ -122,8 +122,8 @@ func (t *Tree) initReportBucket() error {
 			select {
 			case <-c:
 				reports := t.GetReportInfo()
-				if err := t.UpdateMachineStatus(reports); err != nil {
-					t.logger.Error("UpdateMachineStatus fail:", err.Error())
+				if err := t.UpdateMachineStatusByReport(reports); err != nil {
+					t.logger.Error("UpdateMachineStatusByReport fail:", err.Error())
 				}
 			}
 		}
