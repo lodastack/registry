@@ -13,7 +13,8 @@ import (
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
 	n "github.com/lodastack/registry/node/node"
-	"github.com/lodastack/registry/store"
+	m "github.com/lodastack/store/model"
+	"github.com/lodastack/store/store"
 )
 
 // Test create
@@ -310,8 +311,7 @@ func TestDelNode(t *testing.T) {
 func mustNewStore(t *testing.T) *store.Store {
 	path := mustTempDir()
 	var err error
-	// Ugly
-	model.LogBackend, err = log.NewFileBackend(path)
+	m.LogBackend, err = log.NewFileBackend(path)
 	if err != nil {
 		t.Fatalf("new store error: create logger fail at %s, error: %s \n", path, err.Error())
 	}

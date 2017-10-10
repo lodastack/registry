@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/lodastack/registry/common"
-	"github.com/lodastack/registry/model"
+	m "github.com/lodastack/store/model"
 )
 
 var (
@@ -116,8 +116,8 @@ func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 	return GroupList[:i], nil
 }
 
-func (g *Group) createGroup(gName string, managers, members, items []string) (model.Row, error) {
-	updateRow := model.Row{}
+func (g *Group) createGroup(gName string, managers, members, items []string) (m.Row, error) {
+	updateRow := m.Row{}
 	if gName == "" {
 		return updateRow, ErrInvalidParam
 	}
@@ -139,7 +139,7 @@ func (g *Group) createGroup(gName string, managers, members, items []string) (mo
 		return updateRow, err
 	}
 
-	updateRow = model.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: gByte}
+	updateRow = m.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: gByte}
 	return updateRow, nil
 }
 
@@ -176,8 +176,8 @@ func (g *Group) removeGroup(gName string) ([]string, error) {
 	return managerAndMember, g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gName))
 }
 
-func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeManagers, removeMembers []string) (model.Row, error) {
-	updateRow := model.Row{}
+func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeManagers, removeMembers []string) (m.Row, error) {
+	updateRow := m.Row{}
 	group, err := g.GetGroup(gName)
 	if err != nil {
 		return updateRow, err
@@ -201,6 +201,6 @@ func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeM
 		return updateRow, err
 	}
 
-	updateRow = model.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: newGroupByte}
+	updateRow = m.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: newGroupByte}
 	return updateRow, nil
 }

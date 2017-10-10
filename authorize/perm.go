@@ -9,6 +9,7 @@ import (
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
+	m "github.com/lodastack/store/model"
 )
 
 var (
@@ -150,7 +151,7 @@ func (p *perm) createUserIfNotExist(username string) error {
 }
 
 func (p *perm) CreateGroup(gName string, managers, members, items []string) error {
-	updateRows := []model.Row{}
+	updateRows := []m.Row{}
 	p.Lock()
 	defer p.Unlock()
 
@@ -184,7 +185,7 @@ func (p *perm) CreateGroup(gName string, managers, members, items []string) erro
 }
 
 func (p *perm) UpdateMember(gName string, managers, members []string) error {
-	updateRows := []model.Row{}
+	updateRows := []m.Row{}
 	p.Lock()
 	defer p.Unlock()
 
@@ -239,7 +240,7 @@ func (p *perm) RemoveUser(username string) error {
 		return err
 	}
 
-	updateGroupRows := []model.Row{}
+	updateGroupRows := []m.Row{}
 	for _, gName := range groups {
 		udpateRow, err := p.UpdateGroupMember(gName, []string{}, []string{},
 			[]string{username}, []string{username})
@@ -258,7 +259,7 @@ func (p *perm) RemoveGroup(gName string) error {
 		return err
 	}
 
-	updateGroupRows := []model.Row{}
+	updateGroupRows := []m.Row{}
 	for _, username := range userList {
 		udpateRow, err := p.UpdateUser(username, "", gName)
 		if err != nil {

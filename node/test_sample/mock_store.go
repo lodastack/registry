@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/store"
+	"github.com/lodastack/store/store"
 )
 
 func MustNewStore(t *testing.T) *store.Store {
