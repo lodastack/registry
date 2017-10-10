@@ -7,7 +7,7 @@ import (
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
-	"github.com/lodastack/registry/model"
+	m "github.com/lodastack/store/model"
 )
 
 var (
@@ -113,8 +113,8 @@ func (u *User) UserRemoveUser(username string) ([]string, error) {
 	return us.Groups, u.cluster.RemoveKey([]byte(AuthBuck), getUKey(username))
 }
 
-func (u *User) UpdateUser(username string, addGroup string, removeGroup string) (model.Row, error) {
-	updateRow := model.Row{}
+func (u *User) UpdateUser(username string, addGroup string, removeGroup string) (m.Row, error) {
+	updateRow := m.Row{}
 	user, err := u.GetUser(username)
 	if err != nil {
 		return updateRow, err
@@ -133,6 +133,6 @@ func (u *User) UpdateUser(username string, addGroup string, removeGroup string) 
 		return updateRow, err
 	}
 
-	updateRow = model.Row{Bucket: []byte(AuthBuck), Key: getUKey(username), Value: newUserByte}
+	updateRow = m.Row{Bucket: []byte(AuthBuck), Key: getUKey(username), Value: newUserByte}
 	return updateRow, nil
 }

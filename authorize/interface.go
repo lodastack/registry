@@ -3,7 +3,7 @@ package authorize
 import (
 	"sync"
 
-	"github.com/lodastack/registry/model"
+	m "github.com/lodastack/store/model"
 )
 
 var rootNode = "loda"
@@ -81,7 +81,7 @@ type Cluster interface {
 	Update(bucket []byte, key []byte, value []byte) error
 
 	// Batch update values for given keys in given buckets, via distributed consensus.
-	Batch(rows []model.Row) error
+	Batch(rows []m.Row) error
 
 	// ViewPrefix returns the value for the keys has the keyPrefix.
 	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)

@@ -9,7 +9,8 @@ import (
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/store"
+	m "github.com/lodastack/store/model"
+	"github.com/lodastack/store/store"
 )
 
 func TestUpdateGroupMember(t *testing.T) {
@@ -300,7 +301,7 @@ func mustNewStore(t *testing.T) *store.Store {
 	path := mustTempDir()
 	var err error
 	// Ugly
-	model.LogBackend, err = log.NewFileBackend(path)
+	m.LogBackend, err = log.NewFileBackend(path)
 	if err != nil {
 		t.Fatalf("new store error: create logger fail at %s, error: %s \n", path, err.Error())
 	}
@@ -315,7 +316,7 @@ func mustNewStoreB(b *testing.B) *store.Store {
 	path := mustTempDir()
 	var err error
 	// Ugly
-	model.LogBackend, err = log.NewFileBackend(path)
+	m.LogBackend, err = log.NewFileBackend(path)
 	if err != nil {
 		return nil
 	}

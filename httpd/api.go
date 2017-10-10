@@ -24,6 +24,7 @@ import (
 	"github.com/lodastack/registry/utils"
 
 	"github.com/julienschmidt/httprouter"
+	sm "github.com/lodastack/store/model"
 )
 
 // Cluster is the interface op must implement.
@@ -56,7 +57,7 @@ type Cluster interface {
 	RemoveKey(bucket, key []byte) error
 
 	// Batch update values for given keys in given buckets, via distributed consensus.
-	Batch(rows []model.Row) error
+	Batch(rows []sm.Row) error
 
 	// GetSession returns the sression value for the given key.
 	GetSession(key interface{}) interface{}

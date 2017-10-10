@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"github.com/lodastack/registry/model"
+	m "github.com/lodastack/store/model"
 )
 
 // Cluster is the interface op must implement.
@@ -28,7 +28,7 @@ type ClusterInf interface {
 	Update(bucket []byte, key []byte, value []byte) error
 
 	// Batch update values for given keys in given buckets, via distributed consensus.
-	Batch(rows []model.Row) error
+	Batch(rows []m.Row) error
 
 	// Backup database.
 	Backup() ([]byte, error)

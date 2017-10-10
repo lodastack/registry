@@ -12,12 +12,13 @@ import (
 	"time"
 
 	"github.com/lodastack/log"
-	"github.com/lodastack/registry/cluster"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/store"
 	"github.com/lodastack/registry/tcp"
+
+	"github.com/lodastack/store/cluster"
+	"github.com/lodastack/store/store"
 )
 
 // Command line defaults
