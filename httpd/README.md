@@ -385,6 +385,13 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
     curl -X DELETE "http://127.0.0.1:9991/api/v1/resource/collect?ns=pool.loda&measurements=PORT.test,PLUGIN.test.cpu"
 
 
+#### 2.9 修改机器状态
+
+搜索机器名，修改这个机器在所有节点下的机器状态。设置type为`machine`，读取`resourceid`为`hostname`，用以搜索机器并更新机器资源。
+`PUT`方法，url:`/api/v1/machine/status`
+
+    curl -X PUT  -H 'Resource: machine' -H 'NS: loda' -H 'AuthToken: xxx' -d'[{"ns": "loda", "type": "machine", "resourceid": "hostname", "update":{"status":"online"}}]' 'http://127.0.0.1:9991/api/v1/resource/list'
+
 ### 3 agent相关接口
 ---
 

@@ -2,6 +2,7 @@ package node
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -142,7 +143,25 @@ func (t *Tree) RegisterMachine(newMachine model.Resource) (map[string]string, er
 	return NsIDMap, nil
 }
 
-func (t *Tree) UpdateMachineStatus(reports map[string]m.Report) error {
+// UpdateStatusByHostname search the machine and update the status.
+// updateMap is map[string]string{HostStatusProp: status}
+func (t *Tree) UpdateStatusByHostname(hostname string, updateMap map[string]string) error {
+	machineRecord, err := t.SearchMachine(hostname)
+	if err != nil {
+		t.logger.Errorf("UpdateStatusByHostname search machine fail: %s", err.Error())
+		return fmt.Errorf("update machine fail, invalid hostname: %s, error: %s", hostname, err.Error())
+	}
+	for _ns, resourceID := range machineRecord {
+		if err := t.r.UpdateResource(_ns, model.Machine, resourceID, updateMap); err != nil {
+			t.logger.Errorf("UpdateStatusByHostname update machine fail, ns: %s, resourceID: %s, new status: %+v, error: %s",
+				_ns, resourceID, updateMap, err.Error())
+			return fmt.Errorf("update machine status fail, hostname %s, error: %s", hostname, err.Error())
+		}
+	}
+	return nil
+}
+
+func (t *Tree) UpdateMachineStatusByReport(reports map[string]m.Report) error {
 	nodes, err := t.AllNodes()
 	if err != nil {
 		return err
