@@ -362,7 +362,7 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 		ReturnBadRequest(w, err)
 		return
 	}
-	hostname, _ := machine.ReadProperty(node.HostnameProp)
+	hostname, _ := machine.ReadProperty(model.HostnameProp)
 	if hostname == "" {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
@@ -378,8 +378,8 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 	}
 
 	// check the machine status.
-	if status, _ := machine.ReadProperty(node.HostStatusProp); status == "" {
-		machine.SetProperty(node.HostStatusProp, "online")
+	if status, _ := machine.ReadProperty(model.HostStatusProp); status == "" {
+		machine.SetProperty(model.HostStatusProp, "online")
 	}
 	regMap, err := s.tree.RegisterMachine(machine)
 	if err != nil {
@@ -410,12 +410,12 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 	if report.Update {
 		updateMap := map[string]string{}
 		if report.NewHostname != "" && report.NewHostname != report.OldHostname {
-			updateMap[node.HostnameProp] = report.NewHostname
+			updateMap[model.HostnameProp] = report.NewHostname
 		}
 		if len(report.NewIPList) != 0 &&
 			len(report.OldIPList) != 0 &&
 			strings.Join(report.NewIPList, ",") != strings.Join(report.OldIPList, ",") {
-			updateMap[node.IpProp] = strings.Join(report.NewIPList, ",")
+			updateMap[model.IpProp] = strings.Join(report.NewIPList, ",")
 		}
 
 		if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
@@ -601,8 +601,8 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	} else if param.ResType == "machine" {
-		if status, _ := param.R.ReadProperty(node.HostStatusProp); status == "" {
-			param.R.SetProperty(node.HostStatusProp, "online")
+		if status, _ := param.R.ReadProperty(model.HostStatusProp); status == "" {
+			param.R.SetProperty(model.HostStatusProp, "online")
 		}
 	}
 

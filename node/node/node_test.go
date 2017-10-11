@@ -40,25 +40,25 @@ func TestNodeMarshalJSON(t *testing.T) {
 
 // Test get node by ns.
 func TestGet(t *testing.T) {
-	if node, err := nodes.GetByNS(rootNode); err != nil || node == nil {
+	if node, err := nodes.GetByNS(RootNode); err != nil || node == nil {
 		t.Fatalf("nodes Get \"root\" is valid, not match with expect\n")
 	}
-	if node, err := nodes.GetByNS("0-1." + rootNode); err != nil || node.ID != "0-1" {
+	if node, err := nodes.GetByNS("0-1." + RootNode); err != nil || node.ID != "0-1" {
 		t.Fatalf("nodes Get \"0-1.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get Get \"0-1.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.GetByNS("0-2." + rootNode); err != nil || node.ID != "0-2" || len(node.Children) != 2 {
+	if node, err := nodes.GetByNS("0-2." + RootNode); err != nil || node.ID != "0-2" || len(node.Children) != 2 {
 		t.Fatalf("nodes Get \"0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get GetByNs \"0-2.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.GetByNS("0-2-1.0-2." + rootNode); err != nil || node.ID != "0-2-1" {
+	if node, err := nodes.GetByNS("0-2-1.0-2." + RootNode); err != nil || node.ID != "0-2-1" {
 		t.Fatalf("nodes Get \"0-2-1.0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get Get \"0-2-1.0-2.root\" return right: %+v\n", node)
 	}
-	if node, err := nodes.GetByNS("0-2-2-2.0-2-2.0-2." + rootNode); err != nil || node.ID != "0-2-2-2" {
+	if node, err := nodes.GetByNS("0-2-2-2.0-2-2.0-2." + RootNode); err != nil || node.ID != "0-2-2-2" {
 		t.Fatalf("nodes Get \"0-2-2-2.0-2-2.0-2.root\" not match with expect %+v, error: %s\n", node, err)
 	} else {
 		t.Logf("get Get \"0-2-2-2.0-2-2.0-2.root\" return right: %+v\n", node)
@@ -67,28 +67,28 @@ func TestGet(t *testing.T) {
 
 // Test get node by ID.
 func TestGetById(t *testing.T) {
-	if node, _, err := nodes.GetByID(rootNode); err != nil || node == nil {
+	if node, _, err := nodes.GetByID(RootNode); err != nil || node == nil {
 		t.Fatalf("nodes GetByID \"0\" is invalid, not match with expect\n")
 	}
-	if node, ns, err := nodes.GetByID("0-1"); err != nil || node.ID != "0-1" || ns != "0-1."+rootNode {
+	if node, ns, err := nodes.GetByID("0-1"); err != nil || node.ID != "0-1" || ns != "0-1."+RootNode {
 		t.Fatalf("nodes GetByID \"0-1.root\" not match with expect %+v, ns: %s,error: %s\n", node, ns, err)
 	} else {
 		t.Logf("get GetByID \"0-1.root\" return right: %+v, ns:%s\n", node, ns)
 	}
 
-	if node, ns, err := nodes.GetByID("0-2"); err != nil || node.ID != "0-2" || ns != "0-2."+rootNode || len(node.Children) != 2 {
+	if node, ns, err := nodes.GetByID("0-2"); err != nil || node.ID != "0-2" || ns != "0-2."+RootNode || len(node.Children) != 2 {
 		t.Fatalf("nodes GetByID \"0-2.root\" not match with expect %+v, ns: %s,error: %s\n", node, ns, err)
 	} else {
 		t.Logf("get GetByID \"0-2.root\" return right: %+v, ns:%s\n", node, ns)
 	}
 
-	if node, ns, err := nodes.GetByID("0-2-1"); err != nil || node.ID != "0-2-1" || ns != "0-2-1.0-2."+rootNode {
+	if node, ns, err := nodes.GetByID("0-2-1"); err != nil || node.ID != "0-2-1" || ns != "0-2-1.0-2."+RootNode {
 		t.Fatalf("nodes GetByID \"0-2-1.0-2.root\" not match with expect %+v, ns: %s,error: %s\n", node, ns, err)
 	} else {
 		t.Logf("get GetByID \"0-2-1.0-2.root\" return right: %+v, ns:%s\n", node, ns)
 	}
 
-	if node, ns, err := nodes.GetByID("0-2-2-2"); err != nil || node.ID != "0-2-2-2" || ns != "0-2-2-2.0-2-2.0-2."+rootNode {
+	if node, ns, err := nodes.GetByID("0-2-2-2"); err != nil || node.ID != "0-2-2-2" || ns != "0-2-2-2.0-2-2.0-2."+RootNode {
 		t.Fatalf("nodes GetByID \"0-2-2-2.0-2-2.0-2.root\" not match with expect %+v, ns: %s,error: %s\n", node, ns, err)
 	} else {
 		t.Logf("get GetByID \"0-2-2-2.0-2-2.0-2.root\" return right: %+v, ns:%s\n", node, ns)
@@ -171,7 +171,7 @@ func TestUpdateNode(t *testing.T) {
 
 func TestDeleteNode(t *testing.T) {
 	var nodeTest Node = Node{
-		NodeProperty{ID: rootNode, Name: rootNode, Type: NonLeaf, MachineReg: "*"},
+		NodeProperty{ID: RootNode, Name: RootNode, Type: NonLeaf, MachineReg: "*"},
 		[]*Node{
 			{NodeProperty{ID: "noChild", Name: "noChild", Type: NonLeaf, MachineReg: "-"}, []*Node{}},
 			{NodeProperty{ID: "haveChild", Name: "haveChild", Type: NonLeaf, MachineReg: "-"}, []*Node{
@@ -191,7 +191,7 @@ func TestDeleteNode(t *testing.T) {
 		t.Fatal("node delChild success, not match with expect")
 	}
 
-	nodeParent, err := nodeTest.GetByNS("haveChild." + rootNode)
+	nodeParent, err := nodeTest.GetByNS("haveChild." + RootNode)
 	if err != nil || nodeParent == nil {
 		t.Fatalf("get node haveChild fail, error: %v", err)
 	}

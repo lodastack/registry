@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/lodastack/log"
+	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/node/cluster"
+	"github.com/lodastack/registry/node/machine"
 	n "github.com/lodastack/registry/node/node"
 	r "github.com/lodastack/registry/node/resource"
-
-	m "github.com/lodastack/models"
 )
 
 var (
@@ -25,15 +25,9 @@ const (
 	nodeBucket   = "loda"
 	reportBucket = "report"
 
-	nodeDataKey = "node"
-	nodeIdKey   = "nodeid"
+	nodeIdKey = "nodeid"
 
-	rootNode = "loda"
-	poolNode = "pool"
-	rootID   = "0"
-	nodeDeli = "."
-
-	NoMachineMatch = "^$"
+	rootID = "0"
 )
 
 type Tree struct {
@@ -41,6 +35,7 @@ type Tree struct {
 	c     cluster.ClusterInf
 	n     n.NodeInf
 	r     r.ResourceInf
+	m     machine.MachineInf
 	Mu    sync.RWMutex
 
 	reports ReportInfo
@@ -50,11 +45,13 @@ type Tree struct {
 func NewTree(cluster cluster.ClusterInf) (*Tree, error) {
 	nodeInf := n.NewNodeMethod(cluster)
 	logger := log.New(config.C.LogConf.Level, "tree", model.LogBackend)
+	r := r.NewResourceMethod(cluster, nodeInf, logger)
 	t := Tree{
-		Nodes:   &n.Node{n.NodeProperty{ID: rootID, Name: rootNode, Type: n.NonLeaf, MachineReg: NoMachineMatch}, []*n.Node{}},
+		Nodes:   &n.Node{n.NodeProperty{ID: rootID, Name: n.RootNode, Type: n.NonLeaf, MachineReg: n.NotMatchMachine}, []*n.Node{}},
 		c:       cluster,
 		n:       nodeInf,
-		r:       r.NewResourceMethod(cluster, nodeInf, logger),
+		r:       r,
+		m:       machine.NewMachine(cluster, nodeInf, r, logger),
 		Mu:      sync.RWMutex{},
 		logger:  logger,
 		reports: ReportInfo{sync.RWMutex{}, make(map[string]m.Report)},
@@ -76,7 +73,7 @@ func (t *Tree) initNodeBucket() error {
 		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", nodeBucket, err.Error())
 		return err
 	}
-	if err := t.initKey(nodeDataKey); err != nil {
+	if err := t.initKey(n.NodeDataKey); err != nil {
 		t.logger.Error("init nodeDataKey fail:", err.Error())
 		return err
 	}
@@ -122,7 +119,7 @@ func (t *Tree) initReportBucket() error {
 			select {
 			case <-c:
 				reports := t.GetReportInfo()
-				if err := t.UpdateMachineStatusByReport(reports); err != nil {
+				if err := t.CheckMachineStatusByReport(reports); err != nil {
 					t.logger.Error("UpdateMachineStatusByReport fail:", err.Error())
 				}
 			}
@@ -133,7 +130,7 @@ func (t *Tree) initReportBucket() error {
 
 // initKey initialization tree data and idmap if they are nil.
 func (t *Tree) initKey(key string) error {
-	v, err := t.c.View([]byte(rootNode), []byte(key))
+	v, err := t.c.View([]byte(n.NodeDataBucketID), []byte(key))
 	if err != nil {
 		return err
 	}
@@ -143,22 +140,22 @@ func (t *Tree) initKey(key string) error {
 
 	t.logger.Info(key, "is not inited, begin to init")
 	switch key {
-	case nodeDataKey:
+	case n.NodeDataKey:
 		// Create rootNode map/bucket and init template.
 		if _, err := t.NewNode("", "", n.Root); err != nil {
 			panic("create root node fail: " + err.Error())
 		}
 		// Create root pool node.
-		if _, err := t.NewNode(poolNode, rootNode, n.Leaf, NoMachineMatch); err != nil {
+		if _, err := t.NewNode(n.PoolNode, n.RootNode, n.Leaf, n.NotMatchMachine); err != nil {
 			panic("create root pool node fail: " + err.Error())
 		}
 	case nodeIdKey:
 		// Initialization NodeId Map to store.
-		initByte, _ := json.Marshal(map[string]string{rootID: rootNode})
+		initByte, _ := json.Marshal(map[string]string{rootID: n.RootNode})
 		if err != nil {
 			return common.ErrInitNodeKey
 		}
-		if err = t.c.Update([]byte(rootNode), []byte(nodeIdKey), initByte); err != nil {
+		if err = t.c.Update([]byte(n.NodeDataBucketID), []byte(nodeIdKey), initByte); err != nil {
 			return common.ErrInitNodeKey
 		}
 	}
@@ -173,7 +170,7 @@ func (t *Tree) saveTree() error {
 		return err
 	}
 	// TODO: purge cache or not
-	return t.c.Update([]byte(rootNode), []byte(nodeDataKey), treeByte)
+	return t.c.Update([]byte(n.NodeDataBucketID), []byte(n.NodeDataKey), treeByte)
 }
 
 // Create bucket for node.
@@ -250,13 +247,13 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 	var nodeId, matchReg string
 	var newNode n.Node
 	if nodeType == n.Root {
-		nodeId, name, nodeType, matchReg = rootID, rootNode, n.NonLeaf, NoMachineMatch
+		nodeId, name, nodeType, matchReg = rootID, n.RootNode, n.NonLeaf, n.NotMatchMachine
 		parentNs = "-"
 	} else {
 		if len(property) > 0 && property[0] != "" {
 			matchReg = property[0]
 		} else {
-			matchReg = NoMachineMatch
+			matchReg = n.NotMatchMachine
 		}
 		nodeId = common.GenUUID()
 	}
@@ -285,7 +282,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 		}
 
 		// If the newnode alread exist, return err.
-		if exist := nodes.Exist(newNode.Name + nodeDeli + parentNs); exist {
+		if exist := nodes.Exist(newNode.Name + n.NodeDeli + parentNs); exist {
 			return "", common.ErrNodeAlreadyExist
 		}
 		if parent.IsLeaf() {
@@ -314,7 +311,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 	// TODO: rollback if copy template fail
 	if parentNs == "-" {
 		for k, res := range model.RootTemplate {
-			if err := t.SetResource(rootNode, k, res); err != nil {
+			if err := t.SetResource(n.RootNode, k, res); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when create rootNode, error: %s", err.Error())
 			}
 		}
@@ -343,7 +340,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, property ...string) 
 					return "", err
 				}
 				for index := range *rl {
-					if (*rl)[index], err = GenAlarmFromTemplate(newNode.Name+nodeDeli+parentNs, (*rl)[index], ""); err != nil {
+					if (*rl)[index], err = GenAlarmFromTemplate(newNode.Name+n.NodeDeli+parentNs, (*rl)[index], ""); err != nil {
 						t.logger.Errorf("make alarm template fail, parent ns: %s, error: %s",
 							parentNs, err.Error())
 						return "", err
@@ -373,8 +370,8 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 		return err
 	}
 
-	if oldNsSplit := strings.Split(ns, nodeDeli); name != oldNsSplit[0] {
-		newNs := strings.Join(append([]string{name}, oldNsSplit[1:]...), nodeDeli)
+	if oldNsSplit := strings.Split(ns, n.NodeDeli); name != oldNsSplit[0] {
+		newNs := strings.Join(append([]string{name}, oldNsSplit[1:]...), n.NodeDeli)
 		if exist := allNodes.Exist(newNs); exist {
 			return common.ErrNodeAlreadyExist
 		}
@@ -397,11 +394,11 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 
 // DelNode delete node from tree, remove bucket.
 func (t *Tree) DelNode(ns string) error {
-	nsSplit := strings.Split(ns, nodeDeli)
+	nsSplit := strings.Split(ns, n.NodeDeli)
 	if len(nsSplit) < 2 {
 		return common.ErrInvalidParam
 	}
-	parentNs := strings.Join(nsSplit[1:], nodeDeli)
+	parentNs := strings.Join(nsSplit[1:], n.NodeDeli)
 	delID, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Error("get all nodes error when GetNodesById")

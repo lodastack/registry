@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lodastack/registry/model"
+	"github.com/lodastack/store/model"
 	"github.com/lodastack/store/store"
 )
 
 func MustNewStore(t *testing.T) *store.Store {
 	path := mustTempDir()
 	var err error
-	// Ugly
 	model.LogBackend, err = log.NewFileBackend(path)
+
 	if err != nil {
 		log.Errorf("new store error: create logger fail at %s, error: %s \n", path, err.Error())
 	}
@@ -26,7 +26,7 @@ func MustNewStore(t *testing.T) *store.Store {
 	return s
 }
 
-func MustNewStoreB() *store.Store {
+func MustNewStoreB(t *testing.B) *store.Store {
 	path := mustTempDir()
 	var err error
 	// Ugly
