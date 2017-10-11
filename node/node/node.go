@@ -6,19 +6,18 @@ import (
 	"strings"
 )
 
-//
 const (
-	nodeDataKey = "node"
+	RootNode = "loda"
+	PoolNode = "pool"
+	NodeDeli = "."
 
-	rootNode = "loda"
-	poolNode = "pool"
-	rootID   = "0"
-	nodeDeli = "."
+	NodeDataBucketID = "loda"
+	NodeDataKey      = "node"
 
 	NsFormat = "ns"
 	IDFormat = "id"
 
-	NoMachineMatch = "^$"
+	NotMatchMachine = "^$"
 )
 
 const (
@@ -151,7 +150,7 @@ func (n *Node) LeafNs() ([]string, error) {
 			result[node.Name] = ""
 		} else {
 			for chindNs := range childReturn {
-				result[chindNs+nodeDeli+node.Name] = ""
+				result[chindNs+NodeDeli+node.Name] = ""
 			}
 		}
 		return result, nil
@@ -191,7 +190,7 @@ func (n *Node) LeafMachineReg() (map[string]string, error) {
 			result[node.Name] = node.MachineReg
 		} else {
 			for relativeNs, reg := range childReturn {
-				result[relativeNs+nodeDeli+node.Name] = reg
+				result[relativeNs+NodeDeli+node.Name] = reg
 			}
 		}
 		return result, nil
@@ -205,7 +204,7 @@ func (n *Node) GetByID(nodeId string) (*Node, string, error) {
 	} else {
 		for index := range n.Children {
 			if detNode, ns, err := n.Children[index].GetByID(nodeId); err == nil {
-				return detNode, ns + nodeDeli + n.Name, nil
+				return detNode, ns + NodeDeli + n.Name, nil
 			}
 		}
 	}
@@ -214,8 +213,8 @@ func (n *Node) GetByID(nodeId string) (*Node, string, error) {
 
 // GetByNS return exact node by nodename.
 func (n *Node) GetByNS(ns string) (*Node, error) {
-	nsSplit := strings.Split(ns, nodeDeli)
-	if len(nsSplit) == 1 && ns == rootNode {
+	nsSplit := strings.Split(ns, NodeDeli)
+	if len(nsSplit) == 1 && ns == RootNode {
 		// return tree if get root.
 		return n, nil
 	} else if len(nsSplit) < 2 {
@@ -235,7 +234,7 @@ func (n *Node) GetByNS(ns string) (*Node, error) {
 		return nil, false
 	}
 
-	if rootNode != nsSplit[len(nsSplit)-1] {
+	if RootNode != nsSplit[len(nsSplit)-1] {
 		return nil, common.ErrNodeNotFound
 	}
 

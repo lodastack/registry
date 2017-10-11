@@ -28,7 +28,7 @@ func (m *NodeMethod) getByteFromStore(bucketID, resType string) ([]byte, error) 
 
 // get allnodes from cluster.
 func (m *NodeMethod) allNodeByte() ([]byte, error) {
-	return m.getByteFromStore(rootNode, nodeDataKey)
+	return m.getByteFromStore(NodeDataBucketID, NodeDataKey)
 }
 
 // AllNodes return the whole nodes.
