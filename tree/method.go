@@ -6,8 +6,7 @@ import (
 	n "github.com/lodastack/registry/tree/node"
 )
 
-// TreeMethod is the interface tree must implement.
-type TreeMethod interface {
+type nodeInf interface {
 	// AllNodes return all nodes.
 	AllNodes() (*n.Node, error)
 
@@ -20,9 +19,11 @@ type TreeMethod interface {
 	// GetNodesById return exact node by nodeid.
 	GetNodeByNS(id string) (*n.Node, error)
 
-	// NewNode create node.
-	NewNode(name, parentNs string, nodeType int, property ...string) (string, error)
+	// Return leaf child node of the ns.
+	LeafChildIDs(ns string) ([]string, error)
+}
 
+type resourceInf interface {
 	// GetResource return the resourceList by ns/resource type/resource ID.
 	GetResource(ns, resType string, resID ...string) ([]model.Resource, error)
 
@@ -35,26 +36,8 @@ type TreeMethod interface {
 	// SearchResourceByNs return the map[ns]resources which match the search.
 	SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error)
 
-	// Return leaf child node of the ns.
-	LeafChildIDs(ns string) ([]string, error)
-
-	// Search Machine on tree.
-	SearchMachine(hostname string) (map[string]string, error)
-
-	// Regist machine on the tree.
-	RegisterMachine(newMachine model.Resource) (map[string]string, error)
-
-	// Update the node property.
-	UpdateNode(ns string, name, machineReg string) error
-
-	// RemoveNode remove the node with delID from parentNs.
-	RemoveNode(ns string) error
-
 	// Update Resource By ns and ResourceID.
 	UpdateResource(ns, resType, resID string, updateMap map[string]string) error
-
-	// Update hostname property of machine resource.
-	MachineUpdate(oldName string, updateMap map[string]string) error
 
 	// Append resource to ns.
 	AppendResource(ns, resType string, appendRes ...model.Resource) error
@@ -67,11 +50,38 @@ type TreeMethod interface {
 
 	// Remove resource from one ns to another.
 	MoveResource(oldNs, newNs, resType string, resourceID ...string) error
+}
+
+type machineInf interface {
+	// Search Machine on tree.
+	SearchMachine(hostname string) (map[string]string, error)
+
+	// Regist machine on the tree.
+	RegisterMachine(newMachine model.Resource) (map[string]string, error)
+
+	// Update hostname property of machine resource.
+	MachineUpdate(oldName string, updateMap map[string]string) error
 
 	// UpdateStatusByHostname update machine status.
 	UpdateStatusByHostname(hostname string, updateMap map[string]string) error
 
 	// UpdateStatusByHostname search and remove machine.
 	RemoveStatusByHostname(hostname string) error
+}
+
+// TreeMethod is the interface tree must implement.
+type TreeMethod interface {
+	nodeInf
+	resourceInf
+	machineInf
 	DashboardInf
+
+	// NewNode create node.
+	NewNode(name, parentNs string, nodeType int, property ...string) (string, error)
+
+	// Update the node property.
+	UpdateNode(ns string, name, machineReg string) error
+
+	// RemoveNode remove the node with delID from parentNs.
+	RemoveNode(ns string) error
 }

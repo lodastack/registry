@@ -110,7 +110,7 @@ func (s *Service) handlerDashboardDel(w http.ResponseWriter, r *http.Request, _ 
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.DeleteDashboard(ns, i); err != nil {
+	if err := s.tree.RemoveDashboard(ns, i); err != nil {
 		s.logger.Errorf("delete dashboard fail: %s", err.Error())
 		ReturnBadRequest(w, err)
 		return
@@ -199,7 +199,7 @@ func (s *Service) handlerPanelDel(w http.ResponseWriter, r *http.Request, _ http
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.DelPanel(ns, dI, pI); err != nil {
+	if err := s.tree.RemovePanel(ns, dI, pI); err != nil {
 		s.logger.Errorf("AddPanel fail: %s", err.Error())
 		ReturnServerError(w, err)
 		return
@@ -271,7 +271,7 @@ func (s *Service) handlerTargetDelete(w http.ResponseWriter, r *http.Request, _ 
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
-	if err := s.tree.DelTarget(ns, dI, pI, tI); err != nil {
+	if err := s.tree.RemoveTarget(ns, dI, pI, tI); err != nil {
 		ReturnServerError(w, err)
 	}
 	ReturnJson(w, 200, "OK")

@@ -13,8 +13,7 @@ var (
 	dashboardType = "dashboard"
 )
 
-var DashboardBuck = "dashboard"
-
+// DashboardInf is interface the dashboard resource have.
 type DashboardInf interface {
 	// GetDashboard return dashboard map of the ns.
 	GetDashboard(ns string) (model.DashboardData, error)
@@ -25,24 +24,26 @@ type DashboardInf interface {
 	// AddDashboard add the dashboard to the ns.
 	AddDashboard(ns string, dashboardData model.Dashboard) error
 
-	// DeleteDashboard update the dashboard of the ns.
-	DeleteDashboard(ns string, dIndex int) error
+	// RemoveDashboard update the dashboard of the ns.
+	RemoveDashboard(ns string, dIndex int) error
 
-	// Update update the title of dashboard.
+	// UpdateDashboard update the title of dashboard.
 	UpdateDashboard(ns string, dIndex int, title string) error
 
 	PanelInf
 }
 
+// PanelInf is the panel method.
+// Panel is picture a dashboard have.
 type PanelInf interface {
-	// ReorderPanel reorder the panel
+	// ReorderPanel update the panel order of a dashboard.
 	ReorderPanel(ns string, dIndex int, newOrder []int) error
 
 	// AddPanel add the panel to the dashboard.
 	AddPanel(ns string, dIndex int, panel model.Panel) error
 
-	// DelPanel delete the panel of the dashboard.
-	DelPanel(ns string, dIndex int, panelIndex int) error
+	// RemovePanel delete the panel of the dashboard.
+	RemovePanel(ns string, dIndex int, panelIndex int) error
 
 	// UpdatePanel update the panel of the dashboard.
 	UpdatePanel(ns string, dIndex int, panelIndex int, title, graphType string) error
@@ -53,20 +54,19 @@ type PanelInf interface {
 	// UpdateTarget update a target.
 	UpdateTarget(ns string, dIndex int, panelIndex, targetIndex int, target model.Target) error
 
-	// DelTarget delete a target.
-	DelTarget(ns string, dIndex int, panelIndex, targetIndex int) error
+	// RemoveTarget delete a target.
+	RemoveTarget(ns string, dIndex int, panelIndex, targetIndex int) error
 }
 
-//  u.cluster.View([]byte(AuthBuck), getUKey(username))
 // GetDashboard return the dashboard under the ns.
 func (t *Tree) GetDashboard(ns string) (model.DashboardData, error) {
-	nodeId, err := t.getNodeIDByNS(ns)
+	nodeID, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return nil, err
 	}
 
-	resByte, err := t.getByteFromStore(nodeId, dashboardType)
+	resByte, err := t.getByteFromStore(nodeID, dashboardType)
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +82,9 @@ func (t *Tree) GetDashboard(ns string) (model.DashboardData, error) {
 	return rl, nil
 }
 
-// GetDashboard return the dashboard under the ns.
+// SetDashboard set the dashboard to a node.
 func (t *Tree) SetDashboard(ns string, dashboards model.DashboardData) error {
-	nodeId, err := t.getNodeIDByNS(ns)
+	nodeID, err := t.getNodeIDByNS(ns)
 	if err != nil {
 		t.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return err
@@ -94,9 +94,10 @@ func (t *Tree) SetDashboard(ns string, dashboards model.DashboardData) error {
 		t.logger.Errorf("marshal dashboard fail: %s", err.Error())
 		return err
 	}
-	return t.setByteToStore(nodeId, dashboardType, resNewByte)
+	return t.setByteToStore(nodeID, dashboardType, resNewByte)
 }
 
+// AddDashboard add a dashboard to a ns.
 func (t *Tree) AddDashboard(ns string, dashboardData model.Dashboard) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil {
@@ -107,6 +108,7 @@ func (t *Tree) AddDashboard(ns string, dashboardData model.Dashboard) error {
 	return t.SetDashboard(ns, dashboards)
 }
 
+// UpdateDashboard update one dashboard title of ns.
 func (t *Tree) UpdateDashboard(ns string, dIndex int, title string) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil {
@@ -114,24 +116,24 @@ func (t *Tree) UpdateDashboard(ns string, dIndex int, title string) error {
 	}
 	if dIndex >= len(dashboards) {
 		return common.ErrInvalidParam
-	} else {
-		dashboards[dIndex].Title = title
 	}
+	dashboards[dIndex].Title = title
 	return t.SetDashboard(ns, dashboards)
 }
 
-func (t *Tree) DeleteDashboard(ns string, dIndex int) error {
+// RemoveDashboard one dashboard of ns.
+func (t *Tree) RemoveDashboard(ns string, dIndex int) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || dIndex >= len(dashboards) {
 		t.logger.Errorf("DeleteDashboard error, data: %+v, error: %v", dashboards, err)
 		return err
 	}
 
-	// TODO: check
 	copy(dashboards[dIndex:], dashboards[dIndex+1:])
 	return t.SetDashboard(ns, dashboards[:len(dashboards)-1])
 }
 
+// ReorderPanel update the order of panel by newOrder.
 func (t *Tree) ReorderPanel(ns string, dIndex int, newOrder []int) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) {
@@ -153,6 +155,7 @@ func (t *Tree) ReorderPanel(ns string, dIndex int, newOrder []int) error {
 	return t.SetDashboard(ns, dashboards)
 }
 
+// AddPanel add a panel to a dashboard.
 func (t *Tree) AddPanel(ns string, dIndex int, panel model.Panel) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) {
@@ -164,6 +167,7 @@ func (t *Tree) AddPanel(ns string, dIndex int, panel model.Panel) error {
 	return t.SetDashboard(ns, dashboards)
 }
 
+// UpdatePanel update a panel.
 func (t *Tree) UpdatePanel(ns string, dIndex int, panelIndex int, title, graphType string) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || len(dashboards[dIndex].Panels) <= panelIndex {
@@ -180,7 +184,8 @@ func (t *Tree) UpdatePanel(ns string, dIndex int, panelIndex int, title, graphTy
 	return t.SetDashboard(ns, dashboards)
 }
 
-func (t *Tree) DelPanel(ns string, dIndex int, panelIndex int) error {
+// RemovePanel remove a panel from a dashboard.
+func (t *Tree) RemovePanel(ns string, dIndex int, panelIndex int) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || panelIndex >= len(dashboards[dIndex].Panels) {
 		t.logger.Errorf("AddPanel error, data: %+v, dindex %d, pindex %d, error: %v", dashboards, dIndex, panelIndex, err)
@@ -229,8 +234,8 @@ func (t *Tree) UpdateTarget(ns string, dIndex int, panelIndex, targetIndex int, 
 	return t.SetDashboard(ns, dashboards)
 }
 
-// DelTarget remove update a target.
-func (t *Tree) DelTarget(ns string, dIndex int, panelIndex, targetIndex int) error {
+// RemoveTarget remove update a target.
+func (t *Tree) RemoveTarget(ns string, dIndex int, panelIndex, targetIndex int) error {
 	dashboards, err := t.GetDashboard(ns)
 	if err != nil || len(dashboards) == 0 || dIndex >= len(dashboards) || panelIndex >= len(dashboards[dIndex].Panels) || targetIndex >= len(dashboards[dIndex].Panels[panelIndex].Targets) {
 		t.logger.Errorf("AddPanel error, data: %+v, dindex %d, pindex %d, error: %v", dashboards, dIndex, panelIndex, err)

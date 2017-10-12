@@ -7,25 +7,37 @@ import (
 )
 
 const (
+	// RootNode is the root node name.
 	RootNode = "loda"
+	// PoolNode is the global pool node.
 	PoolNode = "pool"
+	// NodeDeli join node to ns.
+	// e.g The global pool node is the the leaf child of root node, its ns is pool.loda.
 	NodeDeli = "."
 
+	// NodeDataBucketID is the bucketID to save node data.
 	NodeDataBucketID = "loda"
-	NodeDataKey      = "node"
+	// NodeDataKey is the node data key.
+	NodeDataKey = "node"
 
+	// NsFormat
 	NsFormat = "ns"
+	// IDFormat
 	IDFormat = "id"
-
+	// NotMatchMachine is defaul not match machine.
 	NotMatchMachine = "^$"
 )
 
 const (
-	Leaf    = iota // leaf type of node
-	NonLeaf        // non-leaf type of node
+	// Leaf node type
+	Leaf = iota // leaf type of node
+	// NonLeaf node type
+	NonLeaf
+	// Root type of node
 	Root
 )
 
+// NodeProperty is node should has.
 type NodeProperty struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -36,15 +48,18 @@ type NodeProperty struct {
 	MachineReg string `json:"machinereg"`
 }
 
+// Node is the item of tree, it has machine match stregy and resource.
 type Node struct {
 	NodeProperty
 	Children []*Node `json:"children"`
 }
 
+// IsLeaf return the node is leaf or not.
 func (n *Node) IsLeaf() bool {
 	return n.Type == Leaf
 }
 
+// Exist check the ns is exist already or not.
 func (n *Node) Exist(ns string) bool {
 	if _, err := n.GetByNS(ns); err == nil {
 		return true
@@ -52,13 +67,13 @@ func (n *Node) Exist(ns string) bool {
 	return false
 }
 
-// Update update node machineReg propertyn.
-func (n *Node) Update(name, machineReg string) {
+// Update update node machineMatchStrategy property.
+func (n *Node) Update(name, machineMatchStrategy string) {
 	if name != "" {
 		n.Name = name
 	}
-	if machineReg != "" {
-		n.MachineReg = machineReg
+	if machineMatchStrategy != "" {
+		n.MachineReg = machineMatchStrategy
 	}
 }
 
@@ -90,7 +105,7 @@ func (n *Node) RemoveChildNode(childID string) error {
 	return common.ErrNodeNotFound
 }
 
-// AllowSetResource checks if the node could be set a resource.
+// AllowResource checks if the node could be set a resource.
 // Leaf node could set/get resource;
 // NonLeaf node could be only set/get template resource.
 //
@@ -117,7 +132,7 @@ func getKeysOfMap(ori map[string]string) []string {
 	return keys
 }
 
-// WalkFunc is the type of the function for each node visited by Walk.
+// WalkfFun is the type of the function for each node visited by Walk.
 // The node argument is the node the walkFunc will process.
 // The childReturn argument will pass the nodes's childNode return.
 //
@@ -143,6 +158,7 @@ func (n *Node) Walk(walkFun WalkfFun) (map[string]string, error) {
 	return walkFun(n, childReturn)
 }
 
+// LeafNs return all leaf child ns.
 func (n *Node) LeafNs() ([]string, error) {
 	nsMap, err := n.Walk(func(node *Node, childReturn map[string]string) (map[string]string, error) {
 		result := map[string]string{}
@@ -197,15 +213,14 @@ func (n *Node) LeafMachineReg() (map[string]string, error) {
 	})
 }
 
-// GetById return exact node and ns which with nodeid.
-func (n *Node) GetByID(nodeId string) (*Node, string, error) {
-	if n.ID == nodeId {
+// GetByID return exact node and ns which with nodeid.
+func (n *Node) GetByID(nodeID string) (*Node, string, error) {
+	if n.ID == nodeID {
 		return n, n.Name, nil
-	} else {
-		for index := range n.Children {
-			if detNode, ns, err := n.Children[index].GetByID(nodeId); err == nil {
-				return detNode, ns + NodeDeli + n.Name, nil
-			}
+	}
+	for index := range n.Children {
+		if detNode, ns, err := n.Children[index].GetByID(nodeID); err == nil {
+			return detNode, ns + NodeDeli + n.Name, nil
 		}
 	}
 	return nil, "", common.ErrNodeNotFound
@@ -264,8 +279,8 @@ func (n *Node) getChildMap() (map[string]string, error) {
 			return map[string]string{node.ID: ""}, nil
 		}
 		childIDs := ""
-		for LeafId := range childReturn {
-			childIDs += LeafId + ","
+		for LeafID := range childReturn {
+			childIDs += LeafID + ","
 		}
 		leafCache[node.ID] = strings.TrimRight(childIDs, ",")
 		return childReturn, nil

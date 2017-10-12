@@ -11,16 +11,18 @@ import (
 )
 
 var (
-	// unit: hour
+	// MachineReportTimeout is the time which machine is judged as dead status. unit: hour
 	MachineReportTimeout float64 = 48
-	MachineReportAlive   float64 = 24
+
+	// MachineReportAlive is the time which machine is judged as online status. unit: hour
+	MachineReportAlive float64 = 24
 
 	ErrInvalidMachine = errors.New("invalid machine resource")
 )
 
 // Search hostname on the tree.
 // Return map[ns]resourceID.
-func (m *Machine) SearchMachine(hostname string) (map[string]string, error) {
+func (m *machine) SearchMachine(hostname string) (map[string]string, error) {
 	searchHostname, err := model.NewSearch(false, model.HostnameProp, hostname)
 	if err != nil {
 		return nil, err
@@ -47,7 +49,7 @@ func (m *Machine) SearchMachine(hostname string) (map[string]string, error) {
 	return machineRes, nil
 }
 
-func (m *Machine) MachineUpdate(oldName string, updateMap map[string]string) error {
+func (m *machine) MachineUpdate(oldHostName string, updateMap map[string]string) error {
 	hostname, ok := updateMap[model.HostnameProp]
 	if ok && hostname == "" {
 		return ErrInvalidMachine
@@ -57,18 +59,18 @@ func (m *Machine) MachineUpdate(oldName string, updateMap map[string]string) err
 		return ErrInvalidMachine
 	}
 
-	location, err := m.SearchMachine(oldName)
+	location, err := m.SearchMachine(oldHostName)
 	if err != nil {
-		m.logger.Error("SearchMachine fail: %s", err.Error())
+		m.logger.Errorf("SearchMachine fail: %s", err.Error())
 		return err
 	}
 	if len(location) == 0 {
 		return errors.New("machine not found")
 	}
-	for ns, resId := range location {
-		if err := m.r.UpdateResource(ns, "machine", resId, updateMap); err != nil {
+	for ns, resourceID := range location {
+		if err := m.r.UpdateResource(ns, "machine", resourceID, updateMap); err != nil {
 			m.logger.Errorf("MachineRename fail and skip, oldname: %s, ns: %s, update: %+v, error: %s",
-				oldName, ns, updateMap, err.Error())
+				oldHostName, ns, updateMap, err.Error())
 			return err
 		}
 	}
@@ -77,7 +79,7 @@ func (m *Machine) MachineUpdate(oldName string, updateMap map[string]string) err
 
 // Return the ns which MachineReg match the hostname.
 // If there is not ns be match, return the pool ns.
-func (m *Machine) MatchNs(hostname string) ([]string, error) {
+func (m *machine) MatchNs(hostname string) ([]string, error) {
 	nodes, err := m.n.AllNodes()
 	if err != nil {
 		return nil, err
@@ -107,7 +109,7 @@ func (m *Machine) MatchNs(hostname string) ([]string, error) {
 
 // RegisterMachine registry a machine to the tree.
 // NewMachine mast have property "hostname", it will be used to judge which ns to register.
-func (m *Machine) RegisterMachine(newMachine model.Resource) (map[string]string, error) {
+func (m *machine) RegisterMachine(newMachine model.Resource) (map[string]string, error) {
 	hostname, ok := newMachine.ReadProperty(model.HostnameProp)
 	if !ok {
 		m.logger.Errorf("RegisterMachine fail: not provide hostname")
@@ -135,7 +137,7 @@ func (m *Machine) RegisterMachine(newMachine model.Resource) (map[string]string,
 	return NsIDMap, nil
 }
 
-func (m *Machine) CheckMachineStatusByReport(reports map[string]m.Report) error {
+func (m *machine) CheckMachineStatusByReport(reports map[string]m.Report) error {
 	nodes, err := m.n.AllNodes()
 	if err != nil {
 		return err
