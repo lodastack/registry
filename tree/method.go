@@ -70,5 +70,8 @@ type TreeMethod interface {
 
 	// UpdateStatusByHostname update machine status.
 	UpdateStatusByHostname(hostname string, updateMap map[string]string) error
+
+	// UpdateStatusByHostname search and remove machine.
+	RemoveStatusByHostname(hostname string) error
 	DashboardInf
 }
