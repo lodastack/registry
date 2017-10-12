@@ -5,34 +5,46 @@ import (
 	"github.com/lodastack/registry/tree/cluster"
 )
 
-type NodeInf interface {
+// Inf is the interface node have.
+type Inf interface {
+	// GetNodeByNS return the node by ns.
+	// e.g return root node if get ns "loda".
 	GetNodeByNS(ns string) (*Node, error)
+
+	// LeafChildIDs return leaf child node ID list of the ns.
 	LeafChildIDs(ns string) ([]string, error)
+
+	// GetNodeIDByNS return the NS of the node ID.
 	GetNodeIDByNS(ns string) (string, error)
+
+	// GetNodeNSByID returh the node ID of the ns.
 	GetNodeNSByID(id string) (string, error)
+
+	// AllNodes return the root node.
 	AllNodes() (*Node, error)
 }
 
-type NodeMethod struct {
-	c cluster.ClusterInf
+type node struct {
+	c cluster.Inf
 }
 
-func NewNodeMethod(c cluster.ClusterInf) NodeInf {
-	return &NodeMethod{c: c}
+// return a node interface object.
+func NewNode(c cluster.Inf) Inf {
+	return &node{c: c}
 }
 
 // Get value from cluster by bucketID and resType.
-func (m *NodeMethod) getByteFromStore(bucketID, resType string) ([]byte, error) {
+func (m *node) getByteFromStore(bucketID, resType string) ([]byte, error) {
 	return m.c.View([]byte(bucketID), []byte(resType))
 }
 
 // get allnodes from cluster.
-func (m *NodeMethod) allNodeByte() ([]byte, error) {
+func (m *node) allNodeByte() ([]byte, error) {
 	return m.getByteFromStore(NodeDataBucketID, NodeDataKey)
 }
 
 // AllNodes return the whole nodes.
-func (m *NodeMethod) AllNodes() (*Node, error) {
+func (m *node) AllNodes() (*Node, error) {
 	v, err := m.allNodeByte()
 	if err != nil || len(v) == 0 {
 		return nil, common.ErrGetNode
@@ -46,7 +58,7 @@ func (m *NodeMethod) AllNodes() (*Node, error) {
 }
 
 // GetNSByID return NS by NodeID.
-func (m *NodeMethod) GetNodeNSByID(id string) (string, error) {
+func (m *node) GetNodeNSByID(id string) (string, error) {
 	nodes, err := m.AllNodes()
 	if err != nil {
 		return "", err
@@ -58,7 +70,7 @@ func (m *NodeMethod) GetNodeNSByID(id string) (string, error) {
 	return ns, nil
 }
 
-func (m *NodeMethod) GetNodeIDByNS(ns string) (string, error) {
+func (m *node) GetNodeIDByNS(ns string) (string, error) {
 	node, err := m.GetNodeByNS(ns)
 	if err != nil {
 		return "", err
@@ -67,7 +79,7 @@ func (m *NodeMethod) GetNodeIDByNS(ns string) (string, error) {
 }
 
 // GetNodesById return exact node with name.
-func (m *NodeMethod) GetNodeByNS(ns string) (*Node, error) {
+func (m *node) GetNodeByNS(ns string) (*Node, error) {
 	if ns == "" {
 		return nil, common.ErrInvalidParam
 	}
@@ -80,7 +92,7 @@ func (m *NodeMethod) GetNodeByNS(ns string) (*Node, error) {
 }
 
 // Return leaf IDs of the ns.
-func (m *NodeMethod) LeafChildIDs(ns string) ([]string, error) {
+func (m *node) LeafChildIDs(ns string) ([]string, error) {
 	// check the ns exist and valid or not.
 	nodeID, err := m.GetNodeIDByNS(ns)
 	if nodeID == "" || err != nil {

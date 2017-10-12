@@ -8,6 +8,7 @@ import (
 	"github.com/lodastack/registry/common"
 )
 
+// ReportInfo save the agent report infomation.
 type ReportInfo struct {
 	sync.RWMutex
 	ReportInfo reportMap
@@ -28,6 +29,7 @@ func newReportMap(data []byte) (reports reportMap, err error) {
 	return
 }
 
+// AgentReport handle and save the agent report message.
 func (t *Tree) AgentReport(info m.Report) error {
 	t.reports.Lock()
 	defer t.reports.Unlock()
@@ -41,6 +43,7 @@ func (t *Tree) AgentReport(info m.Report) error {
 	return nil
 }
 
+// GetReportInfo return all report information.
 func (t *Tree) GetReportInfo() map[string]m.Report {
 	reportInfo := make(map[string]m.Report, len(t.reports.ReportInfo))
 	t.reports.RLock()

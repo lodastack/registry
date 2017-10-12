@@ -17,8 +17,8 @@ var (
 )
 
 // return resource list by nodeId/resource type.
-func (r *ResourceMethod) getResourceList(nodeId, resourceType string) (*model.ResourceList, error) {
-	resByte, err := r.c.View([]byte(nodeId), []byte(resourceType))
+func (r *resourceMethod) getResourceList(nodeID, resourceType string) (*model.ResourceList, error) {
+	resByte, err := r.c.View([]byte(nodeID), []byte(resourceType))
 	if err != nil {
 		return nil, err
 	}
@@ -33,27 +33,27 @@ func (r *ResourceMethod) getResourceList(nodeId, resourceType string) (*model.Re
 
 // return the resource list at form of []byte by nodeId/resource type.
 // NOTE: return error ErrEmtpyResource if the resource list in store is emtpy.
-func (r *ResourceMethod) getResourceListByte(ns, resourceType string) (nodeId string, resByte []byte, err error) {
-	nodeId, err = r.n.GetNodeIDByNS(ns)
+func (r *resourceMethod) getResourceListByte(ns, resourceType string) (nodeID string, resByte []byte, err error) {
+	nodeID, err = r.n.GetNodeIDByNS(ns)
 	if err != nil {
 		r.logger.Errorf("getNodeIDByNS fail: %s", err.Error())
 		return "", nil, err
 	}
-	resOldByte, err := r.c.View([]byte(nodeId), []byte(resourceType))
+	resOldByte, err := r.c.View([]byte(nodeID), []byte(resourceType))
 	if err != nil {
-		r.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %s", nodeId, resourceType, err.Error())
+		r.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %s", nodeID, resourceType, err.Error())
 		return "", nil, errors.New("get resource fail")
 	} else if len(resOldByte) == 0 {
-		return nodeId, nil, ErrEmtpyResource
+		return nodeID, nil, ErrEmtpyResource
 	}
 	resByte = make([]byte, len(resOldByte))
 	copy(resByte, resOldByte)
-	return nodeId, resByte, nil
+	return nodeID, resByte, nil
 }
 
 // GetResource return the Resource list by ns/resourceType.
 // If the node is nonleaf node, return the resource list of all its leaf child node.
-func (r *ResourceMethod) GetResourceList(ns string, resourceType string) (*model.ResourceList, error) {
+func (r *resourceMethod) GetResourceList(ns string, resourceType string) (*model.ResourceList, error) {
 	node, err := r.n.GetNodeByNS(ns)
 	if err != nil {
 		return nil, err
@@ -74,17 +74,17 @@ func (r *ResourceMethod) GetResourceList(ns string, resourceType string) (*model
 		return nil, err
 	}
 	for _, leafID := range leafIDs {
-		if oneNodeResourceList, err := r.getResourceList(leafID, resourceType); err != nil {
+		oneNodeResourceList, err := r.getResourceList(leafID, resourceType)
+		if err != nil {
 			return nil, err
-		} else {
-			allResourceList.AppendResources(*oneNodeResourceList)
 		}
+		allResourceList.AppendResources(*oneNodeResourceList)
 	}
 	return &allResourceList, nil
 }
 
 // Get Resource by ns/resource type/resource ID.
-func (r *ResourceMethod) GetResource(ns, resType string, resID ...string) ([]model.Resource, error) {
+func (r *resourceMethod) GetResource(ns, resType string, resID ...string) ([]model.Resource, error) {
 	l, err := r.GetResourceList(ns, resType)
 	if err != nil {
 		r.logger.Errorf("GetResourceList fail, result: %v, error: %v", *l, err)
@@ -97,10 +97,10 @@ func (r *ResourceMethod) GetResource(ns, resType string, resID ...string) ([]mod
 }
 
 // Set ResourceList to ns.
-func (r *ResourceMethod) SetResource(ns, resType string, rl model.ResourceList) error {
+func (r *resourceMethod) SetResource(ns, resType string, rl model.ResourceList) error {
 	node, err := r.n.GetNodeByNS(ns)
 	if err != nil || node.ID == "" {
-		r.logger.Error("Get node by ns(%s) fail\n", ns)
+		r.logger.Errorf("Get node by ns(%s) fail", ns)
 		return common.ErrGetNode
 	}
 	if !node.AllowResource(resType) {
@@ -119,7 +119,7 @@ func (r *ResourceMethod) SetResource(ns, resType string, rl model.ResourceList) 
 
 // UpdateResource One Resource by ns/resource type/resource ID/update map.
 // NOTE: read and append at level of []byte, do not unmarshal.
-func (r *ResourceMethod) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
+func (r *resourceMethod) UpdateResource(ns, resType, resID string, updateMap map[string]string) error {
 	nodeID, resOldByte, err := r.getResourceListByte(ns, resType)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func (r *ResourceMethod) UpdateResource(ns, resType, resID string, updateMap map
 }
 
 // AppendResource one resource to ns.
-func (r *ResourceMethod) AppendResource(ns, resType string, appendRes ...model.Resource) error {
+func (r *resourceMethod) AppendResource(ns, resType string, appendRes ...model.Resource) error {
 	nodeID, resOldByte, err := r.getResourceListByte(ns, resType)
 	if err != nil && err != ErrEmtpyResource {
 		return err
@@ -150,15 +150,15 @@ func (r *ResourceMethod) AppendResource(ns, resType string, appendRes ...model.R
 }
 
 // DeleteResource remove a resource by ns/resTYpe/resID.
-func (r *ResourceMethod) RemoveResource(ns, resType string, resID ...string) error {
-	nodeId, err := r.n.GetNodeIDByNS(ns)
+func (r *resourceMethod) RemoveResource(ns, resType string, resID ...string) error {
+	nodeID, err := r.n.GetNodeIDByNS(ns)
 	if err != nil {
 		r.logger.Errorf("getIDByNs fail: %s", err.Error())
 		return err
 	}
-	resOldByte, err := cluster.GetByte(r.c, nodeId, resType)
+	resOldByte, err := cluster.GetByte(r.c, nodeID, resType)
 	if err != nil || len(resOldByte) == 0 {
-		r.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %v", nodeId, resType, err)
+		r.logger.Errorf("getByteFromStore fail or get none, nodeid: %s, ns : %s, error: %v", nodeID, resType, err)
 		return errors.New("get resource fail")
 	}
 
@@ -166,10 +166,10 @@ func (r *ResourceMethod) RemoveResource(ns, resType string, resID ...string) err
 	if err != nil {
 		return err
 	}
-	return cluster.SetByte(r.c, nodeId, resType, resNewByte)
+	return cluster.SetByte(r.c, nodeID, resType, resNewByte)
 }
 
-func (r *ResourceMethod) CopyResource(fromNs, toNs, resType string, resourceIDs ...string) error {
+func (r *resourceMethod) CopyResource(fromNs, toNs, resType string, resourceIDs ...string) error {
 	rs, err := r.GetResource(fromNs, resType, resourceIDs...)
 	if err != nil || rs == nil {
 		r.logger.Errorf("GetResource fail, ns: %s, error: %s", toNs, err)
@@ -221,7 +221,7 @@ func (r *ResourceMethod) CopyResource(fromNs, toNs, resType string, resourceIDs 
 }
 
 // MoveResource move the resource to a new ns.
-func (r *ResourceMethod) MoveResource(oldNs, newNs, resType string, resourceIDs ...string) error {
+func (r *resourceMethod) MoveResource(oldNs, newNs, resType string, resourceIDs ...string) error {
 	if err := r.CopyResource(oldNs, newNs, resType, resourceIDs...); err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (r *ResourceMethod) MoveResource(oldNs, newNs, resType string, resourceIDs 
 }
 
 // SearchResource search the resource.
-func (r *ResourceMethod) SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error) {
+func (r *resourceMethod) SearchResource(ns, resType string, search model.ResourceSearch) (map[string]*model.ResourceList, error) {
 	result := map[string]*model.ResourceList{}
 	leafIDs, err := r.n.LeafChildIDs(ns)
 	if err != nil && len(leafIDs) == 0 {

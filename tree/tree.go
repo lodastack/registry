@@ -18,34 +18,36 @@ import (
 )
 
 var (
-	template string = model.TemplatePrefix
+	template = model.TemplatePrefix
 )
 
 const (
 	nodeBucket   = "loda"
 	reportBucket = "report"
 
-	nodeIdKey = "nodeid"
+	nodeIDKey = "nodeid"
 
 	rootID = "0"
 )
 
+// Tree manage the node/resource/machine.
 type Tree struct {
 	Nodes *n.Node
-	c     cluster.ClusterInf
-	n     n.NodeInf
-	r     r.ResourceInf
-	m     machine.MachineInf
+	c     cluster.Inf
+	n     n.Inf
+	r     r.Inf
+	m     machine.Inf
 	Mu    sync.RWMutex
 
 	reports ReportInfo
 	logger  *log.Logger
 }
 
-func NewTree(cluster cluster.ClusterInf) (*Tree, error) {
-	nodeInf := n.NewNodeMethod(cluster)
+// NewTree return Tree obj.
+func NewTree(cluster cluster.Inf) (*Tree, error) {
+	nodeInf := n.NewNode(cluster)
 	logger := log.New(config.C.LogConf.Level, "tree", model.LogBackend)
-	r := r.NewResourceMethod(cluster, nodeInf, logger)
+	r := r.NewResource(cluster, nodeInf, logger)
 	t := Tree{
 		Nodes:   &n.Node{n.NodeProperty{ID: rootID, Name: n.RootNode, Type: n.NonLeaf, MachineReg: n.NotMatchMachine}, []*n.Node{}},
 		c:       cluster,
@@ -77,7 +79,7 @@ func (t *Tree) initNodeBucket() error {
 		t.logger.Error("init nodeDataKey fail:", err.Error())
 		return err
 	}
-	if err := t.initKey(nodeIdKey); err != nil {
+	if err := t.initKey(nodeIDKey); err != nil {
 		t.logger.Error("init nodeidKey fail:", err.Error())
 		return err
 	}
@@ -149,13 +151,13 @@ func (t *Tree) initKey(key string) error {
 		if _, err := t.NewNode(n.PoolNode, n.RootNode, n.Leaf, n.NotMatchMachine); err != nil {
 			panic("create root pool node fail: " + err.Error())
 		}
-	case nodeIdKey:
+	case nodeIDKey:
 		// Initialization NodeId Map to store.
 		initByte, _ := json.Marshal(map[string]string{rootID: n.RootNode})
 		if err != nil {
 			return common.ErrInitNodeKey
 		}
-		if err = t.c.Update([]byte(n.NodeDataBucketID), []byte(nodeIdKey), initByte); err != nil {
+		if err = t.c.Update([]byte(n.NodeDataBucketID), []byte(nodeIDKey), initByte); err != nil {
 			return common.ErrInitNodeKey
 		}
 	}
@@ -192,11 +194,12 @@ func (t *Tree) setByteToStore(bucket, resType string, resByte []byte) error {
 	return t.c.Update([]byte(bucket), []byte(resType), resByte)
 }
 
-func (t *Tree) templateOfNode(nodeId string) (map[string][]byte, error) {
-	return t.c.ViewPrefix([]byte(nodeId), []byte(template))
+func (t *Tree) templateOfNode(nodeID string) (map[string][]byte, error) {
+	return t.c.ViewPrefix([]byte(nodeID), []byte(template))
 }
 
-func (t *Tree) UpdateNode(ns, name, machineReg string) error {
+// UpdateNode update the node name or machineMatchStrategy.
+func (t *Tree) UpdateNode(ns, name, machineMatchStrategy string) error {
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 	allNodes, err := t.AllNodes()
@@ -218,7 +221,7 @@ func (t *Tree) UpdateNode(ns, name, machineReg string) error {
 		t.logger.Errorf("GetByNs %s fail, error: %s", ns, err.Error())
 		return err
 	}
-	node.Update(name, machineReg)
+	node.Update(name, machineMatchStrategy)
 
 	t.Nodes = allNodes
 	if err := t.saveTree(); err != nil {
@@ -238,30 +241,30 @@ func getParentNS(ns string) (string, error) {
 
 func (t *Tree) allowRemoveNS(ns string) error {
 	rl, err := t.GetResourceList(ns, "machine")
+	// not allow remove the nonleaf node still has child node.
 	if err != nil && err != common.ErrNoLeafChild {
-		// not allow remove the nonleaf node still has child node.
+
 		return err
-	} else {
-		// not allow remove the leaf node still has machine resource.
-		if rl != nil && len(*rl) != 0 {
-			t.logger.Errorf("not allow delete ns %s, error: %v", ns, err)
-			return common.ErrNotAllowDel
-		}
+	}
+	// not allow remove the leaf node still has machine resource.
+	if rl != nil && len(*rl) != 0 {
+		t.logger.Errorf("not allow delete ns %s, error: %v", ns, err)
+		return common.ErrNotAllowDel
 	}
 	return nil
 }
 
-// DelNode delete node from tree, remove bucket.
+// RemoveNode remove node from tree, remove bucket which save the resource.
 func (t *Tree) RemoveNode(ns string) error {
 	parentNs, err := getParentNS(ns)
 	if err != nil {
-		t.logger.Errorf("remove ns fail because the ns is root node or invalid, ns:%s")
+		t.logger.Errorf("remove ns fail because the ns is root node or invalid, ns: %s", ns)
 		return err
 	}
 
 	removeNodeID, err := t.getNodeIDByNS(ns)
 	if err != nil {
-		t.logger.Error("getNodeIDByNS error: %s", err.Error())
+		t.logger.Errorf("getNodeIDByNS error: %s", err.Error())
 		return err
 	}
 
@@ -344,7 +347,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, machineRegistRule ..
 			parent.Children = parent.Children[:len(parent.Children)-1]
 		}
 		if err := t.saveTree(); err != nil {
-			t.logger.Error("Rollback tree node fail: %s", err.Error())
+			t.logger.Errorf("Rollback tree node fail: %s", err.Error())
 		}
 		return "", err
 	}

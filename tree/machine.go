@@ -7,18 +7,22 @@ import (
 	"github.com/lodastack/registry/model"
 )
 
+// RegisterMachine search and register the machine to the node which match the hostname.
 func (t *Tree) RegisterMachine(newMachine model.Resource) (map[string]string, error) {
 	return t.m.RegisterMachine(newMachine)
 }
 
+// SearchMachine search the hostname in all node.
 func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
 	return t.m.SearchMachine(hostname)
 }
 
+// MachineUpdate search the hostname and update the machine resource by updateMap.
 func (t *Tree) MachineUpdate(oldName string, updateMap map[string]string) error {
 	return t.m.MachineUpdate(oldName, updateMap)
 }
 
+// CheckMachineStatusByReport check the machine is online or dead by its report, update the machine status.
 func (t *Tree) CheckMachineStatusByReport(reports map[string]m.Report) error {
 	return t.m.CheckMachineStatusByReport(reports)
 }

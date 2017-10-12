@@ -9,7 +9,7 @@ import (
 	"github.com/lodastack/registry/tree/test_sample"
 )
 
-var testPath string = "../test_sample/"
+var testPath = "../test_sample/"
 var nodes Node
 var nodeMap, nodeNsMap map[string]int
 var leafMachineReg map[string]string
@@ -170,7 +170,7 @@ func TestUpdateNode(t *testing.T) {
 }
 
 func TestRemoveChildNode(t *testing.T) {
-	var nodeTest Node = Node{
+	nodeTest := Node{
 		NodeProperty{ID: RootNode, Name: RootNode, Type: NonLeaf, MachineReg: "*"},
 		[]*Node{
 			{NodeProperty{ID: "noChild", Name: "noChild", Type: NonLeaf, MachineReg: "-"}, []*Node{}},
@@ -207,7 +207,7 @@ func BenchmarkNodeJsonUnmarshal(b *testing.B) {
 	var allNode Node
 	nodeMapByte, err := getNodesByte()
 	if err != nil {
-		b.Fatal("getNodesByte error:%s\n", err.Error())
+		b.Fatalf("getNodesByte error:%s\n", err.Error())
 	}
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
@@ -229,7 +229,7 @@ func BenchmarkNodeFFJsonUnmarshal(b *testing.B) {
 	var allNode Node
 	nodeMapByte, err := getNodesByte()
 	if err != nil {
-		b.Fatal("getNodesByte error:%s\n", err.Error())
+		b.Fatalf("getNodesByte error:%s\n", err.Error())
 	}
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {

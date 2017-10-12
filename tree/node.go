@@ -5,7 +5,7 @@ import (
 	n "github.com/lodastack/registry/tree/node"
 )
 
-// GetAllNodes return the root node.
+// AllNodes return the root node.
 func (t *Tree) AllNodes() (n *n.Node, err error) {
 	if n, err = t.n.AllNodes(); err != nil {
 		t.logger.Errorf("AllNodes fail, node %v, error: %s", *n, err.Error())
@@ -41,7 +41,7 @@ func (t *Tree) getNodeIDByNS(ns string) (id string, err error) {
 	return
 }
 
-// Return leaf node of the ns.
+// LeafChildIDs return leaf node of the ns.
 func (t *Tree) LeafChildIDs(ns string) (l []string, err error) {
 	if l, err = t.n.LeafChildIDs(ns); err != nil {
 		t.logger.Errorf("LeafChildIDs fail: %s", err.Error())

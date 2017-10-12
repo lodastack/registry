@@ -1,17 +1,15 @@
 package cluster
 
+// store cluster save the tree data include node/resource data.
+// the node infomation save in a bucket which include the relationship of this node and their nodeID,
+// nodeID used as bucketid to save the node's resource data.
+
 import (
 	m "github.com/lodastack/store/model"
 )
 
-// Cluster is the interface op must implement.
-type ClusterInf interface {
-	// Join joins the node, reachable at addr, to the cluster.
-	Join(addr string) error
-
-	// Remove removes a node from the store, specified by addr.
-	Remove(addr string) error
-
+// Inf is the cluster interface the cluster should have.
+type Inf interface {
 	// Create a bucket, via distributed consensus.
 	CreateBucket(name []byte) error
 
@@ -30,19 +28,16 @@ type ClusterInf interface {
 	// Batch update values for given keys in given buckets, via distributed consensus.
 	Batch(rows []m.Row) error
 
-	// Backup database.
-	Backup() ([]byte, error)
-
 	// ViewPrefix returns the value for the keys has the keyPrefix.
 	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)
 }
 
-// Get type resType resource of node with ID bucketId.
-func GetByte(c ClusterInf, bucket, resType string) ([]byte, error) {
-	return c.View([]byte(bucket), []byte(resType))
+// GetByte return the resource byte of the nodeID/resourceType.
+func GetByte(c Inf, nodeID, resourceType string) ([]byte, error) {
+	return c.View([]byte(nodeID), []byte(resourceType))
 }
 
-// Set resource to node bucket.
-func SetByte(c ClusterInf, bucket, resType string, resByte []byte) error {
-	return c.Update([]byte(bucket), []byte(resType), resByte)
+// SetByte set the resource to a node.
+func SetByte(c Inf, nodeID, resourceType string, resourceByte []byte) error {
+	return c.Update([]byte(nodeID), []byte(resourceType), resourceByte)
 }
