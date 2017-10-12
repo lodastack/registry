@@ -1,4 +1,4 @@
-package node
+package tree
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/node/node"
-	"github.com/lodastack/registry/node/test_sample"
+	n "github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/test_sample"
 )
 
 var testPath string = "./test_sample/"

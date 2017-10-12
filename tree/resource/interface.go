@@ -3,8 +3,8 @@ package resource
 import (
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/node/cluster"
-	"github.com/lodastack/registry/node/node"
+	"github.com/lodastack/registry/tree/cluster"
+	"github.com/lodastack/registry/tree/node"
 )
 
 type ResourceInf interface {

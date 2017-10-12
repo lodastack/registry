@@ -19,8 +19,8 @@ import (
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/node"
-	n "github.com/lodastack/registry/node/node"
+	"github.com/lodastack/registry/tree"
+	n "github.com/lodastack/registry/tree/node"
 	"github.com/lodastack/registry/utils"
 
 	"github.com/julienschmidt/httprouter"
@@ -88,7 +88,7 @@ type Service struct {
 	router *httprouter.Router
 
 	cluster Cluster
-	tree    node.TreeMethod
+	tree    tree.TreeMethod
 	perm    authorize.Perm
 
 	logger *log.Logger
@@ -108,7 +108,7 @@ var ErrInvalidParam = errors.New("invalid infomation")
 // New returns an uninitialized HTTP service.
 func New(c config.HTTPConfig, cluster Cluster) (*Service, error) {
 	// init Tree
-	tree, err := node.NewTree(cluster)
+	tree, err := tree.NewTree(cluster)
 	if err != nil {
 		fmt.Println("init tree fail: %s", err.Error())
 		return nil, err
@@ -948,7 +948,7 @@ func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, _ http
 func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ns := r.FormValue("ns")
 
-	if err := s.tree.DelNode(ns); err != nil {
+	if err := s.tree.RemoveNode(ns); err != nil {
 		ReturnServerError(w, err)
 		return
 	}

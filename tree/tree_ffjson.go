@@ -3,13 +3,13 @@
 // source: tree.go
 // DO NOT EDIT!
 
-package node
+package tree
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	n "github.com/lodastack/registry/node/node"
+	n "github.com/lodastack/registry/tree/node"
 	fflib "github.com/pquerna/ffjson/fflib/v1"
 )
 

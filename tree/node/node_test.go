@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lodastack/registry/common"
-	"github.com/lodastack/registry/node/test_sample"
+	"github.com/lodastack/registry/tree/test_sample"
 )
 
 var testPath string = "../test_sample/"
@@ -169,7 +169,7 @@ func TestUpdateNode(t *testing.T) {
 	}
 }
 
-func TestDeleteNode(t *testing.T) {
+func TestRemoveChildNode(t *testing.T) {
 	var nodeTest Node = Node{
 		NodeProperty{ID: RootNode, Name: RootNode, Type: NonLeaf, MachineReg: "*"},
 		[]*Node{
@@ -180,14 +180,14 @@ func TestDeleteNode(t *testing.T) {
 		},
 	}
 
-	if err := nodeTest.DelChild("noChild"); err != nil {
+	if err := nodeTest.RemoveChildNode("noChild"); err != nil {
 		t.Fatal("node delChild return false")
 	}
 	if nodeTest.Children[0].ID != "haveChild" {
 		t.Fatalf("node after del children node not match with expect: %+v", nodeTest)
 	}
 
-	if err := nodeTest.DelChild("haveChild"); err == nil {
+	if err := nodeTest.RemoveChildNode("haveChild"); err == nil {
 		t.Fatal("node delChild success, not match with expect")
 	}
 
@@ -195,10 +195,10 @@ func TestDeleteNode(t *testing.T) {
 	if err != nil || nodeParent == nil {
 		t.Fatalf("get node haveChild fail, error: %v", err)
 	}
-	if err := nodeParent.DelChild("child"); err != nil {
+	if err := nodeParent.RemoveChildNode("child"); err != nil {
 		t.Fatalf("del node child return false, error:%s", err.Error())
 	}
-	if err := nodeTest.DelChild("haveChild"); err != nil {
+	if err := nodeTest.RemoveChildNode("haveChild"); err != nil {
 		t.Fatal("del node haveChild fail")
 	}
 }

@@ -1,4 +1,4 @@
-package node
+package tree
 
 import (
 	"os"
@@ -9,8 +9,8 @@ import (
 	"github.com/lodastack/models"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/node/node"
-	"github.com/lodastack/registry/node/test_sample"
+	n "github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/test_sample"
 )
 
 // Test create
@@ -264,7 +264,7 @@ func TestTreeUpdateNode(t *testing.T) {
 	}
 }
 
-func TestDelNode(t *testing.T) {
+func TestRomoveNode(t *testing.T) {
 	s := test_sample.MustNewStore(t)
 	defer os.RemoveAll(s.Path())
 
@@ -296,10 +296,10 @@ func TestDelNode(t *testing.T) {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 
-	if err := tree.DelNode("test1.loda"); err == nil {
+	if err := tree.RemoveNode("test1.loda"); err == nil {
 		t.Fatal("delete ns still have machine success, not match wich expect")
 	}
-	if err := tree.DelNode("test2.loda"); err != nil {
+	if err := tree.RemoveNode("test2.loda"); err != nil {
 		t.Fatalf("delete ns have no machine fail, not match wich expect, error: %s", err.Error())
 	}
 }

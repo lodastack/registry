@@ -1,9 +1,9 @@
-package node
+package tree
 
 import (
 	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/node/node"
+	n "github.com/lodastack/registry/tree/node"
 )
 
 // TreeMethod is the interface tree must implement.
@@ -47,8 +47,8 @@ type TreeMethod interface {
 	// Update the node property.
 	UpdateNode(ns string, name, machineReg string) error
 
-	// Delete the node with delID from parentNs.
-	DelNode(ns string) error
+	// RemoveNode remove the node with delID from parentNs.
+	RemoveNode(ns string) error
 
 	// Update Resource By ns and ResourceID.
 	UpdateResource(ns, resType, resID string, updateMap map[string]string) error

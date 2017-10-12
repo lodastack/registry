@@ -7,7 +7,7 @@ import (
 
 	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/node/node"
+	n "github.com/lodastack/registry/tree/node"
 )
 
 var (
