@@ -1,4 +1,4 @@
-package node
+package tree
 
 import (
 	"github.com/lodastack/registry/authorize"

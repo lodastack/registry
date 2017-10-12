@@ -2,7 +2,7 @@ package node
 
 import (
 	"github.com/lodastack/registry/common"
-	"github.com/lodastack/registry/node/cluster"
+	"github.com/lodastack/registry/tree/cluster"
 )
 
 type NodeInf interface {

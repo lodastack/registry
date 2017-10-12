@@ -74,10 +74,10 @@ func (n *Node) allowDel() bool {
 	return false
 }
 
-// delChild delete one child node by ID.
-func (n *Node) DelChild(childId string) error {
+// RemoveChildNode remove the child by node ID.
+func (n *Node) RemoveChildNode(childID string) error {
 	for index, child := range n.Children {
-		if child.ID != childId {
+		if child.ID != childID {
 			continue
 		}
 		if !child.allowDel() {

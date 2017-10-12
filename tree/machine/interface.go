@@ -4,9 +4,9 @@ import (
 	"github.com/lodastack/log"
 	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/node/cluster"
-	"github.com/lodastack/registry/node/node"
-	"github.com/lodastack/registry/node/resource"
+	"github.com/lodastack/registry/tree/cluster"
+	"github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/resource"
 )
 
 type MachineInf interface {

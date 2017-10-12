@@ -1,4 +1,4 @@
-package node
+package tree
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/node/node"
-	"github.com/lodastack/registry/node/test_sample"
+	n "github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/test_sample"
 )
 
 var nodeMap, nodeNsMap map[string]int
