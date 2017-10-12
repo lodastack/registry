@@ -40,3 +40,20 @@ func (t *Tree) UpdateStatusByHostname(hostname string, updateMap map[string]stri
 	}
 	return nil
 }
+
+// RemoveStatusByHostname search and remove the machine by hostname.
+func (t *Tree) RemoveStatusByHostname(hostname string) error {
+	machineRecord, err := t.m.SearchMachine(hostname)
+	if err != nil {
+		t.logger.Errorf("UpdateStatusByHostname search machine fail: %s", err.Error())
+		return fmt.Errorf("update machine fail, invalid hostname: %s, error: %s", hostname, err.Error())
+	}
+	for _ns, resourceID := range machineRecord {
+		if err := t.r.RemoveResource(_ns, model.Machine, resourceID); err != nil {
+			t.logger.Errorf("UpdateStatusByHostname update machine fail, ns: %s, resourceID: %s,  error: %s",
+				_ns, resourceID, err.Error())
+			return fmt.Errorf("update machine status fail, hostname %s, error: %s", hostname, err.Error())
+		}
+	}
+	return nil
+}

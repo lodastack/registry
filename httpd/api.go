@@ -216,6 +216,7 @@ func (s *Service) initHandler() {
 	s.router.PUT("/api/v1/resource/move", s.handleResourceMove)
 	s.router.PUT("/api/v1/resource/copy", s.handleResourceCopy)
 	s.router.DELETE("/api/v1/resource", s.handleResourceDel)
+	s.router.DELETE("/api/v1/resource/list", s.handleRemoveResourceList)
 	s.router.DELETE("/api/v1/resource/collect", s.handleCollectDel)
 
 	s.router.POST("/api/v1/ns", s.handlerNsNew)
@@ -530,6 +531,36 @@ func (s *Service) handleUpdateResourceList(w http.ResponseWriter, r *http.Reques
 			}
 		} else {
 			if err := s.tree.UpdateResource(_param.Ns, _param.ResType, _param.ResId, _param.UpdateMap); err != nil {
+				ReturnBadRequest(w, err)
+				return
+			}
+		}
+	}
+	ReturnJson(w, 200, "OK")
+}
+
+func (s *Service) handleRemoveResourceList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var err error
+	buf := new(bytes.Buffer)
+	if _, err = buf.ReadFrom(r.Body); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+	params := []bodyParam{}
+	if err := json.Unmarshal(buf.Bytes(), &params); err != nil {
+		ReturnBadRequest(w, err)
+		return
+	}
+
+	for _, _param := range params {
+		if _param.ResType == model.Machine && _param.Ns == "" {
+			hostname := _param.ResId
+			if err := s.tree.RemoveStatusByHostname(hostname); err != nil {
+				ReturnServerError(w, err)
+				return
+			}
+		} else {
+			if err := s.tree.RemoveResource(_param.Ns, _param.ResType, _param.ResId); err != nil {
 				ReturnBadRequest(w, err)
 				return
 			}
