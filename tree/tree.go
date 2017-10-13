@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"encoding/json"
 	"strings"
 	"sync"
 	"time"
@@ -25,9 +24,7 @@ const (
 	nodeBucket   = "loda"
 	reportBucket = "report"
 
-	nodeIDKey = "nodeid"
-
-	rootID = "0"
+	rootNodeID = "0"
 )
 
 // Tree manage the node/resource/machine.
@@ -49,7 +46,7 @@ func NewTree(cluster cluster.Inf) (*Tree, error) {
 	logger := log.New(config.C.LogConf.Level, "tree", model.LogBackend)
 	r := r.NewResource(cluster, nodeInf, logger)
 	t := Tree{
-		Nodes:   &n.Node{n.NodeProperty{ID: rootID, Name: n.RootNode, Type: n.NonLeaf, MachineReg: n.NotMatchMachine}, []*n.Node{}},
+		Nodes:   &n.Node{n.NodeProperty{ID: rootNodeID, Name: n.RootNode, Type: n.NonLeaf, MachineReg: n.NotMatchMachine}, []*n.Node{}},
 		c:       cluster,
 		n:       nodeInf,
 		r:       r,
@@ -75,13 +72,33 @@ func (t *Tree) initNodeBucket() error {
 		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", nodeBucket, err.Error())
 		return err
 	}
-	if err := t.initKey(n.NodeDataKey); err != nil {
+	if err := t.initNodeData(n.NodeDataKey); err != nil {
 		t.logger.Error("init nodeDataKey fail:", err.Error())
 		return err
 	}
-	if err := t.initKey(nodeIDKey); err != nil {
-		t.logger.Error("init nodeidKey fail:", err.Error())
+
+	return nil
+}
+
+// initialization tree node data and if empty.
+func (t *Tree) initNodeData(key string) error {
+	v, err := t.c.View([]byte(n.NodeDataBucketID), []byte(key))
+	if err != nil {
 		return err
+	}
+	if len(v) != 0 {
+		return nil
+	}
+
+	t.logger.Info(key, "is not inited, begin to init")
+
+	// Create rootNode map/bucket and init template.
+	if _, err := t.NewNode("", "", n.Root); err != nil {
+		panic("create root node fail: " + err.Error())
+	}
+	// Create root pool node.
+	if _, err := t.NewNode(n.PoolNode, n.RootNode, n.Leaf, n.NotMatchMachine); err != nil {
+		panic("create root pool node fail: " + err.Error())
 	}
 	return nil
 }
@@ -127,40 +144,6 @@ func (t *Tree) initReportBucket() error {
 			}
 		}
 	}()
-	return nil
-}
-
-// initKey initialization tree data and idmap if they are nil.
-func (t *Tree) initKey(key string) error {
-	v, err := t.c.View([]byte(n.NodeDataBucketID), []byte(key))
-	if err != nil {
-		return err
-	}
-	if len(v) != 0 {
-		return nil
-	}
-
-	t.logger.Info(key, "is not inited, begin to init")
-	switch key {
-	case n.NodeDataKey:
-		// Create rootNode map/bucket and init template.
-		if _, err := t.NewNode("", "", n.Root); err != nil {
-			panic("create root node fail: " + err.Error())
-		}
-		// Create root pool node.
-		if _, err := t.NewNode(n.PoolNode, n.RootNode, n.Leaf, n.NotMatchMachine); err != nil {
-			panic("create root pool node fail: " + err.Error())
-		}
-	case nodeIDKey:
-		// Initialization NodeId Map to store.
-		initByte, _ := json.Marshal(map[string]string{rootID: n.RootNode})
-		if err != nil {
-			return common.ErrInitNodeKey
-		}
-		if err = t.c.Update([]byte(n.NodeDataBucketID), []byte(nodeIDKey), initByte); err != nil {
-			return common.ErrInitNodeKey
-		}
-	}
 	return nil
 }
 
@@ -310,7 +293,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, machineRegistRule ..
 		n.NodeProperty{},
 		[]*n.Node{}}
 	if nodeType == n.Root {
-		newNode.ID = rootID
+		newNode.ID = rootNodeID
 		newNode.Name, newNode.Type = n.RootNode, n.NonLeaf
 		newNode.MachineReg = n.NotMatchMachine
 		parentNs = "-"
