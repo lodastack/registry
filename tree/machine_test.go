@@ -8,12 +8,12 @@ import (
 
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/node"
 	"github.com/lodastack/registry/tree/test_sample"
 )
 
 var testPath string = "./test_sample/"
-var nodes n.Node
+var nodes node.Node
 var resMap1, resMap2 []map[string]string
 
 func init() {
@@ -54,27 +54,27 @@ func TestMatchNs(t *testing.T) {
 	}
 
 	// case 1: hostname "0-2-" only machine ns "0-2-1.0-2.loda"
-	if nsList, err := tree.m.MatchNs("0-2-"); err != nil || len(nsList) != 1 || nsList[0] != "0-2-1.0-2."+n.RootNode {
+	if nsList, err := tree.machine.MatchNs("0-2-"); err != nil || len(nsList) != 1 || nsList[0] != "0-2-1.0-2."+node.RootNode {
 		t.Fatalf("match ns 0-2- not match with expect, error, %v, result %+v ", err, nsList)
 	}
 
 	// case 2: hostname "0-2-host" only machine ns "0-2-1.0-2.loda"
-	if nsList, err := tree.m.MatchNs("0-2-host"); err != nil || len(nsList) != 1 || nsList[0] != "0-2-1.0-2."+n.RootNode {
+	if nsList, err := tree.machine.MatchNs("0-2-host"); err != nil || len(nsList) != 1 || nsList[0] != "0-2-1.0-2."+node.RootNode {
 		t.Fatalf("match ns 0-2-host not match with expect, error, %v, result %+v ", err, nsList)
 	}
 
 	// case 3: hostname "0-2-2-1-host" machine two ns: "0-2-2-1.0-2-2.0-2.loda" and "0-2-1.0-2.loda"
-	if nsList, err := tree.m.MatchNs("0-2-2-1-host"); err != nil || len(nsList) != 2 {
+	if nsList, err := tree.machine.MatchNs("0-2-2-1-host"); err != nil || len(nsList) != 2 {
 		t.Fatalf("match ns 0-2-2-1-host not match with expect, error, %v, result %+v ", err, nsList)
 	} else {
-		if !common.CheckStringInList(nsList, "0-2-1.0-2."+n.RootNode) ||
-			!common.CheckStringInList(nsList, "0-2-2-1.0-2-2.0-2."+n.RootNode) {
+		if !common.CheckStringInList(nsList, "0-2-1.0-2."+node.RootNode) ||
+			!common.CheckStringInList(nsList, "0-2-2-1.0-2-2.0-2."+node.RootNode) {
 			t.Fatalf("match ns 0-2-2-1-host not match with expect, error, %v, result %+v ", err, nsList)
 		}
 	}
 
 	// case 4: hostname not machine any ns, so get ns pool.
-	if nsList, err := tree.m.MatchNs("0-5-host"); err != nil || len(nsList) != 1 || nsList[0] != n.PoolNode+n.NodeDeli+n.RootNode {
+	if nsList, err := tree.machine.MatchNs("0-5-host"); err != nil || len(nsList) != 1 || nsList[0] != node.PoolNode+node.NodeDeli+node.RootNode {
 		t.Fatalf("match ns 0-5-host match with expect, error, %v, result %+v ", err, nsList)
 	}
 }
@@ -93,11 +93,11 @@ func TestSearchMachine(t *testing.T) {
 		t.Fatal("NewTree error")
 	}
 
-	_, err = tree.NewNode("test1", n.RootNode, n.Leaf, "test1")
+	_, err = tree.NewNode("test1", node.RootNode, node.Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", n.RootNode, n.Leaf, "test2")
+	_, err = tree.NewNode("test2", node.RootNode, node.Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -108,12 +108,12 @@ func TestSearchMachine(t *testing.T) {
 	resourceByte2, _ := model.NewResourceList(resMap2)
 
 	// test1.loda have 127.0.0.1 and 127.0.0.2
-	err = tree.SetResource("test1."+n.RootNode, "machine", *resourceByte1)
+	err = tree.SetResource("test1."+node.RootNode, "machine", *resourceByte1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 	// test2.loda have 127.0.0.2 and 127.0.0.3
-	err = tree.SetResource("test2."+n.RootNode, "machine", *resourceByte2)
+	err = tree.SetResource("test2."+node.RootNode, "machine", *resourceByte2)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -127,7 +127,7 @@ func TestSearchMachine(t *testing.T) {
 	if result, err := tree.SearchMachine("127.0.0.1"); err != nil {
 		t.Fatal("SearchMachine 127.0.0.1 fail", err.Error())
 	} else {
-		if _, ok := result["test1."+n.RootNode]; !ok {
+		if _, ok := result["test1."+node.RootNode]; !ok {
 			t.Fatalf("SearchMachine 127.0.0.1 not match with expect, result: %+v", result)
 		}
 	}
@@ -136,10 +136,10 @@ func TestSearchMachine(t *testing.T) {
 	if result, err := tree.SearchMachine("127.0.0.2"); err != nil {
 		t.Fatal("SearchMachine 127.0.0.2 fail", err.Error())
 	} else {
-		if _, ok := result["test1."+n.RootNode]; !ok {
+		if _, ok := result["test1."+node.RootNode]; !ok {
 			t.Fatalf("SearchMachine 127.0.0.1 not match with expect, result: %+v", result)
 		}
-		if _, ok := result["test2."+n.RootNode]; !ok {
+		if _, ok := result["test2."+node.RootNode]; !ok {
 			t.Fatalf("SearchMachine 127.0.0.1 not match with expect, result: %+v", result)
 		}
 	}
@@ -158,11 +158,11 @@ func TestUpdateStatusByHostname(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test1", n.RootNode, n.Leaf, "test1")
+	_, err = tree.NewNode("test1", node.RootNode, node.Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", n.RootNode, n.Leaf, "test2")
+	_, err = tree.NewNode("test2", node.RootNode, node.Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -173,12 +173,12 @@ func TestUpdateStatusByHostname(t *testing.T) {
 	resourceByte2, _ := model.NewResourceList(resMap2)
 
 	// test1.loda have 127.0.0.1 and 127.0.0.2
-	err = tree.SetResource("test1."+n.RootNode, model.Machine, *resourceByte1)
+	err = tree.SetResource("test1."+node.RootNode, model.Machine, *resourceByte1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 	// test2.loda have 127.0.0.2 and 127.0.0.3
-	err = tree.SetResource("test2."+n.RootNode, model.Machine, *resourceByte2)
+	err = tree.SetResource("test2."+node.RootNode, model.Machine, *resourceByte2)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
@@ -193,7 +193,7 @@ func TestUpdateStatusByHostname(t *testing.T) {
 		t.Fatalf("UpdateStatusByHostname 127.0.0.3 fail: %s, ", err.Error())
 	}
 
-	if l, err := tree.r.GetResourceList("test1."+n.RootNode, model.Machine); err != nil {
+	if l, err := tree.resource.GetResourceList("test1."+node.RootNode, model.Machine); err != nil {
 		t.Fatalf("read node test1 fail: %s ", err.Error())
 	} else {
 		for _, r := range *l {
@@ -208,7 +208,7 @@ func TestUpdateStatusByHostname(t *testing.T) {
 		}
 	}
 
-	if l, err := tree.r.GetResourceList("test2."+n.RootNode, model.Machine); err != nil {
+	if l, err := tree.resource.GetResourceList("test2."+node.RootNode, model.Machine); err != nil {
 		t.Fatalf("read node test1 fail: %s ", err.Error())
 	} else {
 		for _, r := range *l {
@@ -238,19 +238,19 @@ func TestRegisterMachine(t *testing.T) {
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
-	_, err = tree.NewNode("test1", n.RootNode, n.Leaf, "test1")
+	_, err = tree.NewNode("test1", node.RootNode, node.Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", n.RootNode, n.Leaf, "test2")
+	_, err = tree.NewNode("test2", node.RootNode, node.Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test3", n.RootNode, n.Leaf, "test-mu")
+	_, err = tree.NewNode("test3", node.RootNode, node.Leaf, "test-mu")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test4", n.RootNode, n.Leaf, "test-multi")
+	_, err = tree.NewNode("test4", node.RootNode, node.Leaf, "test-multi")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -261,7 +261,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("register machine case 1 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != "test1"+n.NodeDeli+n.RootNode {
+		if regNs != "test1"+node.NodeDeli+node.RootNode {
 			t.Fatal("resgier ns not match with expect")
 		}
 		searchIP := model.ResourceSearch{
@@ -285,7 +285,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("register machine case 2 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != "test2"+n.NodeDeli+n.RootNode {
+		if regNs != "test2"+node.NodeDeli+node.RootNode {
 			t.Fatal("resgier ns not match with expect")
 		}
 		searchIP := model.ResourceSearch{
@@ -309,7 +309,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("regist machine case 3 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != "test3"+n.NodeDeli+n.RootNode && regNs != "test4"+n.NodeDeli+n.RootNode {
+		if regNs != "test3"+node.NodeDeli+node.RootNode && regNs != "test4"+node.NodeDeli+node.RootNode {
 			t.Fatal("resgier ns not match with expect:", regNs)
 		}
 		searchIP := model.ResourceSearch{
@@ -333,7 +333,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("regist machine case 4 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != n.PoolNode+n.NodeDeli+n.RootNode {
+		if regNs != node.PoolNode+node.NodeDeli+node.RootNode {
 			t.Fatal("resgier ns not match with expect")
 		}
 		searchIP := model.ResourceSearch{
@@ -369,7 +369,7 @@ func BenchmarkRegisterNewMachine(b *testing.B) {
 	cnt := 100
 	for i := 0; i < cnt; i++ {
 		nodeName := fmt.Sprintf("test-%d", i)
-		_, err = tree.NewNode(nodeName, n.RootNode, n.Leaf, nodeName)
+		_, err = tree.NewNode(nodeName, node.RootNode, node.Leaf, nodeName)
 		if err != nil {
 			b.Fatalf("create leaf fail: %s", err.Error())
 		}

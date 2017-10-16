@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/lodastack/log"
-	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/tree/cluster"
 	"github.com/lodastack/registry/tree/machine"
-	n "github.com/lodastack/registry/tree/node"
-	r "github.com/lodastack/registry/tree/resource"
+	"github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/resource"
 )
 
 var (
@@ -29,12 +28,12 @@ const (
 
 // Tree manage the node/resource/machine.
 type Tree struct {
-	Nodes *n.Node
-	c     cluster.Inf
-	n     n.Inf
-	r     r.Inf
-	m     machine.Inf
-	Mu    sync.RWMutex
+	Nodes    *node.Node
+	cluster  cluster.Inf
+	node     node.Inf
+	resource resource.Inf
+	machine  machine.Inf
+	Mu       sync.RWMutex
 
 	reports ReportInfo
 	logger  *log.Logger
@@ -42,18 +41,20 @@ type Tree struct {
 
 // NewTree return Tree obj.
 func NewTree(cluster cluster.Inf) (*Tree, error) {
-	nodeInf := n.NewNode(cluster)
+	nodeInf := node.NewNode(cluster)
 	logger := log.New(config.C.LogConf.Level, "tree", model.LogBackend)
-	r := r.NewResource(cluster, nodeInf, logger)
+	r := resource.NewResource(cluster, nodeInf, logger)
 	t := Tree{
-		Nodes:   &n.Node{n.NodeProperty{ID: rootNodeID, Name: n.RootNode, Type: n.NonLeaf, MachineReg: n.NotMatchMachine}, []*n.Node{}},
-		c:       cluster,
-		n:       nodeInf,
-		r:       r,
-		m:       machine.NewMachine(cluster, nodeInf, r, logger),
-		Mu:      sync.RWMutex{},
-		logger:  logger,
-		reports: ReportInfo{sync.RWMutex{}, make(map[string]m.Report)},
+		Nodes: &node.Node{
+			node.NodeProperty{ID: rootNodeID, Name: node.RootNode, Type: node.NonLeaf, MachineReg: node.NotMatchMachine},
+			[]*node.Node{}},
+		cluster:  cluster,
+		node:     nodeInf,
+		resource: r,
+		machine:  machine.NewMachine(nodeInf, r, logger),
+		Mu:       sync.RWMutex{},
+		logger:   logger,
+		reports:  ReportInfo{sync.RWMutex{}, make(map[string]model.Report)},
 	}
 	err := t.init()
 	return &t, err
@@ -67,12 +68,12 @@ func (t *Tree) init() error {
 }
 
 func (t *Tree) initNodeBucket() error {
-	err := t.c.CreateBucketIfNotExist([]byte(nodeBucket))
+	err := t.cluster.CreateBucketIfNotExist([]byte(nodeBucket))
 	if err != nil {
 		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", nodeBucket, err.Error())
 		return err
 	}
-	if err := t.initNodeData(n.NodeDataKey); err != nil {
+	if err := t.initNodeData(node.NodeDataKey); err != nil {
 		t.logger.Error("init nodeDataKey fail:", err.Error())
 		return err
 	}
@@ -82,7 +83,7 @@ func (t *Tree) initNodeBucket() error {
 
 // initialization tree node data and if empty.
 func (t *Tree) initNodeData(key string) error {
-	v, err := t.c.View([]byte(n.NodeDataBucketID), []byte(key))
+	v, err := t.cluster.View([]byte(node.NodeDataBucketID), []byte(key))
 	if err != nil {
 		return err
 	}
@@ -93,18 +94,18 @@ func (t *Tree) initNodeData(key string) error {
 	t.logger.Info(key, "is not inited, begin to init")
 
 	// Create rootNode map/bucket and init template.
-	if _, err := t.NewNode("", "", n.Root); err != nil {
+	if _, err := t.NewNode("", "", node.Root); err != nil {
 		panic("create root node fail: " + err.Error())
 	}
 	// Create root pool node.
-	if _, err := t.NewNode(n.PoolNode, n.RootNode, n.Leaf, n.NotMatchMachine); err != nil {
+	if _, err := t.NewNode(node.PoolNode, node.RootNode, node.Leaf, node.NotMatchMachine); err != nil {
 		panic("create root pool node fail: " + err.Error())
 	}
 	return nil
 }
 
 func (t *Tree) initReportBucket() error {
-	err := t.c.CreateBucketIfNotExist([]byte(reportBucket))
+	err := t.cluster.CreateBucketIfNotExist([]byte(reportBucket))
 	if err != nil {
 		t.logger.Errorf("tree init %s CreateBucketIfNotExist fail: %s", reportBucket, err.Error())
 		return err
@@ -112,7 +113,7 @@ func (t *Tree) initReportBucket() error {
 	t.reports.ReportInfo, err = t.readReport()
 	if err != nil {
 		t.logger.Error("tree init report fail, set empty")
-		t.reports.ReportInfo = make(map[string]m.Report)
+		t.reports.ReportInfo = make(map[string]model.Report)
 	}
 
 	// Persistent report data.
@@ -155,30 +156,30 @@ func (t *Tree) saveTree() error {
 		return err
 	}
 	// TODO: purge cache or not
-	return t.c.Update([]byte(n.NodeDataBucketID), []byte(n.NodeDataKey), treeByte)
+	return t.cluster.Update([]byte(node.NodeDataBucketID), []byte(node.NodeDataKey), treeByte)
 }
 
 // Create bucket for node.
 func (t *Tree) createBucketForNode(nodeID string) error {
-	return t.c.CreateBucket([]byte(nodeID))
+	return t.cluster.CreateBucket([]byte(nodeID))
 }
 
 func (t *Tree) removeNodeResourceFromStore(nodeID string) error {
-	return t.c.RemoveBucket([]byte(nodeID))
+	return t.cluster.RemoveBucket([]byte(nodeID))
 }
 
 // Get type resType resource of node with ID bucketId.
 func (t *Tree) getByteFromStore(bucket, resType string) ([]byte, error) {
-	return t.c.View([]byte(bucket), []byte(resType))
+	return t.cluster.View([]byte(bucket), []byte(resType))
 }
 
 // Set resource to node bucket.
 func (t *Tree) setByteToStore(bucket, resType string, resByte []byte) error {
-	return t.c.Update([]byte(bucket), []byte(resType), resByte)
+	return t.cluster.Update([]byte(bucket), []byte(resType), resByte)
 }
 
 func (t *Tree) templateOfNode(nodeID string) (map[string][]byte, error) {
-	return t.c.ViewPrefix([]byte(nodeID), []byte(template))
+	return t.cluster.ViewPrefix([]byte(nodeID), []byte(template))
 }
 
 // UpdateNode update the node name or machineMatchStrategy.
@@ -192,8 +193,8 @@ func (t *Tree) UpdateNode(ns, name, machineMatchStrategy string) error {
 	}
 
 	// check the new ns exist or not if update the node name.
-	if oldNsSplit := strings.Split(ns, n.NodeDeli); name != oldNsSplit[0] {
-		newNs := strings.Join(append([]string{name}, oldNsSplit[1:]...), n.NodeDeli)
+	if oldNsSplit := strings.Split(ns, node.NodeDeli); name != oldNsSplit[0] {
+		newNs := strings.Join(append([]string{name}, oldNsSplit[1:]...), node.NodeDeli)
 		if exist := allNodes.Exist(newNs); exist {
 			return common.ErrNodeAlreadyExist
 		}
@@ -215,11 +216,11 @@ func (t *Tree) UpdateNode(ns, name, machineMatchStrategy string) error {
 }
 
 func getParentNS(ns string) (string, error) {
-	nsSplit := strings.Split(ns, n.NodeDeli)
+	nsSplit := strings.Split(ns, node.NodeDeli)
 	if len(nsSplit) < 2 {
 		return "", common.ErrInvalidParam
 	}
-	return strings.Join(nsSplit[1:], n.NodeDeli), nil
+	return strings.Join(nsSplit[1:], node.NodeDeli), nil
 }
 
 func (t *Tree) allowRemoveNS(ns string) error {
@@ -289,13 +290,13 @@ func (t *Tree) RemoveNode(ns string) error {
 // NewNode create a node, return a pointer which point to node, and it bucketId. Property is preserved.
 // First property argument is used as the machineReg.
 func (t *Tree) NewNode(name, parentNs string, nodeType int, machineRegistRule ...string) (string, error) {
-	newNode := n.Node{
-		n.NodeProperty{},
-		[]*n.Node{}}
-	if nodeType == n.Root {
+	newNode := node.Node{
+		node.NodeProperty{},
+		[]*node.Node{}}
+	if nodeType == node.Root {
 		newNode.ID = rootNodeID
-		newNode.Name, newNode.Type = n.RootNode, n.NonLeaf
-		newNode.MachineReg = n.NotMatchMachine
+		newNode.Name, newNode.Type = node.RootNode, node.NonLeaf
+		newNode.MachineReg = node.NotMatchMachine
 		parentNs = "-"
 	} else {
 		newNode.ID = common.GenUUID()
@@ -303,7 +304,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, machineRegistRule ..
 		if len(machineRegistRule) > 0 && machineRegistRule[0] != "" {
 			newNode.MachineReg = machineRegistRule[0]
 		} else {
-			newNode.MachineReg = n.NotMatchMachine
+			newNode.MachineReg = node.NotMatchMachine
 		}
 	}
 
@@ -321,7 +322,7 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, machineRegistRule ..
 	if err := t.createBucketForNode(newNode.ID); err != nil {
 		t.logger.Errorf("NewNode createNodeBucket fail, nodeid:%s, error: %s\n", newNode.ID, err.Error())
 		// rollback by remove the new node.
-		if nodeType != n.Root {
+		if nodeType != node.Root {
 			parent, err := t.Nodes.GetByNS(parentNs)
 			if err != nil {
 				t.logger.Errorf("get parent id ns: %s, error: %v", parentNs, err)
@@ -338,14 +339,14 @@ func (t *Tree) NewNode(name, parentNs string, nodeType int, machineRegistRule ..
 	return newNode.ID, t.initResourceOrTemplate(newNode, nodeType, parentNs, parentNodeID)
 }
 
-func (t *Tree) addNewNodeToTree(newNode n.Node, parentNs string, nodeType int) (string, error) {
-	var nodes, parent *n.Node
+func (t *Tree) addNewNodeToTree(newNode node.Node, parentNs string, nodeType int) (string, error) {
+	var nodes, parent *node.Node
 	var err error
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 
 	// use the node as root node.
-	if nodeType == n.Root {
+	if nodeType == node.Root {
 		nodes = &newNode
 		t.Nodes = nodes
 		return "", nil
@@ -363,7 +364,7 @@ func (t *Tree) addNewNodeToTree(newNode n.Node, parentNs string, nodeType int) (
 		return "", common.ErrGetParent
 	}
 
-	newNS := newNode.Name + n.NodeDeli + parentNs
+	newNS := newNode.Name + node.NodeDeli + parentNs
 	if exist := nodes.Exist(newNS); exist {
 		return "", common.ErrNodeAlreadyExist
 	}
@@ -376,10 +377,10 @@ func (t *Tree) addNewNodeToTree(newNode n.Node, parentNs string, nodeType int) (
 	return parent.ID, nil
 }
 
-func (t *Tree) initResourceOrTemplate(newNode n.Node, nodeType int, parentNs, parentNodeID string) error {
-	if nodeType == n.Root {
+func (t *Tree) initResourceOrTemplate(newNode node.Node, nodeType int, parentNs, parentNodeID string) error {
+	if nodeType == node.Root {
 		for k, res := range model.RootTemplate {
-			if err := t.SetResource(n.RootNode, k, res); err != nil {
+			if err := t.SetResource(node.RootNode, k, res); err != nil {
 				t.logger.Errorf("SetResourceByNs fail when create rootNode, error: %s", err.Error())
 			}
 		}
@@ -393,7 +394,7 @@ func (t *Tree) initResourceOrTemplate(newNode n.Node, nodeType int, parentNs, pa
 	}
 	for templateName, templateValue := range templateRes {
 		var resourceName string
-		if nodeType == n.Leaf {
+		if nodeType == node.Leaf {
 			resourceName = templateName[len(template):]
 		} else {
 			resourceName = templateName
@@ -413,7 +414,7 @@ func (t *Tree) initResourceOrTemplate(newNode n.Node, nodeType int, parentNs, pa
 				return err
 			}
 			for index := range *rl {
-				if (*rl)[index], err = GenAlarmFromTemplate(newNode.Name+n.NodeDeli+parentNs, (*rl)[index], ""); err != nil {
+				if (*rl)[index], err = GenAlarmFromTemplate(newNode.Name+node.NodeDeli+parentNs, (*rl)[index], ""); err != nil {
 					t.logger.Errorf("make alarm template fail, parent ns: %s, error: %s",
 						parentNs, err.Error())
 					return err

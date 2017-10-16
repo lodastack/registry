@@ -5,7 +5,7 @@ package cluster
 // nodeID used as bucketid to save the node's resource data.
 
 import (
-	m "github.com/lodastack/store/model"
+	"github.com/lodastack/store/model"
 )
 
 // Inf is the cluster interface the cluster should have.
@@ -26,7 +26,7 @@ type Inf interface {
 	Update(bucket []byte, key []byte, value []byte) error
 
 	// Batch update values for given keys in given buckets, via distributed consensus.
-	Batch(rows []m.Row) error
+	Batch(rows []model.Row) error
 
 	// ViewPrefix returns the value for the keys has the keyPrefix.
 	ViewPrefix(bucket, keyPrefix []byte) (map[string][]byte, error)

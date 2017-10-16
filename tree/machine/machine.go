@@ -5,9 +5,8 @@ import (
 	"regexp"
 	"time"
 
-	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/node"
 )
 
 var (
@@ -27,7 +26,7 @@ func (m *machine) SearchMachine(hostname string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	resMap, err := m.r.SearchResource(n.RootNode, "machine", searchHostname)
+	resMap, err := m.resource.SearchResource(node.RootNode, "machine", searchHostname)
 	if err != nil {
 		m.logger.Errorf("SearchResource fail, error: %s", err.Error())
 		return nil, err
@@ -68,7 +67,7 @@ func (m *machine) MachineUpdate(oldHostName string, updateMap map[string]string)
 		return errors.New("machine not found")
 	}
 	for ns, resourceID := range location {
-		if err := m.r.UpdateResource(ns, "machine", resourceID, updateMap); err != nil {
+		if err := m.resource.UpdateResource(ns, "machine", resourceID, updateMap); err != nil {
 			m.logger.Errorf("MachineRename fail and skip, oldname: %s, ns: %s, update: %+v, error: %s",
 				oldHostName, ns, updateMap, err.Error())
 			return err
@@ -80,7 +79,7 @@ func (m *machine) MachineUpdate(oldHostName string, updateMap map[string]string)
 // Return the ns which MachineReg match the hostname.
 // If there is not ns be match, return the pool ns.
 func (m *machine) MatchNs(hostname string) ([]string, error) {
-	nodes, err := m.n.AllNodes()
+	nodes, err := m.node.AllNodes()
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +91,7 @@ func (m *machine) MatchNs(hostname string) ([]string, error) {
 	nsList := []string{}
 	for ns, reg := range leafReg {
 		// Skip the ^$ regular expressions.
-		if reg == n.NotMatchMachine {
+		if reg == node.NotMatchMachine {
 			continue
 		}
 		match, err := regexp.MatchString(reg, hostname)
@@ -102,7 +101,7 @@ func (m *machine) MatchNs(hostname string) ([]string, error) {
 		nsList = append(nsList, ns)
 	}
 	if len(nsList) == 0 {
-		nsList = append(nsList, n.PoolNode+n.NodeDeli+n.RootNode)
+		nsList = append(nsList, node.PoolNode+node.NodeDeli+node.RootNode)
 	}
 	return nsList, nil
 }
@@ -125,7 +124,7 @@ func (m *machine) RegisterMachine(newMachine model.Resource) (map[string]string,
 	NsIDMap := map[string]string{}
 	for _, ns := range nsList {
 		UUID := newMachine.InitID()
-		err := m.r.AppendResource(ns, "machine", newMachine)
+		err := m.resource.AppendResource(ns, "machine", newMachine)
 		if err != nil {
 			m.logger.Errorf("append machine %+v to ns %s fail when register, the whole ns list: %+v error: %+v",
 				newMachine, ns, nsList, err)
@@ -137,8 +136,8 @@ func (m *machine) RegisterMachine(newMachine model.Resource) (map[string]string,
 	return NsIDMap, nil
 }
 
-func (m *machine) CheckMachineStatusByReport(reports map[string]m.Report) error {
-	nodes, err := m.n.AllNodes()
+func (m *machine) CheckMachineStatusByReport(reports map[string]model.Report) error {
+	nodes, err := m.node.AllNodes()
 	if err != nil {
 		return err
 	}
@@ -148,7 +147,7 @@ func (m *machine) CheckMachineStatusByReport(reports map[string]m.Report) error 
 	}
 
 	for _, _ns := range allLeaf {
-		machineList, err := m.r.GetResourceList(_ns, "machine")
+		machineList, err := m.resource.GetResourceList(_ns, "machine")
 		if err != nil {
 			m.logger.Errorf("get machine of ns %s status fail", _ns)
 			continue
@@ -181,7 +180,7 @@ func (m *machine) CheckMachineStatusByReport(reports map[string]m.Report) error 
 			}
 		}
 		if update {
-			err = m.r.SetResource(_ns, "machine", *machineList)
+			err = m.resource.SetResource(_ns, "machine", *machineList)
 		}
 	}
 	return nil

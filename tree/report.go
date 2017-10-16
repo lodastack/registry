@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 
-	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/common"
+	"github.com/lodastack/registry/model"
 )
 
 // ReportInfo save the agent report infomation.
@@ -14,7 +14,7 @@ type ReportInfo struct {
 	ReportInfo reportMap
 }
 
-type reportMap map[string]m.Report
+type reportMap map[string]model.Report
 
 func (r *reportMap) Byte() ([]byte, error) {
 	return json.Marshal(*r)
@@ -30,7 +30,7 @@ func newReportMap(data []byte) (reports reportMap, err error) {
 }
 
 // AgentReport handle and save the agent report message.
-func (t *Tree) AgentReport(info m.Report) error {
+func (t *Tree) AgentReport(info model.Report) error {
 	t.reports.Lock()
 	defer t.reports.Unlock()
 	if info.NewHostname == "" {
@@ -44,8 +44,8 @@ func (t *Tree) AgentReport(info m.Report) error {
 }
 
 // GetReportInfo return all report information.
-func (t *Tree) GetReportInfo() map[string]m.Report {
-	reportInfo := make(map[string]m.Report, len(t.reports.ReportInfo))
+func (t *Tree) GetReportInfo() map[string]model.Report {
+	reportInfo := make(map[string]model.Report, len(t.reports.ReportInfo))
 	t.reports.RLock()
 	defer t.reports.RUnlock()
 	for k, v := range t.reports.ReportInfo {
@@ -59,11 +59,11 @@ func (t *Tree) setReport(reports reportMap) error {
 	if err != nil {
 		return err
 	}
-	return t.c.Update([]byte(reportBucket), []byte(reportBucket), reportByte)
+	return t.cluster.Update([]byte(reportBucket), []byte(reportBucket), reportByte)
 }
 
 func (t *Tree) readReport() (reportMap, error) {
-	reportByte, err := t.c.View([]byte(reportBucket), []byte(reportBucket))
+	reportByte, err := t.cluster.View([]byte(reportBucket), []byte(reportBucket))
 	if err != nil {
 		return nil, err
 	}
