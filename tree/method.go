@@ -1,23 +1,22 @@
 package tree
 
 import (
-	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/node"
 )
 
 type nodeInf interface {
 	// AllNodes return all nodes.
-	AllNodes() (*n.Node, error)
+	AllNodes() (*node.Node, error)
 
 	// SetAgentInfo set agent info
-	AgentReport(info m.Report) error
+	AgentReport(info model.Report) error
 
 	// GetAgents return agent info
-	GetReportInfo() map[string]m.Report
+	GetReportInfo() map[string]model.Report
 
 	// GetNodesById return exact node by nodeid.
-	GetNodeByNS(id string) (*n.Node, error)
+	GetNodeByNS(id string) (*node.Node, error)
 
 	// Return leaf child node of the ns.
 	LeafChildIDs(ns string) ([]string, error)

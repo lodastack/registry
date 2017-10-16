@@ -25,17 +25,17 @@ type Inf interface {
 }
 
 type node struct {
-	c cluster.Inf
+	cluster cluster.Inf
 }
 
 // return a node interface object.
-func NewNode(c cluster.Inf) Inf {
-	return &node{c: c}
+func NewNode(cluster cluster.Inf) Inf {
+	return &node{cluster: cluster}
 }
 
 // Get value from cluster by bucketID and resType.
 func (m *node) getByteFromStore(bucketID, resType string) ([]byte, error) {
-	return m.c.View([]byte(bucketID), []byte(resType))
+	return m.cluster.View([]byte(bucketID), []byte(resType))
 }
 
 // get allnodes from cluster.

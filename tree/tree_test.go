@@ -9,7 +9,7 @@ import (
 	"github.com/lodastack/models"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
-	n "github.com/lodastack/registry/tree/node"
+	"github.com/lodastack/registry/tree/node"
 	"github.com/lodastack/registry/tree/test_sample"
 )
 
@@ -27,31 +27,31 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 
 	var leafID, nonLeafID, childNonID, childLeafID string
 	// Test reate Leaf node and create bucket.
-	if leafID, err = tree.NewNode("l1", n.RootNode, n.Leaf); err != nil {
+	if leafID, err = tree.NewNode("l1", node.RootNode, node.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
 	if err := tree.setByteToStore(leafID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to leafID fail: %s", err.Error())
 	}
 	// Test reate NonLeaf node and create bucket.
-	if nonLeafID, err = tree.NewNode("n1", n.RootNode, n.NonLeaf); err != nil {
+	if nonLeafID, err = tree.NewNode("n1", node.RootNode, node.NonLeaf); err != nil {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
 	if err := tree.setByteToStore(nonLeafID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to nonLeafID fail: %s", err.Error())
 	}
 	// Test reate node under leaf node and create bucket.
-	if _, err := tree.NewNode("n1", "1", n.NonLeaf); err == nil {
+	if _, err := tree.NewNode("n1", "1", node.NonLeaf); err == nil {
 		t.Fatalf("create node under unexist root success, not match with expect")
 	}
-	if _, err := tree.NewNode("n1", "l1."+n.RootNode, n.NonLeaf); err == nil {
+	if _, err := tree.NewNode("n1", "l1."+node.RootNode, node.NonLeaf); err == nil {
 		t.Fatalf("create node under leaf success, not match with expect")
 	}
 	// Test reate node under nonleaf node and create bucket.
-	if childNonID, err = tree.NewNode("nn1", "n1."+n.RootNode, n.NonLeaf); err != nil {
+	if childNonID, err = tree.NewNode("nn1", "n1."+node.RootNode, node.NonLeaf); err != nil {
 		t.Fatalf("create node behind nonLeaf node fail: %s\n", err.Error())
 	}
-	if childLeafID, err = tree.NewNode("nnl1", "nn1.n1."+n.RootNode, n.Leaf); err != nil {
+	if childLeafID, err = tree.NewNode("nnl1", "nn1.n1."+node.RootNode, node.Leaf); err != nil {
 		t.Fatalf("create node under nonleaf fail: %s", err.Error())
 	}
 	if err := tree.setByteToStore(childNonID, "test", []byte("test")); err != nil {
@@ -62,7 +62,7 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get pool node fail: %s", err.Error())
 	}
-	leafIDs, err := tree.LeafChildIDs(n.RootNode)
+	leafIDs, err := tree.LeafChildIDs(node.RootNode)
 	if err != nil || len(leafIDs) != 3 {
 		t.Fatalf("get leaf of root fail not match with expect:%s,%s %v", leafID, childLeafID, leafIDs)
 	}
@@ -89,14 +89,14 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 		t.Fatalf("NewTree fail: %s\n", err.Error())
 	}
 
-	if _, err = tree.NewNode("testl", n.RootNode, n.Leaf); err != nil {
+	if _, err = tree.NewNode("testl", node.RootNode, node.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	if _, err = tree.NewNode("testnl", n.RootNode, n.NonLeaf); err != nil {
+	if _, err = tree.NewNode("testnl", node.RootNode, node.NonLeaf); err != nil {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
 
-	if res, err := tree.GetResourceList(n.RootNode, template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
+	if res, err := tree.GetResourceList(node.RootNode, template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
 		t.Fatalf("get root collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
 	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
@@ -143,15 +143,15 @@ func TestUpdateTemplate(t *testing.T) {
 	}
 
 	resource1, _ := model.NewResourceList(resMap1)
-	err = tree.SetResource(n.RootNode, template+"collect", *resource1)
+	err = tree.SetResource(node.RootNode, template+"collect", *resource1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 
-	if _, err = tree.NewNode("testl", n.RootNode, n.Leaf); err != nil {
+	if _, err = tree.NewNode("testl", node.RootNode, node.Leaf); err != nil {
 		t.Fatalf("create leaf behind root fail: %s", err.Error())
 	}
-	if _, err = tree.NewNode("testnl", n.RootNode, n.NonLeaf); err != nil {
+	if _, err = tree.NewNode("testnl", node.RootNode, node.NonLeaf); err != nil {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
 	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != 2 {
@@ -176,7 +176,7 @@ func TestInitPoolNode(t *testing.T) {
 	}
 
 	// Test root pool node.
-	if node, err := tree.GetNodeByNS(n.PoolNode + n.NodeDeli + n.RootNode); err != nil || node.MachineReg != "^$" {
+	if node, err := tree.GetNodeByNS(node.PoolNode + node.NodeDeli + node.RootNode); err != nil || node.MachineReg != "^$" {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 }
@@ -200,7 +200,7 @@ func TestTreeGetLeaf(t *testing.T) {
 		t.Fatal("saveTree error")
 	}
 
-	childIDs, err := tree.LeafChildIDs(n.RootNode)
+	childIDs, err := tree.LeafChildIDs(node.RootNode)
 	t.Log("result of ID LeafIDs:", childIDs)
 	if err != nil || len(childIDs) != 4 {
 		t.Fatalf("LeafIDs not match with expect, leaf: %+v, error: %v", childIDs, err)
@@ -278,11 +278,11 @@ func TestRomoveNode(t *testing.T) {
 		t.Fatal("NewTree error")
 	}
 
-	_, err = tree.NewNode("test1", n.RootNode, n.Leaf, "test1")
+	_, err = tree.NewNode("test1", node.RootNode, node.Leaf, "test1")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
-	_, err = tree.NewNode("test2", n.RootNode, n.Leaf, "test2")
+	_, err = tree.NewNode("test2", node.RootNode, node.Leaf, "test2")
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -291,7 +291,7 @@ func TestRomoveNode(t *testing.T) {
 	resource1, _ := model.NewResourceList(resMap1)
 
 	// test1.loda have 127.0.0.1 and 127.0.0.2
-	err = tree.SetResource("test1."+n.RootNode, "machine", *resource1)
+	err = tree.SetResource("test1."+node.RootNode, "machine", *resource1)
 	if err != nil {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}

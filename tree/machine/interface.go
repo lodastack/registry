@@ -8,9 +8,7 @@ package machine
 
 import (
 	"github.com/lodastack/log"
-	m "github.com/lodastack/models"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/tree/cluster"
 	"github.com/lodastack/registry/tree/node"
 	"github.com/lodastack/registry/tree/resource"
 )
@@ -22,7 +20,7 @@ type Inf interface {
 	RegisterMachine(newMachine model.Resource) (map[string]string, error)
 
 	// CheckMachineStatusByReport check the machine is online or dead by its report, update the machine status.
-	CheckMachineStatusByReport(reports map[string]m.Report) error
+	CheckMachineStatusByReport(reports map[string]model.Report) error
 
 	// SearchMachine search the hostname in all node.
 	// Return the result at form of ns-resourceID map if the node has this hostname.
@@ -37,13 +35,12 @@ type Inf interface {
 }
 
 type machine struct {
-	c      cluster.Inf
-	n      node.Inf
-	r      resource.Inf
-	logger *log.Logger
+	node     node.Inf
+	resource resource.Inf
+	logger   *log.Logger
 }
 
 // NewMachine return the obj which has machine interface.
-func NewMachine(c cluster.Inf, n node.Inf, r resource.Inf, logger *log.Logger) Inf {
-	return &machine{c: c, n: n, r: r, logger: logger}
+func NewMachine(node node.Inf, resource resource.Inf, logger *log.Logger) Inf {
+	return &machine{node: node, resource: resource, logger: logger}
 }

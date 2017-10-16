@@ -43,12 +43,12 @@ type Inf interface {
 }
 
 type resourceMethod struct {
-	c      cluster.Inf
-	n      node.Inf
-	logger *log.Logger
+	cluster cluster.Inf
+	node    node.Inf
+	logger  *log.Logger
 }
 
 // NewResource return the reource interface.
-func NewResource(c cluster.Inf, n node.Inf, logger *log.Logger) Inf {
-	return &resourceMethod{c: c, n: n, logger: logger}
+func NewResource(cluster cluster.Inf, node node.Inf, logger *log.Logger) Inf {
+	return &resourceMethod{cluster: cluster, node: node, logger: logger}
 }
