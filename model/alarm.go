@@ -15,11 +15,6 @@ type AlarmResource models.Alarm
 
 var (
 	rp string = "loda"
-
-	_defaultHostBlockPeriod = "5"
-	_defaultHostBlockTimes  = "3"
-	_defaultNsBlockPeriod   = "5"
-	_defaultNsBlockTimes    = "20"
 )
 
 func NewAlarm(ns, name string) *AlarmResource {
@@ -82,14 +77,6 @@ func (a *AlarmResource) DisableSelf() {
 	a.Enable = "false"
 }
 
-func (a *AlarmResource) SetDefault() {
-	a.Default = "true"
-}
-
-func (a *AlarmResource) UnsetDefault() {
-	a.Default = "false"
-}
-
 func (a *AlarmResource) SetMD5AndVersion() error {
 	if a.ID == "" {
 		return errors.New("invalid id")
@@ -135,9 +122,6 @@ func NewAlarmByRes(ns string, data Resource, ID string) (*AlarmResource, error) 
 	}
 	if enable, _ := data["enable"]; enable == "false" {
 		alarm.DisableSelf()
-	}
-	if isNsAdminGroup, _ := data["default"]; isNsAdminGroup == "true" {
-		alarm.SetDefault()
 	}
 
 	function, _ := data["func"]
