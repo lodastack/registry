@@ -13,10 +13,16 @@ import (
 )
 
 var (
+	// AuthBuck is the bucket id to save group and authorize data.
 	AuthBuck = "authorize"
 
-	DefaultUser      = "loda-defaultuser"
-	DefaultGName     = "defaultgroup"
+	// DefaultUser is a user. no use
+	DefaultUser = "loda-defaultuser"
+
+	// DefaultGName is the group name has all read permission of all node..
+	DefaultGName = "defaultgroup"
+
+	// AdminGName is the group name has all permission of all node.
 	AdminGName       = "admingroup"
 	lodaDefaultGName = "loda-" + DefaultGName
 	lodaAdminGName   = "loda-" + AdminGName

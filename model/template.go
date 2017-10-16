@@ -7,7 +7,7 @@ var (
 	Deploy  = "deploy"
 
 	Templates []string = []string{
-		Machine, Alarm, Collect, "group", "ns", "user",
+		Machine, Alarm, Collect,
 	}
 
 	PkProperty = map[string]string{
@@ -15,7 +15,6 @@ var (
 		Collect: "name",
 		Alarm:   "name",
 		Deploy:  "name",
-		"doc":   "name",
 	}
 
 	TemplatePrefix     string = "_template_"
@@ -225,11 +224,11 @@ var (
 		"name":             "loda-plugin",
 		"parameters":       "-x loda",
 	}, Resource{
-		"bin_path":         "/usr/local/registry/bin/registry",
+		"bin_path":         "/usr/local/loda/bin/loda-server",
 		"comment":          "registry service",
 		"interval":         "10",
 		"measurement_type": "PROC",
-		"name":             "registry",
+		"name":             "loda-server",
 	},*/
 	}
 
