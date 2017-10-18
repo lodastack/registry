@@ -9,6 +9,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+func (s *Service) initPeerHandler() {
+	s.router.GET("/api/v1/peer", s.handlerPeers)
+	s.router.POST("/api/v1/peer", s.handlerJoin)
+	s.router.DELETE("/api/v1/peer", s.handlerRemove)
+	s.router.GET("/api/v1/db/backup", s.handlerBackup)
+	s.router.GET("/api/v1/db/restore", s.handlerRestore)
+}
+
 func (s *Service) handlerPeers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	peers, err := s.cluster.Peers()
 	if err != nil {
