@@ -3,12 +3,12 @@
 # HTTP API Doc
 
 
-### 0 管理接口
+### 0 集群管理接口
 ---
 
 #### 0.1 加入成员
 
-向集群中加入一个成员。
+agent启动时如果指定加入某个集群，agent会通过接口向指定的集群成员请求加入本机。正常返回表明加入成功，配置peer启动raft则自动加入集群。
 
 ```
 curl -x POST -d '{"addr":"127.0.0.2:9991"}' "http://127.0.0.1:9991/api/v1/join"
@@ -22,7 +22,8 @@ curl -x DELETE -d '{"addr":"127.0.0.2:9991"}' "http://127.0.0.1:9991/api/v1/join
 ```
 
 #### 0.3 备份数据（只能在leader上操作）
-备份整个数据库。
+
+备份整个数据库，返回数据库文件。需要将数据重定向到本地文件。
 
 ```
 curl "http://127.0.0.1:9991/api/v1/backup" > /data/backup.db
@@ -36,16 +37,46 @@ curl "http://127.0.0.1:9991/api/v1/backup" > /data/backup.db
 curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 ```
 
+#### 0.5 查看集群成员
+
+查看集群成员机器状态（Leader/Follower）.每个结果已raft地址作为key，包含http接口及状态信息。
+
+例子:
+
+    curl "http://127.0.0.1:9991/api/v1/peer"
+    # 返回
+    # 8001/8002/8003为服务树http地址，9001/9002/9003为集群raft地址
+    {
+    "httpstatus": 200,
+    "data": {
+        "127.0.0.1:9001": {
+            "api": "127.0.0.1:8001",
+            "role": "Leader"
+        },
+        "127.0.0.1:9002": {
+            "api": "127.0.0.1:8002",
+            "role": "Follower"
+        },
+        "127.0.0.1:9003": {
+            "api": "127.0.0.1:8003",
+            "role": "Follower"
+        }
+    },
+    "msg": ""
+    }
 
 ### 1 节点接口
 ---
-程序会初始化一个初始节点，ID为`0`，name为`loda`。所有节点都基于这个初始节点。
 
-每个节点都会对应一个ns。比如：`test.service.product.loda`
+节点分为`叶子节点`和`非叶子节点`。服务树会初始化根节点`loda`，所有节点都基于这个初始节点。非叶子节点下可以建立节点。叶子节点下不可以再建立节点，但是可以存储`机器`、`监控`、`报警`、`发布`等资源。
+
+把节点名称按照所属顺序连接起来，组成字符串`NS`。`NS`可以定位到一个具体节点，并用来定位节点中的资源。比如根节点下有非叶子节点`product`,`product`下有非叶子节点`service`，`service`下有叶子节点`test`，则`test`的`NS`为`test.service.product.loda`。`NS`可以用来定位`test`节点的`机器`、`监控`、`报警`、`发布`等资源。
 
 #### 1.1 新建节点
-只能在非叶子节点下新建节点。
-新建节点会同时创建节点ID，并创建节点对用存储bucket。
+
+只能在非叶子节点下新建节点，否则返回错误。
+新建节点会同时生成节点ID，用来创建`bolt Bucket`以存储节点的各种资源。
+
 `POST`方法，url: `/api/v1/ns`
 参数：
 - QUERY参数 ns: 父节点的节点Ns
@@ -55,19 +86,21 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 成功返回：JSON数据`{"httpstatus": 200/400/404/500, "data":JSON, "msg":"error msg"}`，httpstatus为返回的http状态码，data为Json, msg为string **如非特别说明，ns及资源接口返回格式相同**
 
-例子  （初始节点ID为`0`）
+例子
 
-    # 新建非叶子节点
-    curl -X POST "http://127.0.0.1:9991/api/v1/ns?ns=loda&name=product0&type=1&machinereg=product0"
+    # 新建非叶子节点 product0.loda，机器匹配规则为：^product0
+    curl -X POST "http://127.0.0.1:9991/api/v1/ns?ns=loda&name=product0&type=1&machinereg=^product0"
     #返回
     {"httpstatus":200,"data":null,"msg":"success"}
     
-    #新建叶子节点
+    # 新建叶子节点 server0.loda,机器匹配规则为：server0.loda
     curl -X POST -d 'ns=loda&name=server0&type=0&matchreg=server0.loda' "http://127.0.0.1:9991/api/v1/ns"
+    # 新建叶子节点 server1.loda,机器匹配规则为：server1.loda
     curl -X POST "http://127.0.0.1:9991/api/v1/ns?ns=loda&name=server1&type=0&matchreg=server1.loda"
     
-    #在prodect1.loda下新建叶子节点
+    # 在prodect0.loda下新建叶子节点 server0.product0.loda
     curl -X POST -d 'ns=product0.loda&name=server0&type=0' "http://127.0.0.1:9991/api/v1/ns"
+    # 在prodect0.loda下新建叶子节点 server1.product0.loda
     curl -X POST "http://127.0.0.1:9991/api/v1/ns?ns=product0.loda&name=server1&type=0&machinereg=server1.product0"
 
     # 错误：在叶子节点下新建节点
@@ -76,11 +109,13 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
     {"httpstatus": 500, "data": null, "msg": "can not create node under leaf node"}
 
 #### 1.2 查询节点
-查询全部节点
+
+查询节点机器所有子节点，如果查询根节点，则返回所有节点。
 `GET`方法, url: `/api/v1/ns`
 参数：
 - QUERY参数 ns: 查询的ns，`loda`则查询全部节点。
 
+    # 获取所有节点
     curl "http://127.0.0.1:9991/api/v1/ns?ns=loda"
     #返回
     {
@@ -125,8 +160,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
       "msg": ""
      }
 
-根据节点ID查询节点
-
+    # 获取某个节点及其子节点
     curl "http://127.0.0.1:9991/api/v1/ns?ns=product0.loda"
     # 返回
     {
@@ -144,7 +178,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 #### 1.3 修改节点
 
-根据参数修改ns的Name/MachineReg属性。如果未提供则保持不变。
+根据参数修改ns的Name/MachineReg属性，如果未提供则保持不变。
 
 `PUT`方法, url: `/api/v1/ns`
 需要提供3个参数：
@@ -160,7 +194,8 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 #### 1.4 节点删除
 
-从节点删除一个子节点。目前只允许删除**叶子节点**或者**没有子节点的非叶子节点**
+从节点删除一个子节点。目前只允许删除**叶子节点**或者**没有子节点的非叶子节点**，**不允许**删除拥有`机器资源`的叶子节点。
+注意：节点删除后，节点的资源会一并删除。
 
 `DELETE`方法, url: `/api/v1/ns`
 需要参数：
@@ -170,12 +205,19 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
     # 返回
     {"httpstatus": 200, "data": "", "msg":"success"}
 
+
 ### 2 资源接口
 ---
 
+某个服务下，所有可以抽象成json的属性都可以看做是这个服务的资源，日常工作就可以针对服务及其各种属性进行展开。
+
+每个叶子节点拥有各种资源，包括`机器`、`监控`、`报警`、`发布`等。
+
+非叶子节点下可以保存各种资源的模板。当建立新叶子节点时，会根据父节点中的模板进行资源初始化，例如初始化监控及报警资源等。
+
 #### 2.1 设置资源
 
-只能在叶子节点下设置资源，目前只能设置全量资源，不能追加资源。
+设置节点下的某种资源。
 
 `POST`方法, url: `/api/v1/resource`
 
@@ -183,22 +225,26 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 - body参数：JSON
 
     type bodyParam struct {
-	    rl        []map[string]string `json:"resourcelist"`
-	    ns        string              `json:"ns"`
-	    resType   string              `json:"type"`
+	    Ns                  string              `json:"ns"`
+	    ResourceType        string              `json:"type"`
+        ResourceList        []map[string]string `json:"resourcelist"`
     }
 
 例子：
 
+    # 设置pool节点的机器资源
     curl -X POST -d '{"ns":"pool.loda","type":"machine","resourcelist":[{"hostname":"127.0.0.2"},{"hostname":"127.0.0.1"}]}' "http://127.0.0.1:9991/api/v1/resource"
     # 返回
     {"httpstatus":200,"data":null,"msg":"success"}
+    
+    # 设置server0.product0.loda的机器资源
     curl -X POST -d '{"ns":"server0.product0.loda","type":"machine","resourcelist":[{"hostname":"127.0.0.2"},{"hostname":"127.0.0.3"}]}' "http://127.0.0.1:9991/api/v1/resource"
 
 #### 2.2 添加资源
 
-在节点下添加一个资源项。如果要添加的pk属性缺失或已经在该节点下存在，则不予添加。
-目前各资源对应的pk属性：`machine`资源： `hostname`， 其他资源: `name`。
+在节点下添加一个资源。要添加的资源pk不为空。如果资源pk值已经存在于该节点下，则不予添加。
+
+目前各资源对应的pk属性：`machine资源`： `hostname`， 其他资源: `name`。
 **系统会自动添加监控类型到collect资源的name前，比如：PROC.bin/PLUGIN.service/PORT.service.xx**
 
 `POST`方法, url: `/api/v1/resource/add`
@@ -207,20 +253,20 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 - body参数：JSON
 
     type bodyParam struct {
-    	Ns        string             `json:"ns"`
-    	ResType   string             `json:"type"`
-    	R         model.Resource     `json:"resource"`
+    	Ns             string             `json:"ns"`
+    	ResourceType   string             `json:"type"`
+    	Resource       model.Resource     `json:"resource"`
     }
 
 
-   curl -X POST -d '{"ns": "pool.loda", "type":"machine", "resource": {"hostname":"127.0.0.255"}}' "http://127.0.0.1:9991/api/v1/resource/add"
+    curl -X POST -d '{"ns": "pool.loda", "type":"machine", "resource": {"hostname":"127.0.0.255"}}' "http://127.0.0.1:9991/api/v1/resource/add"
     # 返回
     {"httpstatus":200,"data":null,"msg":"bebf14c6-d5ad-48df-9cfb-0c75f7d3a505"}
 
 
 #### 2.3 查询资源
 
-如果查询非叶子节点的某种资源(非模板)，则对该节点下所有叶子节点进行查询。
+获取叶子节点的某种资源，或者非叶子节点的所有子节点的某种资源。
 
 `GET`方法, url: `/api/v1/resource`
 
@@ -230,22 +276,33 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 例子:
 
+    # 获取pool节点的机器资源
     curl "http://127.0.0.1:9991/api/v1/resource?ns=pool.loda&type=machine"
     # 返回
     {"httpstatus":200,"data":[{"_id":"2d472e17-09cc-475c-a937-5f21f829c355","hostname":"127.0.0.2"},{"_id":"642944d9-34f3-499b-826e-0585b988b46f","hostname":"127.0.0.3"}]}
 
+    # 获取server0.product0.loda节点的采集资源
     curl "http://127.0.0.1:9991/api/v1/resource?ns=server0.product0.loda&type=collect"
+    # 获取所有叶子节点的机器资源
     curl "http://127.0.0.1:9991/api/v1/resource?ns=loda&type=machine"
 
 
 #### 2.4 搜索资源
+
+在叶子节点或者非叶子节点的所有子节点中查找某种资源。
+
+可以进行模糊查找，或者在资源的所有属性中进行查找。比如：
+- 查找ip为10.10.10.*的机器
+- 查找ip或者hostname包含10的机器
+
+如果查询非叶子节点的某种资源(非模板)，则对该节点下所有叶子节点进行查询。
 
 `GET`方法, url: `/api/v1/resource/search`
 提供参数：
 - query参数 ns：资源所在的叶子节点ns
 - query参数 type：资源类型
 - query参数 mod: 搜索类型，fuzzy为模糊搜索。功能上同strings.contain()进行搜索
-- query参数 k/v： 搜索的属性k-v
+- query参数 k/v： 搜索的属性k-v。如果k为空，则搜索资源的所有属性。
 
 例子:
 
@@ -330,18 +387,23 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 #### 2.5 修改资源
 
+根据`map`对资源进行修改，如果属性未出现在修改map中，则不予变更。
+
 `PUT`方法, url: `api/v1/resource`
 
 提供参数:
 - body 参数: JSON
 
     type bodyParam struct {
-    	Ns        string             `json:"ns"`
-    	ResType   string             `json:"type"`
-    	ResId     string             `json:"resourceid"`
-    	UpdateMap map[string]string  `json:"update"`
+    	Ns             string             `json:"ns"`
+    	ResourceType   string             `json:"type"`
+    	ResourceId     string             `json:"resourceid"`
+    	UpdateMap      map[string]string  `json:"update"`
     }
 
+例子
+
+    # 修改pool节点的某台机器的备注
     curl -X PUT -d'{"ns": "pool.loda", "type": "machine", "resourceid": "1b7a5cac-a875-4062-ba9e-c24319cb27df", "update":{"comment":"new comment"}}' "http://127.0.0.1:9991/api/v1/resource"
     # 返回
     {"httpstatus":200,"data":"success"}
@@ -349,7 +411,7 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 
 #### 2.6 删除资源
 
-在节点下删除一个资源项
+在节点下删除一个资源
 
 `DELETE`方法, url: `/api/v1/resource`
 
@@ -358,11 +420,15 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 - Query参数 type： 需要删除的资源类型
 - Query参数 resourceid: 需要删除的资源ID
 
+例子：
+
     curl -X DELETE "http://127.0.0.1:9991/api/v1/resource?ns=pool.loda&type=machine&resourceid=1b7a5cac-a875-4062-ba9e-c24319cb27df"
     # 返回
     {"httpstatus":200,"data":null,"msg":"success"}
 
 #### 2.7 移动资源
+
+将资源移动到拎一个节点。
 
 `PUT`方法, url: `/api/v1/resource/move`
 
@@ -372,15 +438,20 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 - Query参数 type: 资源类型
 - Query参数 resourceid: 资源ID
 
-     curl -X PUT "http://127.0.0.1:9991/api/v1/resource/move?from=pool.loda&to=server0.product0.loda&type=machine&resourceid=d0f769bf-1e2c-4cae-85ad-61e24f1ea96d"
+例子：
+
+    curl -X PUT "http://127.0.0.1:9991/api/v1/resource/move?from=pool.loda&to=server0.product0.loda&type=machine&resourceid=d0f769bf-1e2c-4cae-85ad-61e24f1ea96d"
 
 #### 2.8 删除监控
 
-删除一个节点下的监控资源，会自动删除监控数据。
+删除监控资源的同时，删除该监控的采集数据。
+
 `DELETE`方法，url:`/api/v1/resource/collect`
 提供参数：
 - Query参数 ns：资源所在的叶子节点ns
 - Query参数 measurements: 要删除的监控项
+
+例子：
 
     curl -X DELETE "http://127.0.0.1:9991/api/v1/resource/collect?ns=pool.loda&measurements=PORT.test,PLUGIN.test.cpu"
 
@@ -425,13 +496,15 @@ curl "http://127.0.0.1:9991/api/v1/restore?file=/data/backup.db"
 #### 3.3 上报接口
 ---
 
-如果`update`为`true`，则变更有变化的`hostname`或`ip`。*注意: 为了定位变更机器，必须提交oldhostname并且值为变更之前的hostname。*如果提交`update`为`true`，但新旧参数无变化或者不合法则不予变更。
+接受将agent上报agent版本信息，并根据hostname将agent版本信息保存到机器资源中。
+
+如果`update`为`true`，则变更有变化的`hostname`或`ip`。*注意: 为了定位变更机器，必须提交oldhostname并且值为变更之前的hostname。*如果提交`update`为`true`但新旧参数无变化或者不合法，则不予变更。
 
 POST方法
 提供参数:
 - body参数: lodastack/models.Report
 
-    curl -X POST -d '{"update": true, "oldhostname": "old-hostname", "oldiplist": ["127.0.0.1"], "newiplist": ["10.10.10.10", "127.0.0.1"]}' "http://127.0.0.1:9991/api/v1/agent/report"
+    curl -X POST -d '{"update": true, "newhostname": "new-hostname", "oldhostname": "old-hostname", "oldiplist": ["127.0.0.1"], "newiplist": ["10.10.10.10", "127.0.0.1"]}' "http://127.0.0.1:9991/api/v1/agent/report"
 
 
 ### 4 权限
@@ -611,32 +684,14 @@ POST方法
 
     curl  -H "AuthToken: aeaec15e-5601-4bd9-a81a-b1a096244a8c" -H "NS: loda" -H "Resource: ns" -X DELETE "http://127.0.0.1:9991/api/v1/perm/group?gname=test"|jq
 
-### 5 集群管理接口
----
+#### 4.11 权限验证接口
 
-#### 5.1 查看集群成员
+根据header中携带的`token`、`ns`、`resource`以及`http method`信息，验证请求有权限进行操作。方便第三方进行权限验证。
+如果有权限则返回`200`，token失效则返回`401`，无权限返回`403`.
 
-`GET`方法
+例子
 
-例子:
-
-    curl "http://127.0.0.1:9991/api/v1/peer"
-    #返回
-    {
-    "httpstatus": 200,
-    "data": {
-        "127.0.0.1:9981": {
-            "api": "127.0.0.1:9991",
-            "role": "Leader"
-        },
-        "127.0.0.1:9982": {
-            "api": "127.0.0.1:9992",
-            "role": "Follower"
-        },
-        "127.0.0.1:9983": {
-            "api": "127.0.0.1:9993",
-            "role": "Follower"
-        }
-    },
-    "msg": ""
-    }
+    curl -X GET -H "AuthToken: xxxxx-xxx-xxx-xxxxxx" -H "NS: pool.loda" -H "Resource: machine" "http://127.0.0.1:9991/api/v1/perm/check"
+    curl -X POST -H "AuthToken: xxxxx-xxx-xxx-xxxxxx" -H "NS: pool.loda" -H "Resource: machine" "http://127.0.0.1:9991/api/v1/perm/check"
+    curl -X PUT -H "AuthToken: xxxxx-xxx-xxx-xxxxxx" -H "NS: pool.loda" -H "Resource: machine" "http://127.0.0.1:9991/api/v1/perm/check"
+    curl -X DELETE -H "AuthToken: xxxxx-xxx-xxx-xxxxxx" -H "NS: pool.loda" -H "Resource: machine" "http://127.0.0.1:9991/api/v1/perm/check"
