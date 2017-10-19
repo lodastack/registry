@@ -306,12 +306,12 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		key := r.Header.Get("AuthToken")
 		v := s.cluster.GetSession(key)
 		if v == nil {
-			ReturnJson(w, 401, "Not Authorized. Please login.")
+			ReturnUnauthorized(w, "Not Authorized. Please login.")
 			return
 		}
 		uid, ok := v.(string)
 		if !ok {
-			ReturnJson(w, 401, "Not Authorized. Please login.")
+			ReturnUnauthorized(w, "Not Authorized. Please login.")
 			return
 		}
 
@@ -323,7 +323,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			ReturnServerError(w, err)
 			return
 		} else if !ok {
-			ReturnJson(w, 403, "Not Authorized. Please check your permission.")
+			ReturnForbidden(w, "Not Authorized. Please check your permission.")
 			return
 		}
 		w.Header().Set(`UID`, uid)
