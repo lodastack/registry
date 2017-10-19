@@ -8,35 +8,38 @@ import (
 
 var rootNode = "loda"
 
+// GroupInf is interface to manager group.
 type GroupInf interface {
-	// ListGroup return the group which name have the prefix.
+	// ListGroup return the group list of under one ns.
 	ListNsGroup(ns string) ([]Group, error)
 
-	// GetGroup return the group.
+	// GetGroup return the group by group name.
 	GetGroup(gName string) (Group, error)
 
-	// UpdateGroup update the group.
+	// UpdateItems update the group permissions.
 	UpdateItems(gName string, items []string) error
 
-	// GetGroupNs return which ns the ns belong to.
+	// ReadGName return the ns and name of the group.
 	ReadGName(gname string) (ns, name string)
 }
 
+// UserInf is interface to manager user.
 type UserInf interface {
-	// get user.
+	// GetUser return user by username.
 	GetUser(username string) (User, error)
 
 	// GetUserList return a map[string]User,
 	// key is username and value is User.
 	GetUserList(usernames []string) (map[string]User, error)
 
-	// create/update group.
+	// SetUser create a user with username/mobile.
 	SetUser(username, mobile string) error
 
-	// Check whether user exist or not.
+	// CheckUserExist check the username exist or not.
 	CheckUserExist(username string) (bool, error)
 }
 
+// Perm is interface to manager authorize.
 type Perm interface {
 	// user interface
 	UserInf
@@ -50,8 +53,8 @@ type Perm interface {
 	// DefaultGroupItems return the admin permission of the ns.
 	AdminGroupItems(ns string) []string
 
-	// check whether one query has the permission.
-	Check(username, ns, resource, method string) (bool, error)
+	// Check return the query has the permission or not by ns/resource type/username/method.
+	Check(username, ns, resourceType, method string) (bool, error)
 
 	// InitGroup init default/admin group and default user.
 	InitGroup(rootNode string) error
@@ -59,10 +62,10 @@ type Perm interface {
 	// CreateGroup create a group.
 	CreateGroup(gName string, managers, members, items []string) error
 
-	// UpdateGroupMember update group member and user groups.
+	// UpdateMember update group member and the user groups.
 	UpdateMember(group string, managers, members []string) error
 
-	// remove group.
+	// RemoveUser remove user from his all group.
 	RemoveUser(username string) error
 
 	// RemoveGroup remove the group.
@@ -90,6 +93,7 @@ type Cluster interface {
 	CreateBucketIfNotExist(name []byte) error
 }
 
+// NewPerm return interface Perm to manager authorize.
 func NewPerm(cluster Cluster) (Perm, error) {
 	if err := cluster.CreateBucketIfNotExist([]byte(AuthBuck)); err != nil {
 		return nil, err

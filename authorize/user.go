@@ -2,7 +2,6 @@ package authorize
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/common"
@@ -10,11 +9,7 @@ import (
 	m "github.com/lodastack/store/model"
 )
 
-var (
-	ErrUserNotFound = errors.New("user not found")
-	ErrInvalidParam = errors.New("invalid param")
-)
-
+// User is the infomation one user has.
 type User struct {
 	Username string   `json:"username"`
 	Mobile   string   `json:"mobile"`
@@ -25,10 +20,12 @@ type User struct {
 
 func getUKey(gid string) []byte { return []byte("u-" + gid) }
 
+// Byte return the user at []byte format.
 func (u *User) Byte() ([]byte, error) {
 	return json.Marshal(u)
 }
 
+// GetUser return user by username.
 func (u *User) GetUser(username string) (User, error) {
 	out := User{}
 	uByte, err := u.cluster.View([]byte(AuthBuck), getUKey(username))
@@ -36,12 +33,13 @@ func (u *User) GetUser(username string) (User, error) {
 		return out, err
 	}
 	if len(uByte) == 0 {
-		return out, ErrUserNotFound
+		return out, common.ErrUserNotFound
 	}
 	err = json.Unmarshal(uByte, &out)
 	return out, err
 }
 
+// GetUserList return user list by username list.
 func (u *User) GetUserList(usernames []string) (map[string]User, error) {
 	Users := make(map[string]User, len(usernames))
 	for _, username := range usernames {
@@ -59,12 +57,13 @@ func (u *User) GetUserList(usernames []string) (map[string]User, error) {
 	return Users, nil
 }
 
+// CheckUserExist return the username exist or not.
 func (u *User) CheckUserExist(username string) (bool, error) {
 	if username == "" {
-		return false, ErrInvalidParam
+		return false, common.ErrInvalidParam
 	}
 	if _, err := u.GetUser(username); err != nil {
-		if err == ErrUserNotFound {
+		if err == common.ErrUserNotFound {
 			return false, nil
 		}
 		log.Errorf("GetUser %s fail: %s", username, err.Error())
@@ -76,7 +75,7 @@ func (u *User) CheckUserExist(username string) (bool, error) {
 // SetUser create/update user. But will not init/update groups.
 func (u *User) SetUser(username, mobile string) error {
 	if username == "" {
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 
 	us, err := u.GetUser(username)
@@ -103,7 +102,7 @@ func (u *User) SetUser(username, mobile string) error {
 	return u.cluster.Update([]byte(AuthBuck), getUKey(username), uByte)
 }
 
-// RemoveUser will remove user and remove the user from groups.
+// UserRemoveUser remove the user and from the groups the user has.
 func (u *User) UserRemoveUser(username string) ([]string, error) {
 	us, err := u.GetUser(username)
 	if err != nil {
@@ -113,6 +112,7 @@ func (u *User) UserRemoveUser(username string) ([]string, error) {
 	return us.Groups, u.cluster.RemoveKey([]byte(AuthBuck), getUKey(username))
 }
 
+// UpdateUser add or remove the user to or from group.
 func (u *User) UpdateUser(username string, addGroup string, removeGroup string) (m.Row, error) {
 	updateRow := m.Row{}
 	user, err := u.GetUser(username)

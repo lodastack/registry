@@ -18,4 +18,8 @@ var (
 	ErrNotAllowDel         = errors.New("not allow to be delete")
 
 	ErrEmptyResource error = errors.New("empty resources")
+
+	ErrGroupNotFound     = errors.New("group not found")
+	ErrGroupAlreadyExist = errors.New("group already exist")
+	ErrUserNotFound      = errors.New("user not found")
 )

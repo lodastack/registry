@@ -2,7 +2,6 @@ package authorize
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/lodastack/registry/common"
@@ -10,15 +9,16 @@ import (
 )
 
 var (
-	ErrGroupNotFound     = errors.New("group not found")
-	ErrGroupAlreadyExist = errors.New("group already exist")
+	// OP group name
+	OP = "op"
+	// DEV group name
+	DEV = "dev"
 
-	OP                  = "op"
-	DEV                 = "dev"
-	nsSep        string = "."
-	groupNameSep byte   = '-'
+	nsSep             = "."
+	groupNameSep byte = '-'
 )
 
+// Group is the infrmation one group has.
 type Group struct {
 	GName    string   `json:"gname"`
 	Managers []string `json:"managers"`
@@ -53,28 +53,33 @@ func readGName(gname string) (ns, name string) {
 	return
 }
 
+// ReadGName return the ns and name of group name.
 func (g *Group) ReadGName(gname string) (ns, name string) {
 	ns, name = readGName(gname)
 	ns = reverceNs(ns)
 	return
 }
 
+// GetNsDevGName return dev group name of ns.
 func GetNsDevGName(ns string) string {
 	return GetGNameByNs(ns, DEV)
 }
 
+// GetNsOpGName return op group name of ns.
 func GetNsOpGName(ns string) string {
 	return GetGNameByNs(ns, OP)
 }
 
+// Byte return group at from of []byte.
 func (g *Group) Byte() ([]byte, error) {
 	return json.Marshal(g)
 }
 
+// GetGroup return group by group name.
 func (g *Group) GetGroup(gName string) (Group, error) {
 	group := Group{}
 	if gName == "" {
-		return group, ErrInvalidParam
+		return group, common.ErrInvalidParam
 	}
 	gByte, err := g.cluster.View([]byte(AuthBuck), getGKey(gName))
 	if err != nil {
@@ -82,12 +87,13 @@ func (g *Group) GetGroup(gName string) (Group, error) {
 	}
 
 	if len(gByte) == 0 {
-		return group, ErrGroupNotFound
+		return group, common.ErrGroupNotFound
 	}
 	err = json.Unmarshal(gByte, &group)
 	return group, err
 }
 
+// ListNsGroup return group list of one ns.
 func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 	gNamePrefix := GetGNameByNs(ns, "")
 	reverseNs := reverceNs(ns)
@@ -119,12 +125,12 @@ func (g *Group) ListNsGroup(ns string) ([]Group, error) {
 func (g *Group) createGroup(gName string, managers, members, items []string) (m.Row, error) {
 	updateRow := m.Row{}
 	if gName == "" {
-		return updateRow, ErrInvalidParam
+		return updateRow, common.ErrInvalidParam
 	}
 	_, err := g.GetGroup(gName)
-	if err != ErrGroupNotFound {
+	if err != common.ErrGroupNotFound {
 		if err == nil {
-			return updateRow, ErrGroupAlreadyExist
+			return updateRow, common.ErrGroupAlreadyExist
 		}
 		return updateRow, err
 	}
@@ -143,8 +149,7 @@ func (g *Group) createGroup(gName string, managers, members, items []string) (m.
 	return updateRow, nil
 }
 
-// UpdateGroup update, not update member infomation.
-// TODO: manager check
+// UpdateItems group items which manage the group permissions.
 func (g *Group) UpdateItems(gName string, items []string) error {
 	group, err := g.GetGroup(gName)
 	if err != nil {
@@ -152,7 +157,7 @@ func (g *Group) UpdateItems(gName string, items []string) error {
 	}
 
 	if len(items) == 0 || items[0] == "" {
-		return ErrInvalidParam
+		return common.ErrInvalidParam
 	}
 	group.Items = items
 
@@ -176,6 +181,7 @@ func (g *Group) removeGroup(gName string) ([]string, error) {
 	return managerAndMember, g.cluster.RemoveKey([]byte(AuthBuck), getGKey(gName))
 }
 
+// UpdateGroupMember add/remove user from group.
 func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeManagers, removeMembers []string) (m.Row, error) {
 	updateRow := m.Row{}
 	group, err := g.GetGroup(gName)
