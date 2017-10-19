@@ -1,23 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"crypto/tls"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net"
-	"net/http"
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"time"
 
 	"github.com/lodastack/log"
-	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
 
-	"github.com/lodastack/store/cluster"
 	m "github.com/lodastack/store/model"
 )
 
@@ -31,77 +21,6 @@ func initLog(dir string, level string, rotatenum int, size uint64) error {
 	log.SetLogging(level, model.LogBackend)
 	log.Rotate(rotatenum, size)
 	return nil
-}
-
-func join(joinAddr, raftAddr string) error {
-	// Join using IP address, as that is what Hashicorp Raft works in.
-	resv, err := net.ResolveTCPAddr("tcp", raftAddr)
-	if err != nil {
-		return err
-	}
-
-	// Check for protocol scheme, and insert default if necessary.
-	fullAddr := httpd.NormalizeAddr(fmt.Sprintf("%s/api/v1/peer", joinAddr))
-
-	// Enable skipVerify as requested.
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	for {
-		b, err := json.Marshal(map[string]string{"addr": resv.String()})
-		if err != nil {
-			return err
-		}
-
-		// Attempt to join.
-		resp, err := client.Post(fullAddr, "application-type/json", bytes.NewReader(b))
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		b, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		switch resp.StatusCode {
-		case http.StatusOK:
-			return nil
-		case http.StatusMovedPermanently:
-			fullAddr = resp.Header.Get("location")
-			if fullAddr == "" {
-				return fmt.Errorf("failed to join, invalid redirect received")
-			}
-			log.Printf("join request redirecting to", fullAddr)
-			continue
-		default:
-			return fmt.Errorf("failed to join, node returned: %s: (%s)", resp.Status, string(b))
-		}
-	}
-}
-
-func publishAPIAddr(c *cluster.Service, raftAddr, apiAddr string, t time.Duration) error {
-	tck := time.NewTicker(publishPeerDelay)
-	defer tck.Stop()
-	tmr := time.NewTimer(t)
-	defer tmr.Stop()
-
-	for {
-		select {
-		case <-tck.C:
-			if err := c.SetPeer(raftAddr, apiAddr); err != nil {
-				log.Errorf("failed to set peer for %s to %s: %s (retrying)",
-					raftAddr, apiAddr, err.Error())
-				continue
-			}
-			return nil
-		case <-tmr.C:
-			return fmt.Errorf("set peer timeout expired")
-		}
-	}
 }
 
 // prof stores the file locations of active profiles.

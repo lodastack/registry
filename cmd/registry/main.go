@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -15,10 +14,7 @@ import (
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
-	"github.com/lodastack/registry/tcp"
-
 	"github.com/lodastack/store/cluster"
-	"github.com/lodastack/store/store"
 )
 
 // Command line defaults
@@ -42,11 +38,6 @@ var (
 	commit    = "unknown"
 	branch    = "unknown"
 	buildtime = "unknown"
-)
-
-const (
-	muxRaftHeader = 1 // Raft consensus communications
-	muxMetaHeader = 2 // Cluster meta communications
 )
 
 func init() {
@@ -95,6 +86,7 @@ func main() {
 	}
 }
 
+// Start starts main registry service
 func (m *Main) Start() error {
 
 	m.logger.Printf("registry starting, version %s, branch %s, commit %s", version, branch, commit)
@@ -108,53 +100,39 @@ func (m *Main) Start() error {
 	// store config
 	c := config.C.DataConf
 
-	// serve mux TCP
-	ln, err := net.Listen("tcp", c.ClusterBind)
+	cs, err := cluster.NewService(c.ClusterBind, c.Dir, joinAddr)
 	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %s", c.ClusterBind, err.Error())
-	}
-	mux := tcp.NewMux(ln, nil)
-	go mux.Serve()
-
-	// Start up mux and get transports for cluster.
-	raftTn := mux.Listen(muxRaftHeader)
-	s := store.New(c.Dir, raftTn)
-	if err := s.Open(joinAddr == ""); err != nil {
-		return fmt.Errorf("failed to open store: %s", err.Error())
+		return fmt.Errorf("new store service failed: %s", err.Error())
 	}
 
-	// Create and configure cluster service.
-	tn := mux.Listen(muxMetaHeader)
-	cs := cluster.NewService(tn, s)
 	if err := cs.Open(); err != nil {
-		return fmt.Errorf("failed to open cluster service: %s", err.Error())
+		return fmt.Errorf("failed to open cluster service failed: %s", err.Error())
 	}
 
 	// If join was specified, make the join request.
-	nodes, err := s.Nodes()
+	nodes, err := cs.Nodes()
 	if err != nil {
 		return fmt.Errorf("get nodes failed: %s", err.Error())
 	}
 
 	// if exist a raftdb, or exist a cluster, don't join any leader.
 	if joinAddr != "" && len(nodes) <= 1 {
-		if err := join(joinAddr, c.ClusterBind); err != nil {
+		if err := cs.JoinCluster(joinAddr, c.ClusterBind); err != nil {
 			return fmt.Errorf("failed to join node at %s: %s", joinAddr, err.Error())
 		}
 	}
 
 	// wait for leader
-	l, err := s.WaitForLeader(waitLeaderTimeout)
+	l, err := cs.WaitForLeader(waitLeaderTimeout)
 	if err != nil || l == "" {
 		return fmt.Errorf("wait leader failed: %s", err.Error())
 	}
 	m.logger.Printf("cluster leader is: %s", l)
 
 	// update cluster meta
-	if err := publishAPIAddr(cs, raftTn.Addr().String(), config.C.HTTPConf.Bind, publishPeerTimeout); err != nil {
-		return fmt.Errorf("failed to set peer for %s to %s: %s", raftTn.Addr().String(), config.C.HTTPConf.Bind, err.Error())
+	if err := cs.PublishAPIAddr(config.C.HTTPConf.Bind, publishPeerDelay, publishPeerTimeout); err != nil {
+		return fmt.Errorf("failed to set peer to [API:%s]: %s", config.C.HTTPConf.Bind, err.Error())
 	}
-	m.logger.Printf("set peer for %s to %s", raftTn.Addr().String(), config.C.HTTPConf.Bind)
 
 	// Create and configure HTTP service.
 	h, err := httpd.New(config.C.HTTPConf, cs)
@@ -177,11 +155,6 @@ func (m *Main) Start() error {
 	// close cluster service
 	if err := cs.Close(); err != nil {
 		m.logger.Errorf("close cluster service failed: %s", err)
-	}
-
-	// close store service
-	if err := s.Close(true); err != nil {
-		m.logger.Errorf("close store failed: %s", err)
 	}
 
 	if err := os.Remove(config.C.CommonConf.PID); err != nil {
