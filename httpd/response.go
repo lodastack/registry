@@ -30,14 +30,24 @@ func ReturnOK(w http.ResponseWriter, msg string) {
 	(&Response{Code: http.StatusOK, Msg: msg}).Write(w)
 }
 
-// Return 404 http status.
-func ReturnNotFound(w http.ResponseWriter, msg string) {
-	(&Response{Code: http.StatusNotFound, Msg: msg}).Write(w)
-}
-
 // Return 400 http status.
 func ReturnBadRequest(w http.ResponseWriter, err error) {
 	(&Response{Code: http.StatusBadRequest, Msg: err.Error()}).Write(w)
+}
+
+// Return 401 http status.
+func ReturnUnauthorized(w http.ResponseWriter, msg string) {
+	(&Response{Code: http.StatusUnauthorized, Msg: msg}).Write(w)
+}
+
+// Return 403 http status.
+func ReturnForbidden(w http.ResponseWriter, msg string) {
+	(&Response{Code: http.StatusForbidden, Msg: msg}).Write(w)
+}
+
+// Return 404 http status.
+func ReturnNotFound(w http.ResponseWriter, msg string) {
+	(&Response{Code: http.StatusNotFound, Msg: msg}).Write(w)
 }
 
 // Return 500 http status.
