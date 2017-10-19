@@ -287,13 +287,13 @@ func TestNewPerm(t *testing.T) {
 	if err != nil {
 		t.Fatal("GetGroup fail:", err.Error())
 	} else if len(g.Items) != len(model.Templates)+4 {
-		t.Fatal("default Group items not match with expect, %+v:", g)
+		t.Fatalf("default Group items not match with expect, %+v:", g)
 	}
 	g, err = perm.GetGroup(lodaAdminGName)
 	if err != nil {
 		t.Fatal("GetGroup fail:", err.Error())
 	} else if len(g.Items) != len(model.Templates)*4 {
-		t.Fatal("default Group items not match with expect, %+v:", g)
+		t.Fatalf("default Group items not match with expect, %+v:", g)
 	}
 }
 

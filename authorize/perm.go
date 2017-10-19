@@ -26,19 +26,16 @@ var (
 	AdminGName       = "admingroup"
 	lodaDefaultGName = "loda-" + DefaultGName
 	lodaAdminGName   = "loda-" + AdminGName
-
-	Add    = "add"
-	Remove = "remove"
 )
 
 type perm struct {
-	sync.RWMutex `json:"-"`
+	sync.RWMutex
 	Group
 	User
-	cluster Cluster `json:"-"`
+	cluster Cluster
 }
 
-// check whether one query has the permission.
+// Check one query has the permission or not.
 func (p *perm) Check(username, ns, resource, method string) (bool, error) {
 	u, err := p.GetUser(username)
 	if err != nil {
@@ -69,7 +66,7 @@ func (p *perm) Check(username, ns, resource, method string) (bool, error) {
 	return false, nil
 }
 
-// defaultGroupItems return the item of default group.
+// DefaultGroupItems return the item of default group.
 // default user could get all resource,
 // could get/post/put/delete the group which user is the group manager.
 func (p *perm) DefaultGroupItems(ns string) []string {
@@ -80,7 +77,7 @@ func (p *perm) DefaultGroupItems(ns string) []string {
 	return items
 }
 
-// adminGroupItems return the items of admin group.
+// AdminGroupItems return the items of admin group.
 func (p *perm) AdminGroupItems(ns string) []string {
 	items := make([]string, len(model.Templates)*4)
 	for index, res := range model.Templates {
@@ -138,7 +135,7 @@ func (p *perm) createGroupIfNotExist(g Group) error {
 	if err == nil {
 		return nil
 	}
-	if err != ErrGroupNotFound {
+	if err != common.ErrGroupNotFound {
 		return err
 	}
 	return p.CreateGroup(g.GName, g.Managers, g.Members, g.Items)
@@ -150,7 +147,7 @@ func (p *perm) createUserIfNotExist(username string) error {
 	if err == nil {
 		return nil
 	}
-	if err != ErrUserNotFound {
+	if err != common.ErrUserNotFound {
 		return err
 	}
 	return p.SetUser(username, "")
