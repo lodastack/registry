@@ -9,12 +9,18 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func (s *Service) initPeerHandler() {
+func (s *Service) initManageHandler() {
+	s.router.GET("/api/v1/stats", s.handlerStats)
 	s.router.GET("/api/v1/peer", s.handlerPeers)
 	s.router.POST("/api/v1/peer", s.handlerJoin)
 	s.router.DELETE("/api/v1/peer", s.handlerRemove)
 	s.router.GET("/api/v1/db/backup", s.handlerBackup)
 	s.router.GET("/api/v1/db/restore", s.handlerRestore)
+}
+
+func (s *Service) handlerStats(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ms := s.cluster.Statistics(nil)
+	ReturnJson(w, 200, ms)
 }
 
 func (s *Service) handlerPeers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
