@@ -73,7 +73,11 @@ type Cluster interface {
 	// Restore restores backup data file.
 	Restore(backupfile string) error
 
+	// Peers return the map of Raft addresses to API addresses.
 	Peers() (map[string]map[string]string, error)
+
+	// Statistics returns statistics for periodic monitoring.
+	Statistics(tags map[string]string) []sm.Statistic
 }
 
 // Service provides HTTP service.
@@ -244,7 +248,7 @@ func (s *Service) initHandler() {
 	s.router.GET("/api/v1/event/resource/search", s.handlerSearch)
 	s.router.GET("/api/v1/event/user/list", s.HandlerUserListGet)
 
-	s.initPeerHandler()
+	s.initManageHandler()
 	s.initPermissionHandler()
 	s.initDashboardHandler()
 }
