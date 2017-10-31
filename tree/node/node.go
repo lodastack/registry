@@ -1,9 +1,10 @@
 package node
 
 import (
+	"strings"
+
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/model"
-	"strings"
 )
 
 const (
@@ -39,9 +40,10 @@ const (
 
 // NodeProperty is node should has.
 type NodeProperty struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Type int    `json:"type"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Comment string `json:"comment"`
+	Type    int    `json:"type"`
 
 	// regexp of machine in one node,
 	// used to auto add a machine into nodes
@@ -68,9 +70,12 @@ func (n *Node) Exist(ns string) bool {
 }
 
 // Update update node machineMatchStrategy property.
-func (n *Node) Update(name, machineMatchStrategy string) {
+func (n *Node) Update(name, comment, machineMatchStrategy string) {
 	if name != "" {
 		n.Name = name
+	}
+	if comment != "" {
+		n.Comment = comment
 	}
 	if machineMatchStrategy != "" {
 		n.MachineReg = machineMatchStrategy

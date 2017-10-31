@@ -94,11 +94,11 @@ func (t *Tree) initNodeData(key string) error {
 	t.logger.Info(key, "is not inited, begin to init")
 
 	// Create rootNode map/bucket and init template.
-	if _, err := t.NewNode("", "", node.Root); err != nil {
+	if _, err := t.NewNode("", "", "", node.Root); err != nil {
 		panic("create root node fail: " + err.Error())
 	}
 	// Create root pool node.
-	if _, err := t.NewNode(node.PoolNode, node.RootNode, node.Leaf, node.NotMatchMachine); err != nil {
+	if _, err := t.NewNode(node.PoolNode, "pool", node.RootNode, node.Leaf, node.NotMatchMachine); err != nil {
 		panic("create root pool node fail: " + err.Error())
 	}
 	return nil
@@ -183,7 +183,7 @@ func (t *Tree) templateOfNode(nodeID string) (map[string][]byte, error) {
 }
 
 // UpdateNode update the node name or machineMatchStrategy.
-func (t *Tree) UpdateNode(ns, name, machineMatchStrategy string) error {
+func (t *Tree) UpdateNode(ns, name, comment, machineMatchStrategy string) error {
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 	allNodes, err := t.AllNodes()
@@ -205,7 +205,7 @@ func (t *Tree) UpdateNode(ns, name, machineMatchStrategy string) error {
 		t.logger.Errorf("GetByNs %s fail, error: %s", ns, err.Error())
 		return err
 	}
-	node.Update(name, machineMatchStrategy)
+	node.Update(name, comment, machineMatchStrategy)
 
 	t.Nodes = allNodes
 	if err := t.saveTree(); err != nil {
@@ -289,10 +289,12 @@ func (t *Tree) RemoveNode(ns string) error {
 
 // NewNode create a node, return a pointer which point to node, and it bucketId. Property is preserved.
 // First property argument is used as the machineReg.
-func (t *Tree) NewNode(name, parentNs string, nodeType int, machineRegistRule ...string) (string, error) {
+func (t *Tree) NewNode(name, comment, parentNs string, nodeType int, machineRegistRule ...string) (string, error) {
 	newNode := node.Node{
 		node.NodeProperty{},
-		[]*node.Node{}}
+		[]*node.Node{},
+	}
+	newNode.Comment = comment
 	if nodeType == node.Root {
 		newNode.ID = rootNodeID
 		newNode.Name, newNode.Type = node.RootNode, node.NonLeaf

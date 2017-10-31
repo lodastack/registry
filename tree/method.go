@@ -76,10 +76,10 @@ type TreeMethod interface {
 	DashboardInf
 
 	// NewNode create node.
-	NewNode(name, parentNs string, nodeType int, property ...string) (string, error)
+	NewNode(name, comment, parentNs string, nodeType int, property ...string) (string, error)
 
 	// Update the node property.
-	UpdateNode(ns string, name, machineReg string) error
+	UpdateNode(ns string, name, comment, machineReg string) error
 
 	// RemoveNode remove the node with delID from parentNs.
 	RemoveNode(ns string) error

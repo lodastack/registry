@@ -163,7 +163,7 @@ func TestLeafMachineReg(t *testing.T) {
 func TestUpdateNode(t *testing.T) {
 	testNode := new(Node)
 	*testNode = nodes
-	testNode.Update("newname", "*")
+	testNode.Update("newname", "comment", "*")
 	if testNode.Name != "newname" || len(testNode.Children) != 4 {
 		t.Fatalf("node update not match with expect: %v", testNode)
 	}
