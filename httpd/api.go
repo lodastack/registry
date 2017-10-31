@@ -816,6 +816,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			node.NodeProperty{
 				ID:         (*nodes).ID,
 				Name:       (*nodes).Name,
+				Comment:    (*nodes).Comment,
 				Type:       (*nodes).Type,
 				MachineReg: (*nodes).MachineReg,
 			},
@@ -857,6 +858,7 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 							node.NodeProperty{
 								ID:         nodeOnTree.ID,
 								Name:       nodeOnTree.Name,
+								Comment:    nodeOnTree.Comment,
 								Type:       nodeOnTree.Type,
 								MachineReg: nodeOnTree.MachineReg,
 							},
