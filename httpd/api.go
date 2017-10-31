@@ -896,6 +896,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	var err error
 	parentNs := r.FormValue("ns")
 	name := r.FormValue("name")
+	comment := r.FormValue("comment")
 	nodeType := r.FormValue("type")
 	machineMatch := r.FormValue("machinereg")
 	devStr := r.FormValue("devs")
@@ -922,7 +923,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	if _, err = s.tree.NewNode(name, parentNs, nodeT, machineMatch); err != nil {
+	if _, err = s.tree.NewNode(name, comment, parentNs, nodeT, machineMatch); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
@@ -957,6 +958,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ns := r.FormValue("ns")
 	name := r.FormValue("name")
+	comment := r.FormValue("comment")
 	machinereg := r.FormValue("machinereg")
 
 	for _, nsLetter := range name {
@@ -967,7 +969,7 @@ func (s *Service) handlerNsUpdate(w http.ResponseWriter, r *http.Request, _ http
 		return
 	}
 
-	if err := s.tree.UpdateNode(ns, name, machinereg); err != nil {
+	if err := s.tree.UpdateNode(ns, name, comment, machinereg); err != nil {
 		ReturnServerError(w, err)
 		return
 	}
