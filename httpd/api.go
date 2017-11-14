@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/lodastack/log"
+	"github.com/lodastack/models"
 	"github.com/lodastack/registry/authorize"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
@@ -321,6 +322,20 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 
 		ns := r.Header.Get("NS")
 		res := r.Header.Get("Resource")
+		var ms []models.Metric
+		m := models.Metric{
+			Name:      "registry.oplog",
+			Timestamp: time.Now().Unix(),
+			Tags: map[string]string{
+				"method":   r.Method,
+				"uid":      uid,
+				"ns":       ns,
+				"resource": res,
+				"uri":      r.URL.Path,
+			},
+			Value: 1,
+		}
+		ms = append(ms, m)
 		s.logger.Infof("[%s] access %s path %s NS:%s Res:%s", uid, r.Method, r.URL.Path, ns, res)
 		if ok, err := s.perm.Check(uid, ns, res, r.Method); err != nil {
 			s.logger.Errorf("check permission fail, error: %s", err.Error())
@@ -333,6 +348,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		w.Header().Set(`UID`, uid)
 		r.Header.Set(`UID`, uid)
 		inner.ServeHTTP(w, r)
+		go common.Send(config.C.LogConf.NS, ms)
 	})
 }
 

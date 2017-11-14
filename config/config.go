@@ -80,6 +80,7 @@ type LDAPConfig struct {
 
 // LogConfig is log config struct
 type LogConfig struct {
+	NS            string `toml:"ns"`
 	Dir           string `toml:"logdir"`
 	Level         string `toml:"loglevel"`
 	Logrotatenum  int    `toml:"logrotatenum"`
