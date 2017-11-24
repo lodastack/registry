@@ -24,10 +24,10 @@ type Inf interface {
 
 	// SearchMachine search the hostname in all node.
 	// Return the result at form of ns-resourceID map if the node has this hostname.
-	SearchMachine(hostname string) (map[string]string, error)
+	SearchMachine(hostname string) (map[string][2]string, error)
 
 	// MachineUpdate search the hostname and update the machine resource by updateMap.
-	MachineUpdate(oldHostName string, updateMap map[string]string) error
+	MachineUpdate(sn string, oldHostName string, updateMap map[string]string) error
 
 	// MatchNs walk the all node and check the hostname match the ns or not, return the ns list.
 	// If not match any ns, will return the pool node.
