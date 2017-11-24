@@ -388,7 +388,13 @@ func (s *Service) handlerRegister(w http.ResponseWriter, r *http.Request, _ http
 		ReturnServerError(w, err)
 		return
 	} else if len(matchineMap) != 0 {
-		ReturnJson(w, 200, matchineMap)
+		// TODO: return all detail for SN check
+		// now only return resource ID
+		res := make(map[string]string)
+		for ns, detail := range matchineMap {
+			res[ns] = detail[0]
+		}
+		ReturnJson(w, 200, res)
 		return
 	}
 
@@ -433,7 +439,7 @@ func (s *Service) handlerAgentReport(w http.ResponseWriter, r *http.Request, _ h
 			updateMap[model.IpProp] = strings.Join(report.NewIPList, ",")
 		}
 
-		if err := s.tree.MachineUpdate(report.OldHostname, updateMap); err != nil {
+		if err := s.tree.MachineUpdate(report.SN, report.OldHostname, updateMap); err != nil {
 			log.Errorf("update machine %s fail, data: %+v, error: %s", report.NewHostname, updateMap, err.Error())
 			ReturnServerError(w, err)
 			return

@@ -12,13 +12,13 @@ func (t *Tree) RegisterMachine(newMachine model.Resource) (map[string]string, er
 }
 
 // SearchMachine search the hostname in all node.
-func (t *Tree) SearchMachine(hostname string) (map[string]string, error) {
+func (t *Tree) SearchMachine(hostname string) (map[string][2]string, error) {
 	return t.machine.SearchMachine(hostname)
 }
 
 // MachineUpdate search the hostname and update the machine resource by updateMap.
-func (t *Tree) MachineUpdate(oldName string, updateMap map[string]string) error {
-	return t.machine.MachineUpdate(oldName, updateMap)
+func (t *Tree) MachineUpdate(sn string, oldName string, updateMap map[string]string) error {
+	return t.machine.MachineUpdate(sn, oldName, updateMap)
 }
 
 // CheckMachineStatusByReport check the machine is online or dead by its report, update the machine status.
@@ -35,7 +35,7 @@ func (t *Tree) UpdateStatusByHostname(hostname string, updateMap map[string]stri
 		return fmt.Errorf("update machine fail, invalid hostname: %s, error: %s", hostname, err.Error())
 	}
 	for _ns, resourceID := range machineRecord {
-		if err := t.resource.UpdateResource(_ns, model.Machine, resourceID, updateMap); err != nil {
+		if err := t.resource.UpdateResource(_ns, model.Machine, resourceID[0], updateMap); err != nil {
 			t.logger.Errorf("UpdateStatusByHostname update machine fail, ns: %s, resourceID: %s, new status: %+v, error: %s",
 				_ns, resourceID, updateMap, err.Error())
 			return fmt.Errorf("update machine status fail, hostname %s, error: %s", hostname, err.Error())
@@ -52,7 +52,7 @@ func (t *Tree) RemoveStatusByHostname(hostname string) error {
 		return fmt.Errorf("update machine fail, invalid hostname: %s, error: %s", hostname, err.Error())
 	}
 	for _ns, resourceID := range machineRecord {
-		if err := t.resource.RemoveResource(_ns, model.Machine, resourceID); err != nil {
+		if err := t.resource.RemoveResource(_ns, model.Machine, resourceID[0]); err != nil {
 			t.logger.Errorf("UpdateStatusByHostname update machine fail, ns: %s, resourceID: %s,  error: %s",
 				_ns, resourceID, err.Error())
 			return fmt.Errorf("update machine status fail, hostname %s, error: %s", hostname, err.Error())

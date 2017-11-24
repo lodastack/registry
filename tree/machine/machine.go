@@ -16,12 +16,13 @@ var (
 	// MachineReportAlive is the time which machine is judged as online status. unit: hour
 	MachineReportAlive float64 = 24
 
+	// ErrInvalidMachine invalid machine resource error
 	ErrInvalidMachine = errors.New("invalid machine resource")
 )
 
 // Search hostname on the tree.
-// Return map[ns]resourceID.
-func (m *machine) SearchMachine(hostname string) (map[string]string, error) {
+// Return map[ns][2]{resourceID,SN}.
+func (m *machine) SearchMachine(hostname string) (map[string][2]string, error) {
 	searchHostname, err := model.NewSearch(false, model.HostnameProp, hostname)
 	if err != nil {
 		return nil, err
@@ -32,7 +33,7 @@ func (m *machine) SearchMachine(hostname string) (map[string]string, error) {
 		return nil, err
 	}
 
-	machineRes := map[string]string{}
+	machineRes := make(map[string][2]string)
 	for ns, machines := range resMap {
 		if len(*machines) == 0 {
 			m.logger.Errorf("machine search resout have no ID, ns: %s, machine: %+v", ns, *machines)
@@ -43,12 +44,17 @@ func (m *machine) SearchMachine(hostname string) (map[string]string, error) {
 			m.logger.Errorf("machine search resout have no ID, ns: %s, machine: %+v", ns, *machines)
 			return nil, errors.New("search machine fail")
 		}
-		machineRes[ns] = machineID
+		// get machine SN
+		machineSN, _ := (*machines)[0].ReadProperty(model.SNProp)
+		var detail [2]string
+		detail[0] = machineID
+		detail[1] = machineSN
+		machineRes[ns] = detail
 	}
 	return machineRes, nil
 }
 
-func (m *machine) MachineUpdate(oldHostName string, updateMap map[string]string) error {
+func (m *machine) MachineUpdate(sn string, oldHostName string, updateMap map[string]string) error {
 	hostname, ok := updateMap[model.HostnameProp]
 	if ok && hostname == "" {
 		return ErrInvalidMachine
@@ -67,7 +73,35 @@ func (m *machine) MachineUpdate(oldHostName string, updateMap map[string]string)
 		return errors.New("machine not found")
 	}
 	for ns, resourceID := range location {
-		if err := m.resource.UpdateResource(ns, "machine", resourceID, updateMap); err != nil {
+		if sn == "" || resourceID[1] == "" || sn == resourceID[1] {
+			if err := m.resource.UpdateResource(ns, "machine", resourceID[0], updateMap); err != nil {
+				m.logger.Errorf("MachineRename fail and skip, oldname: %s, ns: %s, update: %+v, error: %s",
+					oldHostName, ns, updateMap, err.Error())
+				return err
+			}
+		} else {
+			m.logger.Errorf("hostname equal, but SN not equal. Hostname:%s oldSN:%s newSN%s", oldHostName, resourceID[1], sn)
+		}
+	}
+	return nil
+}
+
+func (m *machine) MachineUpdateSN(oldHostName string, updateMap map[string]string) error {
+	sn, ok := updateMap[model.SNProp]
+	if ok && sn == "" {
+		return ErrInvalidMachine
+	}
+
+	location, err := m.SearchMachine(oldHostName)
+	if err != nil {
+		m.logger.Errorf("SearchMachine fail: %s", err.Error())
+		return err
+	}
+	if len(location) == 0 {
+		return errors.New("machine not found")
+	}
+	for ns, resourceID := range location {
+		if err := m.resource.UpdateResource(ns, "machine", resourceID[0], updateMap); err != nil {
 			m.logger.Errorf("MachineRename fail and skip, oldname: %s, ns: %s, update: %+v, error: %s",
 				oldHostName, ns, updateMap, err.Error())
 			return err

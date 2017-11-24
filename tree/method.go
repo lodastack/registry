@@ -53,13 +53,13 @@ type resourceInf interface {
 
 type machineInf interface {
 	// Search Machine on tree.
-	SearchMachine(hostname string) (map[string]string, error)
+	SearchMachine(hostname string) (map[string][2]string, error)
 
 	// Regist machine on the tree.
 	RegisterMachine(newMachine model.Resource) (map[string]string, error)
 
 	// Update hostname property of machine resource.
-	MachineUpdate(oldName string, updateMap map[string]string) error
+	MachineUpdate(sn string, oldName string, updateMap map[string]string) error
 
 	// UpdateStatusByHostname update machine status.
 	UpdateStatusByHostname(hostname string, updateMap map[string]string) error
