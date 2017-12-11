@@ -11,6 +11,7 @@ var (
 	HostStatusProp = "status"
 	IpProp         = "ip"
 	SNProp         = "sn"
+	SleepProp      = "sleep"
 
 	Online  = "online"
 	Offline = "offline"
