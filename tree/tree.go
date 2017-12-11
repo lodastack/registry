@@ -134,7 +134,7 @@ func (t *Tree) initReportBucket() error {
 
 	// Update machine status based on the report。
 	go func() {
-		c := time.Tick(time.Hour)
+		c := time.Tick(time.Minute * 10)
 		for {
 			select {
 			case <-c:
