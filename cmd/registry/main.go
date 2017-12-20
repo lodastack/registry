@@ -12,6 +12,7 @@ import (
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/config"
+	"github.com/lodastack/registry/dns"
 	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/store/cluster"
@@ -140,12 +141,23 @@ func (m *Main) Start() error {
 		return fmt.Errorf("failed to start HTTP service: %s", err.Error())
 	}
 
+	// DNS service
+	dns, err := dns.New(config.C.DNSConf, cs)
+	if err := dns.Start(); err != nil {
+		return fmt.Errorf("failed to start DNS service: %s", err.Error())
+	}
+
 	m.logger.Printf("registry started successfully")
 
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
 	<-terminate
 	stopProfile()
+
+	// close DNS service
+	if err := dns.Close(); err != nil {
+		m.logger.Errorf("close DNS failed: %s", err)
+	}
 
 	// close HTTP service
 	if err := h.Close(); err != nil {

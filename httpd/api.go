@@ -792,7 +792,7 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 			req := utils.HttpQuery{
 				Method: http.MethodDelete,
 				Url: fmt.Sprintf("http://%s?ns=collect.%s&name=%s&regexp=true",
-					config.C.RouterAddr, ns, resName),
+					config.C.CommonConf.RouterAddr, ns, resName),
 				BodyType: utils.Form,
 				Timeout:  10}
 			if err := req.DoQuery(); err != nil || req.Result.Status > 299 {
