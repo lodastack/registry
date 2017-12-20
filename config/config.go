@@ -27,12 +27,11 @@ var (
 )
 
 type Config struct {
-	Admins     []string     `toml:"admins"`
-	RouterAddr string       `toml:"routeraddr"`
 	CommonConf CommonConfig `toml:"common"`
 	HTTPConf   HTTPConfig   `toml:"http"`
 	DataConf   DataConfig   `toml:"data"`
 	LDAPConf   LDAPConfig   `toml:"ldap"`
+	DNSConf    DNSConfig    `toml:"dns"`
 	LogConf    LogConfig    `toml:"log"`
 	PluginConf PluginConfig `toml:"plugin"`
 	EventConf  EventConfig  `toml:"event"`
@@ -51,8 +50,10 @@ type EventConfig struct {
 }
 
 type CommonConfig struct {
-	PersistReport int    `toml:"persistreport"`
-	PID           string `toml:"pid"`
+	Admins        []string `toml:"admins"`
+	RouterAddr    string   `toml:"routeraddr"`
+	PersistReport int      `toml:"persistreport"`
+	PID           string   `toml:"pid"`
 }
 
 type HTTPConfig struct {
@@ -76,6 +77,12 @@ type LDAPConfig struct {
 	Binddn   string `toml:"binddn"`
 	Password string `toml:"password"`
 	Base     string `toml:"base"`
+}
+
+// DNSConig is DNS config struct
+type DNSConfig struct {
+	Enable bool `toml:"enable"`
+	Port   int  `toml:"port"`
 }
 
 // LogConfig is log config struct

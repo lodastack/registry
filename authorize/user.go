@@ -83,7 +83,7 @@ func (u *User) SetUser(username, mobile string) error {
 		// create a user.
 		us.Username = username
 		us.Mobile = mobile
-		if _, ok := common.ContainString(config.C.Admins, username); ok {
+		if _, ok := common.ContainString(config.C.CommonConf.Admins, username); ok {
 			us.Groups = []string{lodaAdminGName}
 		} else {
 			us.Groups = []string{lodaDefaultGName}

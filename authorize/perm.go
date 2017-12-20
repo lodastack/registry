@@ -95,7 +95,7 @@ func (p *perm) InitGroup(rootNode string) error {
 		return err
 	}
 	// create admin user if not exist.
-	for _, admin := range config.C.Admins {
+	for _, admin := range config.C.CommonConf.Admins {
 		if err := p.createUserIfNotExist(admin); err != nil {
 			return err
 		}
@@ -108,8 +108,8 @@ func (p *perm) InitGroup(rootNode string) error {
 func (p *perm) checkDefaultGroup() error {
 	g := Group{
 		GName:    lodaDefaultGName,
-		Managers: config.C.Admins,
-		Members:  config.C.Admins,
+		Managers: config.C.CommonConf.Admins,
+		Members:  config.C.CommonConf.Admins,
 		Items:    p.DefaultGroupItems(rootNode)}
 	g.Items = append(g.Items, fmt.Sprintf("%s-%s-%s", rootNode, "user", "PUT"))
 	if err := p.createGroupIfNotExist(g); err != nil {
@@ -119,8 +119,8 @@ func (p *perm) checkDefaultGroup() error {
 
 	g = Group{
 		GName:    lodaAdminGName,
-		Managers: config.C.Admins,
-		Members:  config.C.Admins,
+		Managers: config.C.CommonConf.Admins,
+		Members:  config.C.CommonConf.Admins,
 		Items:    p.AdminGroupItems(rootNode)}
 	if err := p.createGroupIfNotExist(g); err != nil {
 		fmt.Printf("init admin group error: %s\n", err.Error())
