@@ -223,11 +223,12 @@ func (m *machine) CheckMachineStatusByReport(reports map[string]model.Report) er
 				}
 			} else {
 				// set Online/Dead status by report time.
-				if time.Now().Sub(reportInfo.UpdateTime).Hours() >= MachineReportTimeout && hostStatus == model.Online {
-					update = true
-					(*machineList)[i].SetProperty(model.HostStatusProp, model.Dead)
-					m.logger.Errorf("machine %s report timeout %f", hostname, time.Now().Sub(reportInfo.UpdateTime).Hours())
-				} else if time.Now().Sub(reportInfo.UpdateTime).Hours() < MachineReportAlive && hostStatus == model.Dead {
+				// if time.Now().Sub(reportInfo.UpdateTime).Hours() >= MachineReportTimeout && hostStatus == model.Online {
+				// 	update = true
+				// 	(*machineList)[i].SetProperty(model.HostStatusProp, model.Dead)
+				// 	m.logger.Errorf("machine %s report timeout %f", hostname, time.Now().Sub(reportInfo.UpdateTime).Hours())
+				// } else
+				if time.Now().Sub(reportInfo.UpdateTime).Hours() < MachineReportAlive && hostStatus == model.Dead {
 					update = true
 					(*machineList)[i].SetProperty(model.HostStatusProp, model.Online)
 				}
