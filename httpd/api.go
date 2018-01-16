@@ -229,6 +229,7 @@ func (s *Service) initHandler() {
 	s.router.DELETE("/api/v1/ns", s.handlerNsDel)
 
 	s.router.GET("/api/v1/agents", s.handlerAgents)
+	s.router.GET("/api/v1/agent", s.handlerAgent)
 
 	// For agent
 	s.router.POST("/api/v1/agent/ns", s.handlerRegister)
@@ -1019,4 +1020,41 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 
 func (s *Service) handlerAgents(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ReturnJson(w, 200, s.tree.GetReportInfo())
+}
+
+func (s *Service) handlerAgent(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	paraIP := r.FormValue("ip")
+	paraNS := r.FormValue("ns")
+
+	var res model.Report
+	if paraIP != "" {
+		for _, info := range s.tree.GetReportInfo() {
+			for _, ip := range info.NewIPList {
+				if ip == paraIP {
+					if info.UpdateTime.Unix() > res.UpdateTime.Unix() {
+						res = info
+					}
+				}
+			}
+		}
+		ReturnJson(w, 200, res)
+		return
+	}
+
+	var nsRes []model.Report
+	if paraNS != "" {
+		for _, info := range s.tree.GetReportInfo() {
+			for _, ns := range info.Ns {
+				if strings.HasSuffix(ns, paraNS) {
+					nsRes = append(nsRes, info)
+					break
+				}
+			}
+		}
+		ReturnJson(w, 200, nsRes)
+		return
+	}
+
+	ReturnServerError(w, fmt.Errorf("need para"))
+	return
 }
