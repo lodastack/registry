@@ -227,7 +227,7 @@ func (p *perm) UpdateMember(gName string, managers, members []string) error {
 		updateRows = append(updateRows, uRows)
 	}
 
-	gRows, err := p.UpdateGroupMember(gName, addManagers, addMembers, removeManagers, removeMembers)
+	gRows, err := p.SetGroupMember(gName, managers, members)
 	if err != nil {
 		return err
 	}

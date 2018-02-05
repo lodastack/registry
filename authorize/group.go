@@ -210,3 +210,40 @@ func (g *Group) UpdateGroupMember(gName string, addManagers, addMembers, removeM
 	updateRow = m.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: newGroupByte}
 	return updateRow, nil
 }
+
+// SetGroupMember sets user from group.
+// keep user custom config order
+func (g *Group) SetGroupMember(gName string, managers, members []string) (m.Row, error) {
+	updateRow := m.Row{}
+	group, err := g.GetGroup(gName)
+	if err != nil {
+		return updateRow, err
+	}
+
+	group.Managers = []string{}
+	um := make(map[string]struct{})
+	for _, username := range managers {
+		if _, ok := um[username]; ok {
+			continue
+		}
+		group.Managers = append(group.Managers, username)
+		um[username] = struct{}{}
+	}
+	group.Members = []string{}
+	um = make(map[string]struct{})
+	for _, username := range members {
+		if _, ok := um[username]; ok {
+			continue
+		}
+		group.Members = append(group.Members, username)
+		um[username] = struct{}{}
+	}
+
+	newGroupByte, err := group.Byte()
+	if err != nil {
+		return updateRow, err
+	}
+
+	updateRow = m.Row{Bucket: []byte(AuthBuck), Key: getGKey(gName), Value: newGroupByte}
+	return updateRow, nil
+}
