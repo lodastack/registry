@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
-	m "github.com/lodastack/store/model"
+	"github.com/lodastack/store/log"
 	"github.com/lodastack/store/store"
 )
 
@@ -299,13 +298,8 @@ func TestNewPerm(t *testing.T) {
 
 func mustNewStore(t *testing.T) *store.Store {
 	path := mustTempDir()
-	var err error
-	// Ugly
-	m.LogBackend, err = log.NewFileBackend(path)
-	if err != nil {
-		t.Fatalf("new store error: create logger fail at %s, error: %s \n", path, err.Error())
-	}
-	s := store.New(path, mustMockTransport())
+
+	s := store.New(path, mustMockTransport(), log.New())
 	if s == nil {
 		panic("failed to create new store")
 	}
@@ -314,13 +308,8 @@ func mustNewStore(t *testing.T) *store.Store {
 
 func mustNewStoreB(b *testing.B) *store.Store {
 	path := mustTempDir()
-	var err error
-	// Ugly
-	m.LogBackend, err = log.NewFileBackend(path)
-	if err != nil {
-		return nil
-	}
-	s := store.New(path, mustMockTransport())
+
+	s := store.New(path, mustMockTransport(), log.New())
 	if s == nil {
 		panic("failed to create new store")
 	}
