@@ -7,14 +7,11 @@ import (
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/model"
-
-	m "github.com/lodastack/store/model"
 )
 
 func initLog(dir string, level string, rotatenum int, size uint64) error {
 	var err error
 	model.LogBackend, err = log.NewFileBackend(dir)
-	m.LogBackend = model.LogBackend
 	if err != nil {
 		return err
 	}

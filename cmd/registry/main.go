@@ -101,7 +101,14 @@ func (m *Main) Start() error {
 	// store config
 	c := config.C.DataConf
 
-	cs, err := cluster.NewService(c.ClusterBind, c.Dir, joinAddr)
+	storeLogger := log.New(config.C.LogConf.Level, "store", model.LogBackend)
+	opts := cluster.Options{
+		Bind:     c.ClusterBind,
+		DataDir:  c.Dir,
+		JoinAddr: joinAddr,
+		Logger:   storeLogger,
+	}
+	cs, err := cluster.NewService(opts)
 	if err != nil {
 		return fmt.Errorf("new store service failed: %s", err.Error())
 	}
