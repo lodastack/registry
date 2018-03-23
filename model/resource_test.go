@@ -268,6 +268,6 @@ func TestGetResource(t *testing.T) {
 	}
 
 	if rs, err := rl.Get(IdKey, "not exist"); err != nil || len(rs) != 0 {
-		t.Fatalf("get resource success not match expect", err, rs)
+		t.Fatalf("get resource err:%s not match expect: %v\n", err.Error(), rs)
 	}
 }
