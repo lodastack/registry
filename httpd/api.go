@@ -114,7 +114,7 @@ func New(c config.HTTPConfig, cluster Cluster) (*Service, error) {
 	// init Tree
 	tree, err := tree.NewTree(cluster)
 	if err != nil {
-		fmt.Println("init tree fail: %s", err.Error())
+		fmt.Printf("init tree fail: %s\n", err.Error())
 		return nil, err
 	}
 
