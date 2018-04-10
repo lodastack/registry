@@ -2,5 +2,3 @@
 - [ ] Rebased/mergable
 - [ ] Tests pass
 
-
-@lodastack/developers
