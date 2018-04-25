@@ -68,7 +68,7 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 		s.logger.Errorf("check user fail: %s", err.Error())
 	} else if !ok {
 		// create user if first login.
-		if err = s.perm.SetUser(user, ""); err != nil {
+		if err = s.perm.SetUser(user, "", "enable"); err != nil {
 			s.logger.Errorf("set user fail: %s", err.Error())
 		}
 	}
@@ -202,7 +202,7 @@ func (s *Service) HandlerUpdateGroupMember(w http.ResponseWriter, r *http.Reques
 				ReturnNotFound(w, "unknow user "+user)
 				return
 			}
-			if err = s.perm.SetUser(user, ""); err != nil {
+			if err = s.perm.SetUser(user, "", "enable"); err != nil {
 				s.logger.Errorf("set user fail: %s", err.Error())
 				ReturnNotFound(w, "set user fail")
 				return
@@ -263,13 +263,14 @@ func (s *Service) HandlerUserListGet(w http.ResponseWriter, r *http.Request, _ h
 func (s *Service) HandlerUserSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	username := strings.ToLower(r.FormValue("username"))
 	mobile := r.FormValue("mobile")
+	alert := r.FormValue("alert")
 	if username == "" ||
 		(r.Header.Get(`UID`) != "" && username != r.Header.Get(`UID`)) {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 
-	if err := s.perm.SetUser(username, mobile); err != nil {
+	if err := s.perm.SetUser(username, mobile, alert); err != nil {
 		s.logger.Errorf("set user fail: %s", err.Error())
 		ReturnNotFound(w, "set user fail")
 		return

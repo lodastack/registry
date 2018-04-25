@@ -13,6 +13,7 @@ import (
 type User struct {
 	Username string   `json:"username"`
 	Mobile   string   `json:"mobile"`
+	Alert    string   `json:"alert"`
 	Groups   []string `json:"groups"`
 
 	cluster Cluster `json:"-"`
@@ -73,8 +74,8 @@ func (u *User) CheckUserExist(username string) (bool, error) {
 }
 
 // SetUser create/update user. But will not init/update groups.
-func (u *User) SetUser(username, mobile string) error {
-	if username == "" {
+func (u *User) SetUser(username, mobile, alert string) error {
+	if username == "" || (alert != "disable" && alert != "enable") {
 		return common.ErrInvalidParam
 	}
 
@@ -83,6 +84,7 @@ func (u *User) SetUser(username, mobile string) error {
 		// create a user.
 		us.Username = username
 		us.Mobile = mobile
+		us.Alert = alert
 		if _, ok := common.ContainString(config.C.CommonConf.Admins, username); ok {
 			us.Groups = []string{lodaAdminGName}
 		} else {

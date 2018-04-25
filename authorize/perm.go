@@ -91,7 +91,7 @@ func (p *perm) AdminGroupItems(ns string) []string {
 
 // InitGroup createIfNotExist the default user and admin/default group.
 func (p *perm) InitGroup(rootNode string) error {
-	if err := p.SetUser(DefaultUser, ""); err != nil {
+	if err := p.SetUser(DefaultUser, "", "enable"); err != nil {
 		return err
 	}
 	// create admin user if not exist.
@@ -150,7 +150,7 @@ func (p *perm) createUserIfNotExist(username string) error {
 	if err != common.ErrUserNotFound {
 		return err
 	}
-	return p.SetUser(username, "")
+	return p.SetUser(username, "", "enable")
 }
 
 func (p *perm) CreateGroup(gName string, managers, members, items []string) error {

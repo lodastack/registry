@@ -33,7 +33,7 @@ type UserInf interface {
 	GetUserList(usernames []string) (map[string]User, error)
 
 	// SetUser create a user with username/mobile.
-	SetUser(username, mobile string) error
+	SetUser(username, mobile, alert string) error
 
 	// CheckUserExist check the username exist or not.
 	CheckUserExist(username string) (bool, error)
