@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/lodastack/log"
 	"github.com/lodastack/registry/common"
@@ -212,6 +213,11 @@ func containBytes(data, v []byte) bool {
 	return false
 }
 
+func regexpMatch(pattern string, s string) bool {
+	matched, _ := regexp.MatchString(pattern, s)
+	return matched
+}
+
 func search(data []byte, vl []string, fuzzy bool) bool {
 	if !fuzzy {
 		_, ok := common.ContainString(vl, string(data))
@@ -219,7 +225,7 @@ func search(data []byte, vl []string, fuzzy bool) bool {
 	}
 
 	for _, v := range vl {
-		if containBytes(data, []byte(v)) {
+		if regexpMatch(v, string(data)) {
 			return true
 		}
 	}
