@@ -1,4 +1,4 @@
-# Service Registry [![CircleCI](https://circleci.com/gh/lodastack/registry.svg?style=svg&circle-token=d86b3917d23b1883d3b0682c877a3114eff49fc0)](https://circleci.com/gh/lodastack/registry)
+# Service Registry [![CircleCI](https://circleci.com/gh/lodastack/registry.svg?style=svg&circle-token=d86b3917d23b1883d3b0682c877a3114eff49fc0)](https://circleci.com/gh/lodastack/registry)[![Go Report Card](https://goreportcard.com/badge/github.com/lodastack/registry)](https://goreportcard.com/report/github.com/lodastack/registry)
 
 ## Build
 
