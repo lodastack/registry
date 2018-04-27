@@ -190,7 +190,6 @@ func (m *machine) CheckMachineStatusByReport(reports map[string]model.Report) er
 
 		var update bool
 		for i := range *machineList {
-			hostname, _ := (*machineList)[i].ReadProperty(model.HostnameProp)
 			hostStatus, _ := (*machineList)[i].ReadProperty(model.HostStatusProp)
 
 			if hostStatus != model.Online && hostStatus != model.Dead && hostStatus != model.Offline {
@@ -213,25 +212,11 @@ func (m *machine) CheckMachineStatusByReport(reports map[string]model.Report) er
 				}
 			}
 
-			// report update
-			reportInfo, ok := reports[hostname]
-			if !ok {
-				// set dead if not report.
-				if hostStatus == model.Online {
-					update = true
-					(*machineList)[i].SetProperty(model.HostStatusProp, model.Dead)
-				}
-			} else {
-				// set Online/Dead status by report time.
-				// if time.Now().Sub(reportInfo.UpdateTime).Hours() >= MachineReportTimeout && hostStatus == model.Online {
-				// 	update = true
-				// 	(*machineList)[i].SetProperty(model.HostStatusProp, model.Dead)
-				// 	m.logger.Errorf("machine %s report timeout %f", hostname, time.Now().Sub(reportInfo.UpdateTime).Hours())
-				// } else
-				if time.Now().Sub(reportInfo.UpdateTime).Hours() < MachineReportAlive && hostStatus == model.Dead {
-					update = true
-					(*machineList)[i].SetProperty(model.HostStatusProp, model.Online)
-				}
+			// fix report update
+			// TODO: remove this
+			if hostStatus == model.Dead {
+				update = true
+				(*machineList)[i].SetProperty(model.HostStatusProp, model.Online)
 			}
 		}
 		if update {
