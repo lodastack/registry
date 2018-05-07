@@ -95,6 +95,9 @@ func (u *User) SetUser(username, mobile, alert string) error {
 		if mobile != "" {
 			us.Mobile = mobile
 		}
+		if alert != "" {
+			us.Alert = alert
+		}
 	}
 
 	uByte, err := us.Byte()
