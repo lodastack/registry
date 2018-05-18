@@ -395,6 +395,11 @@ func (r *Resource) SetProperty(k, v string) {
 	(*r)[k] = v
 }
 
+// RemoveProperty set the k-v to resource.
+func (r *Resource) RemoveProperty(k string) {
+	delete((*r), k)
+}
+
 // InitID create ID for the resource if not have, and return ID.
 func (r *Resource) InitID() string {
 	id, _ := r.ID()

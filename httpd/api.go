@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"sort"
@@ -296,9 +297,9 @@ func (s *Service) accessLog(inner http.Handler) http.Handler {
 		inner.ServeHTTP(w, r)
 		dur := time.Now().UnixNano()/1e3 - stime
 		if dur <= 1e3 {
-			s.logger.Infof("access %s path %s in %d us\n", r.Method, r.URL.Path, dur)
+			s.logger.Infof("%s access %s path %s in %d us\n", r.RemoteAddr, r.Method, r.URL.Path, dur)
 		} else {
-			s.logger.Infof("access %s path %s in %d ms\n", r.Method, r.URL.Path, dur/1e3)
+			s.logger.Infof("%s access %s path %s in %d ms\n", r.RemoteAddr, r.Method, r.URL.Path, dur/1e3)
 		}
 	})
 }
@@ -337,7 +338,8 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			Value: 1,
 		}
 		ms = append(ms, m)
-		s.logger.Infof("[%s] access %s path %s NS:%s Res:%s", uid, r.Method, r.URL.Path, ns, res)
+		body, _ := ioutil.ReadAll(r.Body)
+		s.logger.Warningf("[%s] access %s path %s NS:%s Res:%s Body:%s", uid, r.Method, r.URL.Path, ns, res, string(body))
 		if ok, err := s.perm.Check(uid, ns, res, r.Method); err != nil {
 			s.logger.Errorf("check permission fail, error: %s", err.Error())
 			ReturnServerError(w, err)
