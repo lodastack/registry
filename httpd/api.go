@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"sort"
@@ -338,8 +337,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			Value: 1,
 		}
 		ms = append(ms, m)
-		body, _ := ioutil.ReadAll(r.Body)
-		s.logger.Warningf("[%s] access %s path %s NS:%s Res:%s Body:%s", uid, r.Method, r.URL.Path, ns, res, string(body))
+		s.logger.Warningf("[%s] access %s path %s NS:%s Res:%s", uid, r.Method, r.URL.Path, ns, res)
 		if ok, err := s.perm.Check(uid, ns, res, r.Method); err != nil {
 			s.logger.Errorf("check permission fail, error: %s", err.Error())
 			ReturnServerError(w, err)
