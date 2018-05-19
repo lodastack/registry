@@ -57,24 +57,21 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 			return
 		}
 	}
-	key := common.GenUUID()
-	if err := s.cluster.SetSession(key, user); err != nil {
-		ReturnJson(w, 500, "set session failed")
-		return
-	}
 
 	ok, err := s.perm.CheckUserExist(user)
 	if err != nil {
 		s.logger.Errorf("check user fail: %s", err.Error())
+		ReturnServerError(w, err)
+		return
 	} else if !ok {
-		// create user if first login.
-		if err = s.perm.SetUser(user, "", "enable"); err != nil {
-			s.logger.Errorf("set user fail: %s", err.Error())
-		}
+		// return 403 if the user is first login.
+		ReturnJson(w, 403, "You have no permission, contact the administrators")
+		return
 	}
 
-	if err != nil {
-		ReturnServerError(w, err)
+	key := common.GenUUID()
+	if err := s.cluster.SetSession(key, user); err != nil {
+		ReturnJson(w, 500, "set session failed")
 		return
 	}
 	ReturnJson(w, 200, UserToken{User: user, Token: key})
