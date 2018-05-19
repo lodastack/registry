@@ -106,7 +106,7 @@ func (s *Service) HandlerGroupGet(w http.ResponseWriter, r *http.Request, _ http
 	ReturnJson(w, 200, g)
 }
 
-// HandlerGroupGet handle query group list resquest
+// HandlerGroupList handle query group list resquest
 func (s *Service) HandlerGroupList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ns := strings.ToLower(r.FormValue("ns"))
 	if ns == "" {
