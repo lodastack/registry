@@ -1012,12 +1012,15 @@ func (s *Service) handlerNsDel(w http.ResponseWriter, r *http.Request, _ httprou
 		ReturnServerError(w, err)
 		return
 	}
-
-	if err := s.perm.RemoveGroup(authorize.GetNsOpGName(ns)); err != nil {
-		log.Errorf("remove ns admin group fail: %s", err.Error())
+	gList, err := s.perm.ListNsGroup(ns)
+	if err != nil {
+		ReturnServerError(w, err)
+		return
 	}
-	if err := s.perm.RemoveGroup(authorize.GetNsDevGName(ns)); err != nil {
-		log.Errorf("remove ns admin group fail: %s", err.Error())
+	for _, g := range gList {
+		if err := s.perm.RemoveGroup(g.GName); err != nil {
+			log.Errorf("remove ns group fail: %s", err)
+		}
 	}
 	ReturnOK(w, "success")
 }
