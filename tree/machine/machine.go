@@ -211,13 +211,8 @@ func (m *machine) CheckMachineStatusByReport(reports map[string]model.Report) er
 					m.logger.Errorf("convert sleep time to int64 failed or sleepTime < 0 : %s %d", hostSleep, sleepTime)
 				}
 			}
-
-			// fix all incorrect dead status
-			if hostStatus == model.Dead {
-				update = true
-				(*machineList)[i].SetProperty(model.HostStatusProp, model.Online)
-			}
 		}
+
 		if update {
 			err = m.resource.SetResource(_ns, "machine", *machineList)
 			if err != nil {
