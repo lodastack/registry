@@ -100,7 +100,7 @@ func UpdateCollectName(collects ...Resource) error {
 		// proc monitor: /sbin/python2.7, the collect name will be pythone2.7
 		// we replace "." with "-".
 		if collectType == ProcCollect {
-			collects[index]["name"] = strings.Replace(collects[index]["name"], ".", "-", 0)
+			collects[index]["name"] = strings.Replace(collects[index]["name"], ".", "-", -1)
 		}
 
 		for _, nameLetter := range collects[index]["name"] {
