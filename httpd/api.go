@@ -660,6 +660,14 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 		if status, _ := param.R.ReadProperty(model.HostStatusProp); status == "" {
 			param.R.SetProperty(model.HostStatusProp, "online")
 		}
+	} else if param.ResType == "deploy" {
+		// need DNS1123 Label
+		pk := model.PkProperty[param.ResType]
+		pkValue, _ := param.R.ReadProperty(pk)
+		if !IsDNS1123Label(pkValue) {
+			ReturnBadRequest(w, errors.New(dns1123LabelErrMsg))
+			return
+		}
 	}
 
 	// Check pk property.
