@@ -1,6 +1,7 @@
 package httpd
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -64,14 +65,14 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 		ReturnServerError(w, err)
 		return
 	} else if !ok {
-		// return 403 if the user is first login.
-		ReturnJson(w, 403, "You have no permission, contact the administrators")
+		// return 500 if the user is first login.
+		ReturnServerError(w, errors.New("You have no permission, contact the administrators"))
 		return
 	}
 
 	key := common.GenUUID()
 	if err := s.cluster.SetSession(key, user); err != nil {
-		ReturnJson(w, 500, "set session failed")
+		ReturnServerError(w, errors.New("set session failed"))
 		return
 	}
 	ReturnJson(w, 200, UserToken{User: user, Token: key})
