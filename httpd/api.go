@@ -342,7 +342,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		r.Body.Close()
 		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 		s.logger.Warningf("[%s] access %s path %s NS:%s Res:%s Body:%s", uid, r.Method, r.URL.Path, ns, res, string(bodyBytes))
-		if ok, err := s.perm.Check(uid, ns, res, r.Method); err != nil {
+		if ok, err := s.perm.Check(uid, ns, res, r.Method, r.URL.Path); err != nil {
 			s.logger.Errorf("check permission fail, error: %s", err.Error())
 			ReturnServerError(w, err)
 			return

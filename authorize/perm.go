@@ -36,7 +36,7 @@ type perm struct {
 }
 
 // Check one query has the permission or not.
-func (p *perm) Check(username, ns, resource, method string) (bool, error) {
+func (p *perm) Check(username, ns, resource, method, uri string) (bool, error) {
 	u, err := p.GetUser(username)
 	if err != nil {
 		return false, errors.New("get user fail: " + err.Error())
@@ -48,6 +48,12 @@ func (p *perm) Check(username, ns, resource, method string) (bool, error) {
 
 	q := ns + "-" + resource + "-" + method
 	for _, gName := range u.Groups {
+		// only support groups which has "-op" suffix
+		// can update deploy resource.
+		if uri == "/api/v1/resource" && method == "PUT" && resource == "deploy" && !strings.HasSuffix(gName, "-op") {
+			continue
+		}
+
 		g, err := p.GetGroup(gName)
 		if err != nil {
 			// TODO: log
