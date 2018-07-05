@@ -54,7 +54,7 @@ type Perm interface {
 	AdminGroupItems(ns string) []string
 
 	// Check return the query has the permission or not by ns/resource type/username/method.
-	Check(username, ns, resourceType, method string) (bool, error)
+	Check(username, ns, resourceType, method, uri string) (bool, error)
 
 	// InitGroup init default/admin group and default user.
 	InitGroup(rootNode string) error
