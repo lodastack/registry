@@ -7,7 +7,7 @@ var (
 	Deploy  = "deploy"
 
 	Templates []string = []string{
-		Machine, Alarm, Collect,
+		Machine, Alarm, Collect, Deploy,
 	}
 
 	PkProperty = map[string]string{
