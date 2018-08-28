@@ -273,7 +273,7 @@ func (t *Tree) RemoveNode(ns string) error {
 		t.logger.Errorf("delete node fail, parent ns: %s, delete ID: %s, error: %s", parentNs, removeNodeID, err.Error())
 		return err
 	}
-	t.logger.Infof("remove node (ID: %s) behind ns %s from store success: %s", removeNodeID, parentNs)
+	t.logger.Infof("remove node (ID: %s) behind ns %s from store success", removeNodeID, parentNs)
 	t.Nodes = allNodes
 	if err := t.saveTree(); err != nil {
 		t.logger.Error("NewNode save tree node fail,", err.Error())

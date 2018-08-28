@@ -3,10 +3,7 @@ all: build
 fmt:
 	gofmt -l -w -s */
 
-dep:fmt
-	gdm restore
-
-build: dep 
+build: fmt
 	cd cmd/registry && go build -v
 
 install: fmt
@@ -15,5 +12,8 @@ install: fmt
 clean:
 	cd cmd/registry && go clean
 
-test:
+tidy:
+	go mod tidy
+
+test: tidy
 	go test ./...

@@ -620,11 +620,11 @@ func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ ht
 	} else if param.ResType == "machine" {
 		machines, err := s.tree.GetResource(param.Ns, param.ResType, param.ResId)
 		if len(machines) == 0 && err != nil {
-			log.Error("clear ns %s machine %s fail", param.Ns, param.ResId)
+			log.Errorf("clear ns %s machine %s fail", param.Ns, param.ResId)
 		} else {
 			hostname, _ := machines[0].ReadProperty(model.PkProperty["machine"])
 			if hostname == "" {
-				log.Error("clear ns %s machine %s fail: have no hostname", param.Ns, param.ResId)
+				log.Errorf("clear ns %s machine %s fail: have no hostname", param.Ns, param.ResId)
 			} else {
 				if err := clearMachineStatus(hostname, param.Ns); err != nil {
 					log.Errorf("clearMachineStatus ns %s hostname %s fail: %s",
