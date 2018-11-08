@@ -32,5 +32,6 @@ replace (
 	golang.org/x/net v0.0.0-20180826012351-8a410e7b638d => github.com/golang/net v0.0.0-20180826012351-8a410e7b638d
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f => github.com/golang/sync v0.0.0-20180314180146-1d60e4601c6f
 	golang.org/x/sys v0.0.0-20180824143301-4910a1d54f87 => github.com/golang/sys v0.0.0-20180824143301-4910a1d54f87
+	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c => github.com/golang/time v0.0.0-20181108054448-85acf8d2951c
 	google.golang.org/appengine v1.1.0 => github.com/golang/appengine v1.1.0
 )
