@@ -310,16 +310,39 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			inner.ServeHTTP(w, r)
 			return
 		}
+
 		key := r.Header.Get("AuthToken")
-		v := s.cluster.GetSession(key)
-		if v == nil {
+		if strings.TrimSpace(key) == "" {
 			ReturnUnauthorized(w, "Not Authorized. Please login.")
 			return
 		}
-		uid, ok := v.(string)
-		if !ok {
-			ReturnUnauthorized(w, "Not Authorized. Please login.")
-			return
+
+		// access token check
+		AccessTokenAuthed := false
+		uid := r.Header.Get("UID")
+		if uid != "" {
+			u, err := s.perm.GetUser(uid)
+			if err != nil {
+				ReturnUnauthorized(w, "Not Authorized. User not found.")
+				return
+			}
+			if key == u.AccessToken {
+				AccessTokenAuthed = true
+			}
+		}
+
+		if !AccessTokenAuthed {
+			v := s.cluster.GetSession(key)
+			if v == nil {
+				ReturnUnauthorized(w, "Not Authorized. Please login.")
+				return
+			}
+			userID, ok := v.(string)
+			if !ok {
+				ReturnUnauthorized(w, "Not Authorized. Please login.")
+				return
+			}
+			uid = userID
 		}
 
 		ns := r.Header.Get("NS")

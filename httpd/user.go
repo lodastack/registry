@@ -200,7 +200,7 @@ func (s *Service) HandlerUpdateGroupMember(w http.ResponseWriter, r *http.Reques
 				ReturnNotFound(w, "unknow user "+user)
 				return
 			}
-			if err = s.perm.SetUser(user, "", "enable"); err != nil {
+			if err = s.perm.SetUser(user, "", "enable", ""); err != nil {
 				s.logger.Errorf("set user fail: %s", err.Error())
 				ReturnNotFound(w, "set user fail")
 				return
@@ -257,18 +257,19 @@ func (s *Service) HandlerUserListGet(w http.ResponseWriter, r *http.Request, _ h
 	ReturnJson(w, 200, userData)
 }
 
-// HandlerGroupGet handle set user resquest
+// HandlerUserSet handle set user resquest
 func (s *Service) HandlerUserSet(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	username := strings.ToLower(r.FormValue("username"))
 	mobile := r.FormValue("mobile")
 	alert := r.FormValue("alert")
+	accessToken := r.FormValue("accesstoken")
 	if username == "" ||
 		(r.Header.Get(`UID`) != "" && username != r.Header.Get(`UID`)) {
 		ReturnBadRequest(w, ErrInvalidParam)
 		return
 	}
 
-	if err := s.perm.SetUser(username, mobile, alert); err != nil {
+	if err := s.perm.SetUser(username, mobile, alert, accessToken); err != nil {
 		s.logger.Errorf("set user fail: %s", err.Error())
 		ReturnNotFound(w, "set user fail")
 		return
