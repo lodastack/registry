@@ -11,10 +11,11 @@ import (
 
 // User is the infomation one user has.
 type User struct {
-	Username string   `json:"username"`
-	Mobile   string   `json:"mobile"`
-	Alert    string   `json:"alert"`
-	Groups   []string `json:"groups"`
+	Username    string   `json:"username"`
+	Mobile      string   `json:"mobile"`
+	Alert       string   `json:"alert"`
+	AccessToken string   `json:"accesstoken"`
+	Groups      []string `json:"groups"`
 
 	cluster Cluster `json:"-"`
 }
@@ -74,7 +75,7 @@ func (u *User) CheckUserExist(username string) (bool, error) {
 }
 
 // SetUser create/update user. But will not init/update groups.
-func (u *User) SetUser(username, mobile, alert string) error {
+func (u *User) SetUser(username, mobile, alert, accesstoken string) error {
 	if username == "" || (alert != "disable" && alert != "enable") {
 		return common.ErrInvalidParam
 	}
@@ -97,6 +98,9 @@ func (u *User) SetUser(username, mobile, alert string) error {
 		}
 		if alert != "" {
 			us.Alert = alert
+		}
+		if accesstoken != "" {
+			us.AccessToken = accesstoken
 		}
 	}
 
