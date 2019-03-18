@@ -8,7 +8,7 @@ require (
 	github.com/julienschmidt/httprouter v0.0.0-20180411154501-adbc77eec0d9
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lodastack/log v0.0.0-20161025094532-b25a4d2e8c22
-	github.com/lodastack/models v0.0.0-20171124042023-a657bc0c06c6
+	github.com/lodastack/models v0.0.0-20190318042348-b272fd875596
 	github.com/lodastack/sdk-go v0.0.0-20170303095045-58b4c40298f6
 	github.com/lodastack/store v0.0.0-20180426085106-d64c4ce0a669
 	github.com/miekg/dns v1.0.7
