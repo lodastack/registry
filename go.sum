@@ -38,6 +38,12 @@ github.com/lodastack/log v0.0.0-20161025094532-b25a4d2e8c22 h1:iW2GQaZBDm1hZjcmP
 github.com/lodastack/log v0.0.0-20161025094532-b25a4d2e8c22/go.mod h1:vXz/v/cScduOoa7Mu6DWVr37fHdAGquDpzE2xao27f0=
 github.com/lodastack/models v0.0.0-20171124042023-a657bc0c06c6 h1:HKZPoNdKD1g7nfK/Y6TEQ2eLy3etZShbccs/27WRKQg=
 github.com/lodastack/models v0.0.0-20171124042023-a657bc0c06c6/go.mod h1:6DwdhCS6s4P+9M6rjiNshSdu7T8KqHJcTHnrQVfn1+U=
+github.com/lodastack/models v0.0.0-20190318035704-5bd8792d9eb8 h1:yQt59rSZ3W05vHDDVzJUkdfTdxl0JqCyxjGrOCPRMQY=
+github.com/lodastack/models v0.0.0-20190318035704-5bd8792d9eb8/go.mod h1:6DwdhCS6s4P+9M6rjiNshSdu7T8KqHJcTHnrQVfn1+U=
+github.com/lodastack/models v0.0.0-20190318042348-b272fd875596 h1:ZML0lpVjMGoKY8+zexPapvS8ZtPsdMDSdpkhhLf8uLE=
+github.com/lodastack/models v0.0.0-20190318042348-b272fd875596/go.mod h1:6DwdhCS6s4P+9M6rjiNshSdu7T8KqHJcTHnrQVfn1+U=
+github.com/lodastack/models v0.0.0-20190318082849-326fc099cf31 h1:7jnx6d+VJjwGL3Pb9OphqDUJDZ5q8dLbbeos4pNbJE0=
+github.com/lodastack/models v0.0.0-20190318082849-326fc099cf31/go.mod h1:6DwdhCS6s4P+9M6rjiNshSdu7T8KqHJcTHnrQVfn1+U=
 github.com/lodastack/sdk-go v0.0.0-20170303095045-58b4c40298f6 h1:PH4qQ3vh0GlbBmFHKktUPePeEyeSyHe/yE6Nx0b9gkk=
 github.com/lodastack/sdk-go v0.0.0-20170303095045-58b4c40298f6/go.mod h1:rnIUskBa/l7o5CCLDAJLa4W2G0I+F11xuG9PzCRPVZI=
 github.com/lodastack/store v0.0.0-20180426085106-d64c4ce0a669 h1:obJdtL30drKr4aIm3p81fv3e5t7DyEvjaX0y/SFZFpg=
