@@ -317,17 +317,21 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 			return
 		}
 
+		var uid string
 		// access token check
 		AccessTokenAuthed := false
-		uid := r.Header.Get("UID")
-		if uid != "" {
-			u, err := s.perm.GetUser(uid)
-			if err != nil {
-				ReturnUnauthorized(w, "Not Authorized. User not found.")
-				return
-			}
-			if key == u.AccessToken {
-				AccessTokenAuthed = true
+		userToken := strings.Split(key, ":")
+		if len(userToken) == 2 {
+			uid = userToken[0]
+			if uid != "" {
+				u, err := s.perm.GetUser(uid)
+				if err != nil {
+					ReturnUnauthorized(w, "Not Authorized. User not found.")
+					return
+				}
+				if userToken[1] == u.AccessToken {
+					AccessTokenAuthed = true
+				}
 			}
 		}
 
