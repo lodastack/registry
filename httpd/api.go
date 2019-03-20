@@ -329,7 +329,7 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 					ReturnUnauthorized(w, "Not Authorized. User not found.")
 					return
 				}
-				if userToken[1] == u.AccessToken {
+				if key == u.AccessToken {
 					AccessTokenAuthed = true
 				}
 			}
