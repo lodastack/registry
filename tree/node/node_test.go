@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"unsafe"
 
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/tree/test_sample"
@@ -236,6 +237,111 @@ func BenchmarkNodeFFJsonUnmarshal(b *testing.B) {
 		// TODO: ffjson
 		if err := allNode.UnmarshalJSON(nodeMapByte); err != nil {
 			b.Fatalf("unmarshal error happen")
+		}
+	}
+}
+
+func TestCopyNode(t *testing.T) {
+	n := (&Node{}).Copy(&nodes)
+	if node, err := n.GetByNS(RootNode); err != nil || node == nil {
+		t.Fatalf("nodes Get \"root\" is valid, not match with expect\n")
+	}
+	if node, err := n.GetByNS("0-1." + RootNode); err != nil || node.ID != "0-1" {
+		t.Fatalf("nodes Get \"0-1.root\" not match with expect %+v, error: %s\n", node, err)
+	} else {
+		t.Logf("get Get \"0-1.root\" return right: %+v\n", node)
+	}
+	if node, err := n.GetByNS("0-2." + RootNode); err != nil || node.ID != "0-2" || len(node.Children) != 2 {
+		t.Fatalf("nodes Get \"0-2.root\" not match with expect %+v, error: %s\n", node, err)
+	} else {
+		t.Logf("get GetByNs \"0-2.root\" return right: %+v\n", node)
+	}
+	if node, err := n.GetByNS("0-2-1.0-2." + RootNode); err != nil || node.ID != "0-2-1" {
+		t.Fatalf("nodes Get \"0-2-1.0-2.root\" not match with expect %+v, error: %s\n", node, err)
+	} else {
+		t.Logf("get Get \"0-2-1.0-2.root\" return right: %+v\n", node)
+	}
+	if node, err := n.GetByNS("0-2-2-2.0-2-2.0-2." + RootNode); err != nil || node.ID != "0-2-2-2" {
+		t.Fatalf("nodes Get \"0-2-2-2.0-2-2.0-2.root\" not match with expect %+v, error: %s\n", node, err)
+	} else {
+		t.Logf("get Get \"0-2-2-2.0-2-2.0-2.root\" return right: %+v\n", node)
+	}
+
+	text, _ := test_sample.LoadFromFile(testPath + "benchmark.json")
+	var allNode Node
+	if err := allNode.UnmarshalJSON(text); err != nil {
+		t.Fatal("UnmarshalJSON fail:", err)
+	}
+	n2 := (&Node{}).Copy(&allNode)
+	marshalCopy, _ := n2.Marshal()
+	t.Log("marshalCopy:", string(marshalCopy))
+}
+
+func BenchmarkJSON(b *testing.B) {
+	text, _ := test_sample.LoadFromFile(testPath + "benchmark.json")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var allNode Node
+		if err := allNode.UnmarshalJSON(text); err != nil {
+			b.Fatal("UnmarshalJSON fail")
+		}
+	}
+}
+
+func BenchmarkCopyByMapUnsafeGetKey(b *testing.B) {
+	text, _ := test_sample.LoadFromFile(testPath + "benchmark.json")
+	var allNode Node
+	if err := allNode.UnmarshalJSON(text); err != nil {
+		b.Fatal("UnmarshalJSON fail")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	pool := map[string]*Node{string(text): &allNode}
+	for i := 0; i < b.N; i++ {
+		k := *(*string)(unsafe.Pointer(&text))
+		cache := pool[k]
+
+		n := (&Node{}).Copy(cache)
+		if n == nil {
+			b.Fatal("copy fail")
+		}
+	}
+}
+func BenchmarkCopyByMapNormalGetKey(b *testing.B) {
+	text, _ := test_sample.LoadFromFile(testPath + "benchmark.json")
+	var allNode Node
+	if err := allNode.UnmarshalJSON(text); err != nil {
+		b.Fatal("UnmarshalJSON fail")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	pool := map[string]*Node{string(text): &allNode}
+	for i := 0; i < b.N; i++ {
+		k := string(text)
+		cache := pool[k]
+
+		n := (&Node{}).Copy(cache)
+		if n == nil {
+			b.Fatal("copy fail")
+		}
+	}
+}
+
+func BenchmarkCopyByNode(b *testing.B) {
+	text, _ := test_sample.LoadFromFile(testPath + "benchmark.json")
+	var allNode Node
+	if err := allNode.UnmarshalJSON(text); err != nil {
+		b.Fatal("UnmarshalJSON fail")
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		n := (&Node{}).Copy(&allNode)
+		if n == nil {
+			b.Fatal("copy fail")
 		}
 	}
 }

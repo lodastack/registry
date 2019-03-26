@@ -69,6 +69,25 @@ func (n *Node) Exist(ns string) bool {
 	return false
 }
 
+// Copy return a copy of a Node.
+func (n *Node) Copy(ori *Node) *Node {
+	n = &Node{
+		NodeProperty{
+			ID:         ori.ID,
+			Name:       ori.Name,
+			Comment:    ori.Comment,
+			Type:       ori.Type,
+			MachineReg: ori.MachineReg,
+		},
+		make([]*Node, len(ori.Children)),
+	}
+
+	for i := range ori.Children {
+		n.Children[i] = (&Node{}).Copy(ori.Children[i])
+	}
+	return n
+}
+
 // Update update node machineMatchStrategy property.
 func (n *Node) Update(name, comment, machineMatchStrategy string) {
 	if name != "" {
