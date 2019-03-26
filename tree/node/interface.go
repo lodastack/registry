@@ -22,6 +22,9 @@ type Inf interface {
 
 	// AllNodes return the root node.
 	AllNodes() (*Node, error)
+
+	// Save the []byte of the nodes.
+	Save(nodeData []byte) error
 }
 
 type node struct {
@@ -31,6 +34,10 @@ type node struct {
 // return a node interface object.
 func NewNode(cluster cluster.Inf) Inf {
 	return &node{cluster: cluster}
+}
+
+func (n *node) Save(nodeByte []byte) error {
+	return n.cluster.Update([]byte(NodeDataBucketID), []byte(NodeDataKey), nodeByte)
 }
 
 // Get value from cluster by bucketID and resType.
@@ -50,11 +57,11 @@ func (m *node) AllNodes() (*Node, error) {
 		return nil, common.ErrGetNode
 	}
 
-	var allNode Node
-	if err := allNode.UnmarshalJSON(v); err != nil {
+	allNode, err := getAllNodeByByte(v)
+	if err != nil {
 		return nil, common.ErrGetNode
 	}
-	return &allNode, nil
+	return allNode, nil
 }
 
 // GetNSByID return NS by NodeID.

@@ -156,7 +156,7 @@ func (t *Tree) saveTree() error {
 		return err
 	}
 	// TODO: purge cache or not
-	return t.cluster.Update([]byte(node.NodeDataBucketID), []byte(node.NodeDataKey), treeByte)
+	return t.node.Save(treeByte)
 }
 
 // Create bucket for node.
