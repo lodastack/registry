@@ -1,9 +1,13 @@
 package httpd
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/lodastack/registry/authorize"
 	"github.com/lodastack/registry/common"
@@ -20,6 +24,7 @@ type UserToken struct {
 
 func (s *Service) initPermissionHandler() {
 	s.router.POST("/api/v1/user/signin", s.HandlerSignin)
+	s.router.GET("/api/v1/user/wework/signin", s.HandlerWeworkSignin)
 	s.router.GET("/api/v1/user/signout", s.HandlerSignout)
 
 	s.router.GET("/api/v1/perm/group", s.HandlerGroupGet)
@@ -76,6 +81,109 @@ func (s *Service) HandlerSignin(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 	ReturnJson(w, 200, UserToken{User: user, Token: key})
+}
+
+const WCtokenAPI = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
+
+var WCTOKEN string
+var WCTOKEN_CREATETIME int64
+
+/*
+{
+   "access_token": "accesstoken000001",
+   "expires_in": 7200
+}
+*/
+
+type tokenResp struct {
+	Token   string `json:"access_token"`
+	Expires int    `json:"expires_in"`
+}
+
+func token(cid string, csec string, refresh bool) error {
+	var diff int64
+	diff = 7000
+	now := time.Now().Unix()
+	if now-WCTOKEN_CREATETIME < diff && WCTOKEN != "" && !refresh {
+		return nil
+	}
+	urlencoded := fmt.Sprintf(WCtokenAPI, url.QueryEscape(cid), url.QueryEscape(csec))
+	res, err := http.Get(urlencoded)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	WCTOKEN_CREATETIME = time.Now().Unix()
+	if res.StatusCode != 200 {
+		return fmt.Errorf("remote server not 200", res.StatusCode)
+	}
+	var response tokenResp
+	decoder := json.NewDecoder(res.Body)
+	if err := decoder.Decode(&response); err != nil {
+		return err
+	}
+	if response.Token != "" {
+		WCTOKEN = response.Token
+		return nil
+	} else {
+		return fmt.Errorf("empty token", response.Token)
+	}
+}
+
+// HandlerWeworkSignin handler wechat server request
+// https://work.weixin.qq.com/api/doc
+func (s *Service) HandlerWeworkSignin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	code := r.FormValue("code")
+	// state := r.FormValue("state")
+	if code == "" {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+
+	if !config.C.WeworkConf.Enable {
+		ReturnServerError(w, fmt.Errorf("wework login not enabled"))
+		return
+	}
+
+	token(config.C.WeworkConf.CorpID, config.C.WeworkConf.CorpSecret, false)
+
+	u := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=%s&code=%s", WCTOKEN, code)
+	resp, err := http.Get(u)
+	if err != nil {
+		ReturnServerError(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	type wwResp struct {
+		ErrCode int    `json:"errcode"`
+		ErrMsg  string `json:"errmsg"`
+		UserID  string `json:"UserId"`
+	}
+
+	var wwr wwResp
+	if resp.StatusCode == 200 {
+		decoder := json.NewDecoder(resp.Body)
+		decoder.Decode(&wwr)
+	} else {
+		ReturnServerError(w, fmt.Errorf("status not OK"))
+		return
+	}
+
+	if wwr.ErrCode != 0 {
+		ReturnServerError(w, fmt.Errorf("error code not 0, got "+string(wwr.ErrCode)))
+		return
+	}
+
+	key := common.GenUUID()
+	if err := s.cluster.SetSession(key, wwr.UserID); err != nil {
+		ReturnServerError(w, errors.New("set session failed"))
+		return
+	}
+
+	ur := fmt.Sprintf(config.C.WeworkConf.Redirect, key, wwr.UserID)
+	http.Redirect(w, r, ur, 302)
 }
 
 //SignoutHandler handler signout request

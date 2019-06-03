@@ -31,6 +31,7 @@ type Config struct {
 	HTTPConf   HTTPConfig   `toml:"http"`
 	DataConf   DataConfig   `toml:"data"`
 	LDAPConf   LDAPConfig   `toml:"ldap"`
+	WeworkConf WeworkConfig `toml:"wework"`
 	DNSConf    DNSConfig    `toml:"dns"`
 	LogConf    LogConfig    `toml:"log"`
 	PluginConf PluginConfig `toml:"plugin"`
@@ -77,6 +78,14 @@ type LDAPConfig struct {
 	Binddn   string `toml:"binddn"`
 	Password string `toml:"password"`
 	Base     string `toml:"base"`
+}
+
+// WeworkConfig is wework config struct
+type WeworkConfig struct {
+	Enable     bool   `toml:"enable"`
+	CorpID     string `toml:"corpid"`
+	CorpSecret string `toml:"corpsecret"`
+	Redirect   string `toml:"redirect"`
 }
 
 // DNSConig is DNS config struct
