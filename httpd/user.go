@@ -400,5 +400,5 @@ func (s *Service) HandlerRemoveUser(w http.ResponseWriter, r *http.Request, _ ht
 }
 
 func (s *Service) nilHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	ReturnJson(w, 200, "success")
+	ReturnJson(w, 200, r.Header.Get("UID"))
 }
