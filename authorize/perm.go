@@ -47,6 +47,10 @@ func (p *perm) Check(username, ns, resource, method, uri string) (bool, error) {
 	}
 
 	q := ns + "-" + resource + "-" + method
+	if uri == "/api/v1/resource" && method == "GET" && resource == "deploy" {
+		q = ns + "-" + resource + "-" + "PUT"
+	}
+
 	for _, gName := range u.Groups {
 		// only support groups which has "-op" suffix
 		// can update deploy resource.
