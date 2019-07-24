@@ -69,14 +69,14 @@ func main() {
 	//parse config file
 	err := config.ParseConfig(configFile)
 	if err != nil {
-		log.Errorf("Parse Config File Error : %s", err.Error())
+		log.Errorf("Parse Config File Error : %v", err)
 		os.Exit(1)
 	}
 
 	// init log backend
 	err = initLog(config.C.LogConf.Dir, config.C.LogConf.Level, config.C.LogConf.Logrotatenum, config.C.LogConf.Logrotatesize)
 	if err != nil {
-		log.Errorf("failed to new log backend: %s", err.Error())
+		log.Errorf("failed to new log backend: %v", err)
 		os.Exit(1)
 	}
 
@@ -95,7 +95,7 @@ func (m *Main) Start() error {
 	//save pid to file
 	err := ioutil.WriteFile(config.C.CommonConf.PID, []byte(strconv.Itoa(os.Getpid())), 0744)
 	if err != nil {
-		return fmt.Errorf("write PID file error: %s", err.Error())
+		return fmt.Errorf("write PID file error: %v", err)
 	}
 
 	// store config
@@ -110,30 +110,30 @@ func (m *Main) Start() error {
 	}
 	cs, err := cluster.NewService(opts)
 	if err != nil {
-		return fmt.Errorf("new store service failed: %s", err.Error())
+		return fmt.Errorf("new store service failed: %v", err)
 	}
 
 	if err := cs.Open(); err != nil {
-		return fmt.Errorf("failed to open cluster service failed: %s", err.Error())
+		return fmt.Errorf("failed to open cluster service failed: %v", err)
 	}
 
 	// If join was specified, make the join request.
 	nodes, err := cs.Nodes()
 	if err != nil {
-		return fmt.Errorf("get nodes failed: %s", err.Error())
+		return fmt.Errorf("get nodes failed: %v", err)
 	}
 
 	// if exist a raftdb, or exist a cluster, don't join any leader.
 	if joinAddr != "" && len(nodes) <= 1 {
 		if err := cs.JoinCluster(joinAddr, c.ClusterBind); err != nil {
-			return fmt.Errorf("failed to join node at %s: %s", joinAddr, err.Error())
+			return fmt.Errorf("failed to join node at %s: %v", joinAddr, err)
 		}
 	}
 
 	// wait for leader
 	l, err := cs.WaitForLeader(waitLeaderTimeout)
 	if err != nil || l == "" {
-		return fmt.Errorf("wait leader failed: %s", err.Error())
+		return fmt.Errorf("wait leader failed: %v", err)
 	}
 	m.logger.Printf("cluster leader is: %s", l)
 
@@ -144,14 +144,17 @@ func (m *Main) Start() error {
 
 	// Create and configure HTTP service.
 	h, err := httpd.New(config.C.HTTPConf, cs)
+	if err != nil {
+		return fmt.Errorf("failed to new HTTP service: %v", err)
+	}
 	if err := h.Start(); err != nil {
-		return fmt.Errorf("failed to start HTTP service: %s", err.Error())
+		return fmt.Errorf("failed to start HTTP service: %v", err)
 	}
 
 	// DNS service
 	dns, err := dns.New(config.C.DNSConf, cs)
 	if err := dns.Start(); err != nil {
-		return fmt.Errorf("failed to start DNS service: %s", err.Error())
+		return fmt.Errorf("failed to start DNS service: %v", err)
 	}
 
 	m.logger.Printf("registry started successfully")
@@ -163,21 +166,21 @@ func (m *Main) Start() error {
 
 	// close DNS service
 	if err := dns.Close(); err != nil {
-		m.logger.Errorf("close DNS failed: %s", err)
+		m.logger.Errorf("close DNS failed: %v", err)
 	}
 
 	// close HTTP service
 	if err := h.Close(); err != nil {
-		m.logger.Errorf("close HTTP failed: %s", err)
+		m.logger.Errorf("close HTTP failed: %v", err)
 	}
 
 	// close cluster service
 	if err := cs.Close(); err != nil {
-		m.logger.Errorf("close cluster service failed: %s", err)
+		m.logger.Errorf("close cluster service failed: %v", err)
 	}
 
 	if err := os.Remove(config.C.CommonConf.PID); err != nil {
-		m.logger.Errorf("clean PID file failed: %s", err)
+		m.logger.Errorf("clean PID file failed: %v", err)
 	}
 
 	// flush log
