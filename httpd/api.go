@@ -769,6 +769,15 @@ func (s *Service) handlerSearch(w http.ResponseWriter, r *http.Request, _ httpro
 		return
 	}
 
+	// check deploy result
+	if resType == "deploy" {
+		for k := range res {
+			if ok, _ := s.perm.Check(r.Header.Get(`UID`), k, resType, r.Method, "/api/v1/resource"); !ok {
+				delete(res, k)
+			}
+		}
+	}
+
 	ReturnJson(w, 200, res)
 }
 
