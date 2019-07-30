@@ -1008,7 +1008,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	} else {
 		ops = []string{creater}
 	}
-	err = s.perm.CreateGroup(authorize.GetNsOpGName(ns), ops, ops, s.perm.AdminGroupItems(ns))
+	err = s.perm.CreateGroup(authorize.GetNsOpGName(ns), ops, []string{}, s.perm.AdminGroupItems(ns))
 	if err != nil {
 		ReturnServerError(w, fmt.Errorf("Create op group %s fail: %s", gOpName, err.Error()))
 		return
@@ -1017,10 +1017,10 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 	if devStr != "" {
 		devs = strings.Split(devStr, ",")
 	} else {
-		devs = []string{creater}
+		devs = []string{}
 	}
 	gDevName = authorize.GetNsDevGName(ns)
-	err = s.perm.CreateGroup(gDevName, devs, devs, s.perm.DefaultGroupItems(ns))
+	err = s.perm.CreateGroup(gDevName, devs, []string{}, s.perm.DefaultGroupItems(ns))
 	if err != nil {
 		ReturnServerError(w, fmt.Errorf("Create dev group %s fail: %s", gDevName, err.Error()))
 		return
