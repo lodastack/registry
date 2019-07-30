@@ -640,7 +640,16 @@ func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ ht
 			return
 		}
 	}
-
+	if param.ResType == model.Deploy {
+		if param.UpdateMap["owner"] != "prod" {
+			ReturnBadRequest(w, fmt.Errorf("only support `prod` owner"))
+			return
+		}
+		if param.UpdateMap["afterInstall"] == "1" && param.UpdateMap["user"] != "prod" {
+			ReturnBadRequest(w, fmt.Errorf("only support `prod` user"))
+			return
+		}
+	}
 	if err := s.tree.UpdateResource(param.Ns, param.ResType, param.ResId, param.UpdateMap); err != nil {
 		ReturnBadRequest(w, err)
 		return
@@ -695,6 +704,21 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 			ReturnBadRequest(w, errors.New(dns1123LabelErrMsg))
 			return
 		}
+
+		// only allow use `prod` user
+		owner, _ := param.R.ReadProperty("owner")
+		if owner != "prod" {
+			ReturnBadRequest(w, errors.New("please use user `prod` owner"))
+			return
+		}
+
+		runUser, _ := param.R.ReadProperty("user")
+		enableCMD, _ := param.R.ReadProperty("afterInstall")
+		if enableCMD == "1" && runUser != "prod" {
+			ReturnBadRequest(w, errors.New("please use user `prod` run cmd"))
+			return
+		}
+
 	}
 
 	// Check pk property.
