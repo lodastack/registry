@@ -51,10 +51,11 @@ type EventConfig struct {
 }
 
 type CommonConfig struct {
-	Admins        []string `toml:"admins"`
-	RouterAddr    string   `toml:"routeraddr"`
-	PersistReport int      `toml:"persistreport"`
-	PID           string   `toml:"pid"`
+	Admins          []string `toml:"admins"`
+	RouterAddr      string   `toml:"routeraddr"`
+	PersistReport   int      `toml:"persistreport"`
+	PID             string   `toml:"pid"`
+	ProductionUsers []string `toml:"productionusers"`
 }
 
 type HTTPConfig struct {
