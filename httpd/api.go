@@ -19,6 +19,7 @@ import (
 	"github.com/lodastack/registry/authorize"
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
+	"github.com/lodastack/registry/limit"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/tree"
 	"github.com/lodastack/registry/tree/node"
@@ -92,9 +93,10 @@ type Service struct {
 
 	router *httprouter.Router
 
-	cluster Cluster
-	tree    tree.TreeMethod
-	perm    authorize.Perm
+	cluster     Cluster
+	tree        tree.TreeMethod
+	perm        authorize.Perm
+	rateLimiter *limit.RateLimiter
 
 	logger *log.Logger
 }
@@ -127,15 +129,16 @@ func New(c config.HTTPConfig, cluster Cluster) (*Service, error) {
 	}
 
 	return &Service{
-		addr:    c.Bind,
-		https:   c.Https,
-		cert:    c.Cert,
-		key:     c.Key,
-		cluster: cluster,
-		tree:    tree,
-		perm:    perm,
-		router:  httprouter.New(),
-		logger:  log.New("INFO", "http", model.LogBackend),
+		addr:        c.Bind,
+		https:       c.Https,
+		cert:        c.Cert,
+		key:         c.Key,
+		cluster:     cluster,
+		tree:        tree,
+		perm:        perm,
+		router:      httprouter.New(),
+		rateLimiter: limit.NewRateLimiter(5, 10),
+		logger:      log.New("INFO", "http", model.LogBackend),
 	}, nil
 }
 
@@ -145,7 +148,7 @@ func (s *Service) Start() error {
 
 	server := http.Server{}
 	if config.C.LDAPConf.Enable {
-		server.Handler = s.accessLog(cors(s.auth(s.router)))
+		server.Handler = s.accessLog(s.rateLimit(cors(s.auth(s.router))))
 	} else {
 		server.Handler = s.accessLog(cors(s.router))
 	}
@@ -381,6 +384,17 @@ func (s *Service) auth(inner http.Handler) http.Handler {
 		r.Header.Set(`UID`, uid)
 		inner.ServeHTTP(w, r)
 		go common.Send(config.C.LogConf.NS, ms)
+	})
+}
+
+func (s *Service) rateLimit(inner http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limiter := s.rateLimiter.GetVisitor(r.RemoteAddr)
+		if limiter.Allow() == false {
+			http.Error(w, http.StatusText(429), http.StatusTooManyRequests)
+			return
+		}
+		inner.ServeHTTP(w, r)
 	})
 }
 
