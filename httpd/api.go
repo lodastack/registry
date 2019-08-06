@@ -621,6 +621,15 @@ func (s *Service) handleRemoveResourceList(w http.ResponseWriter, r *http.Reques
 	ReturnJson(w, 200, "OK")
 }
 
+func isProductionUsers(u string) bool {
+	for _, user := range config.C.CommonConf.ProductionUsers {
+		if u == user {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var err error
 	buf := new(bytes.Buffer)
@@ -641,12 +650,12 @@ func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ ht
 		}
 	}
 	if param.ResType == model.Deploy {
-		if param.UpdateMap["owner"] != "prod" {
-			ReturnBadRequest(w, fmt.Errorf("only support `prod` owner"))
+		if !isProductionUsers(param.UpdateMap["owner"]) {
+			ReturnBadRequest(w, fmt.Errorf("owner can't be set as %s", param.UpdateMap["owner"]))
 			return
 		}
-		if param.UpdateMap["afterInstall"] == "1" && param.UpdateMap["user"] != "prod" {
-			ReturnBadRequest(w, fmt.Errorf("only support `prod` user"))
+		if param.UpdateMap["afterInstall"] == "1" && !isProductionUsers(param.UpdateMap["user"]) {
+			ReturnBadRequest(w, fmt.Errorf("user can't be set as %s", param.UpdateMap["user"]))
 			return
 		}
 	}
@@ -707,15 +716,15 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 
 		// only allow use `prod` user
 		owner, _ := param.R.ReadProperty("owner")
-		if owner != "prod" {
-			ReturnBadRequest(w, errors.New("please use user `prod` owner"))
+		if !isProductionUsers(owner) {
+			ReturnBadRequest(w, errors.New("owner can't be set as "+owner))
 			return
 		}
 
 		runUser, _ := param.R.ReadProperty("user")
 		enableCMD, _ := param.R.ReadProperty("afterInstall")
-		if enableCMD == "1" && runUser != "prod" {
-			ReturnBadRequest(w, errors.New("please use user `prod` run cmd"))
+		if enableCMD == "1" && !isProductionUsers(runUser) {
+			ReturnBadRequest(w, errors.New("run cmd user can't be set as "+runUser))
 			return
 		}
 
