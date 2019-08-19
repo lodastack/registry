@@ -649,7 +649,7 @@ func (s *Service) handleResourcePut(w http.ResponseWriter, r *http.Request, _ ht
 			return
 		}
 	}
-	if param.ResType == model.Deploy {
+	if param.ResType == model.Deploy && param.UpdateMap["language"] != "docker:latest" {
 		if !isProductionUsers(param.UpdateMap["owner"]) {
 			ReturnBadRequest(w, fmt.Errorf("owner can't be set as %s", param.UpdateMap["owner"]))
 			return
@@ -714,11 +714,14 @@ func (s *Service) handlerResourceAdd(w http.ResponseWriter, r *http.Request, _ h
 			return
 		}
 
-		// only allow use `prod` user
-		owner, _ := param.R.ReadProperty("owner")
-		if !isProductionUsers(owner) {
-			ReturnBadRequest(w, errors.New("owner can't be set as "+owner))
-			return
+		env, _ := param.R.ReadProperty("language")
+		if env != "docker:latest" {
+			// only allow use `prod` user
+			owner, _ := param.R.ReadProperty("owner")
+			if !isProductionUsers(owner) {
+				ReturnBadRequest(w, errors.New("owner can't be set as "+owner))
+				return
+			}
 		}
 
 		runUser, _ := param.R.ReadProperty("user")
