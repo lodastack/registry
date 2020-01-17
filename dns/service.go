@@ -147,6 +147,9 @@ func (s *Service) Start() error {
 
 // Close DNS service
 func (s *Service) Close() error {
+	if !s.enable {
+		return nil
+	}
 	return s.server.Shutdown()
 }
 
