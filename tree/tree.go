@@ -97,9 +97,15 @@ func (t *Tree) initNodeData(key string) error {
 	if _, err := t.NewNode("", "", "", node.Root); err != nil {
 		panic("create root node fail: " + err.Error())
 	}
-	// Create root pool node.
-	if _, err := t.NewNode(node.PoolNode, "pool", node.RootNode, node.Leaf, node.NotMatchMachine); err != nil {
-		panic("create root pool node fail: " + err.Error())
+
+	for _, meta := range node.InitNodes {
+		l := strings.SplitAfterN(meta.Name, node.NodeDeli, 2)
+		if len(l) != 2 {
+			continue
+		}
+		if _, err := t.NewNode(strings.TrimSuffix(l[0], node.NodeDeli), meta.Comment, l[1], meta.Tp, node.NotMatchMachine); err != nil {
+			panic("create node " + meta.Name + " failed: " + err.Error())
+		}
 	}
 	return nil
 }

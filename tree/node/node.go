@@ -38,6 +38,31 @@ const (
 	Root
 )
 
+// InitNodes auto creates nodes when registry init.
+type nodeMeta struct {
+	Name    string
+	Tp      int
+	Comment string
+}
+
+// InitNodes auto creates nodes when registry init.
+var InitNodes = []nodeMeta{
+	{Name: "pool.loda", Tp: Leaf, Comment: "pool"},
+	{Name: "monitor.loda", Tp: NonLeaf, Comment: "monitor system"},
+	{Name: "db.monitor.loda", Tp: NonLeaf, Comment: "monitor system"},
+	{Name: "common.db.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "alarm.monitor.loda", Tp: NonLeaf, Comment: "monitor system"},
+	{Name: "kapacitor.alarm.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "adapter.alarm.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "nodata.alarm.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "event.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "router.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "registry.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "mq.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "etcd.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: "ui.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+}
+
 // NodeProperty is node should has.
 type NodeProperty struct {
 	ID      string `json:"id"`
