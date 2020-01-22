@@ -258,7 +258,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "5",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "",
 			"every":        "1m",
 			"expression":   ">",
@@ -280,7 +281,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "5",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "",
 			"every":        "1m",
 			"expression":   "<",
@@ -302,7 +304,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "5",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "0",
 			"every":        "1m",
 			"expression":   ">",
@@ -324,7 +327,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "5",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "",
 			"every":        "1m",
 			"expression":   ">",
@@ -345,7 +349,8 @@ var (
 		},
 		Resource{
 			"alert":       "mail,sms,wechat",
-			"default":     "false",
+			"default":     "true",
+			"enable":      "true",
 			"every":       "1m",
 			"expression":  ">",
 			"func":        "mean",
@@ -363,7 +368,8 @@ var (
 		},
 		Resource{
 			"alert":       "mail,sms,wechat",
-			"default":     "false",
+			"default":     "true",
+			"enable":      "true",
 			"every":       "1m",
 			"expression":  ">",
 			"func":        "mean",
@@ -381,7 +387,8 @@ var (
 		},
 		Resource{
 			"alert":       "mail,sms,wechat",
-			"default":     "false",
+			"default":     "true",
+			"enable":      "true",
 			"every":       "2m",
 			"expression":  ">",
 			"func":        "mean",
@@ -400,7 +407,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wecaht",
 			"blockstep":    "10",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "0",
 			"every":        "1m",
 			"expression":   "==",
@@ -422,7 +430,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "10",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "0",
 			"every":        "1m",
 			"expression":   ">",
@@ -444,7 +453,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "5",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "",
 			"every":        "5m",
 			"expression":   "==",
@@ -466,7 +476,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "5",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "",
 			"every":        "1m",
 			"expression":   "==",
@@ -488,7 +499,8 @@ var (
 		Resource{
 			"alert":        "mail,sms,wechat",
 			"blockstep":    "5",
-			"default":      "false",
+			"default":      "true",
+			"enable":       "true",
 			"endtime":      "",
 			"every":        "5m",
 			"expression":   "<",
