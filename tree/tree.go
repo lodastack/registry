@@ -101,6 +101,21 @@ func (t *Tree) initNodeData(key string) error {
 	if _, err := t.NewNode(node.PoolNode, "pool", node.RootNode, node.Leaf, node.NotMatchMachine); err != nil {
 		panic("create root pool node fail: " + err.Error())
 	}
+
+	t.NewNode("monitor", "monitor system", node.RootNode, node.NonLeaf, node.NotMatchMachine)
+	t.NewNode("db", "monitor system", "monitor.loda", node.NonLeaf, node.NotMatchMachine)
+	t.NewNode("common", "monitor system", "db.monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("alarm", "monitor system", "monitor.loda", node.NonLeaf, node.NotMatchMachine)
+	t.NewNode("kapacitor", "monitor system", "alarm.monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("adapter", "monitor system", "alarm.monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("nodata", "monitor system", "alarm.monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("event", "monitor system", "monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("etcd", "monitor system", "monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("registry", "monitor system", "monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("mq", "monitor system", "monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("router", "monitor system", "monitor.loda", node.Leaf, node.NotMatchMachine)
+	t.NewNode("ui", "monitor system", "monitor.loda", node.Leaf, node.NotMatchMachine)
+
 	return nil
 }
 
