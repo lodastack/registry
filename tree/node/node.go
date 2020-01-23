@@ -38,6 +38,23 @@ const (
 	Root
 )
 
+// InitNodes auto creates nodes when registry init.
+var InitNodes = map[string]int{
+	"monitor.loda":                 NonLeaf,
+	"db.monitor.loda":              NonLeaf,
+	"common.db.monitor.loda":       Leaf,
+	"alarm.monitor.loda":           NonLeaf,
+	"kapacitor.alarm.monitor.loda": Leaf,
+	"adapter.alarm.monitor.loda":   Leaf,
+	"event.alarm.monitor.loda":     Leaf,
+	"event.monitor.loda":           Leaf,
+	"router.monitor.loda":          Leaf,
+	"registry.monitor.loda":        Leaf,
+	"etcd.monitor.loda":            Leaf,
+	"mq.monitor.loda":              Leaf,
+	"ui.monitor.loda":              Leaf,
+}
+
 // NodeProperty is node should has.
 type NodeProperty struct {
 	ID      string `json:"id"`

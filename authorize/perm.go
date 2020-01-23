@@ -9,6 +9,7 @@ import (
 	"github.com/lodastack/registry/common"
 	"github.com/lodastack/registry/config"
 	"github.com/lodastack/registry/model"
+	"github.com/lodastack/registry/tree/node"
 	m "github.com/lodastack/store/model"
 )
 
@@ -135,6 +136,19 @@ func (p *perm) checkDefaultGroup() error {
 	if err := p.createGroupIfNotExist(g); err != nil {
 		fmt.Printf("init admin group error: %s\n", err.Error())
 		return err
+	}
+
+	for ns := range node.InitNodes {
+		g = Group{
+			GName:    GetNsOpGName(ns),
+			Managers: config.C.CommonConf.Admins,
+			Members:  []string{},
+			Items:    p.AdminGroupItems(ns),
+		}
+		if err := p.createGroupIfNotExist(g); err != nil {
+			fmt.Printf("init group in ns:%s error: %v\n", ns, err)
+			continue
+		}
 	}
 
 	return nil
