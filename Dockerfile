@@ -14,7 +14,8 @@ RUN apk add -U git
 COPY --from=build /registry /registry
 COPY --from=build /registry.conf /etc/registry.conf
 
-VOLUME /go
+VOLUME /var/log/registry
+VOLUME /var/opt/registry
 
 EXPOSE 8000
 
