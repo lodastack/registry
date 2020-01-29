@@ -1,23 +1,19 @@
-FROM golang:alpine AS build
+FROM golang:1.14 AS build
 
-RUN apk add --no-cache -U make git
+COPY . /src/project
+WORKDIR /src/project
 
 RUN export CGO_ENABLED=0 &&\
+    export GOPROXY=https://goproxy.io &&\
     make &&\
-    cp cmd/registry/registry /
-RUN cp etc/registry.sample.conf /registry.conf
+    cp cmd/registry/registry /registry &&\
+    cp etc/registry.sample.conf /registry.conf
 
-FROM golang:alpine
-
-RUN apk add -U git
-
+FROM debian:10
+RUN apt-get update && apt-get install -y ca-certificates
 COPY --from=build /registry /registry
 COPY --from=build /registry.conf /etc/registry.conf
 
-VOLUME /var/log/registry
-VOLUME /var/opt/registry
-
 EXPOSE 8000
 
-ENTRYPOINT ["/registry -config /etc/registry.conf"]
-CMD []
+CMD ["/registry", "-config", "/etc/registry.conf"]

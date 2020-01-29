@@ -22,3 +22,7 @@ registry -config /etc/node0.conf
 registry -config /tmp/node1.conf -join 127.0.0.1:9000
 
 ```
+
+## Use docker image
+
+    docker run -d -p8000:8000 lodastack/registry
