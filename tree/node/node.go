@@ -63,6 +63,36 @@ var InitNodes = []nodeMeta{
 	{Name: "ui.monitor.loda", Tp: Leaf, Comment: "monitor system"},
 }
 
+type machineMeta struct {
+	NS           string
+	Type         string
+	ResourceList model.ResourceList
+}
+
+// InitMachines auto creates machines when registry init.
+var InitMachines = []machineMeta{
+	{
+		NS:   "kapacitor.alarm.monitor.loda",
+		Type: "machine",
+		ResourceList: model.ResourceList{
+			model.Resource{
+				"hostname": "kapacitor-srv",
+				"ip":       "kapacitor",
+			},
+		},
+	},
+	{
+		NS:   "common.db.monitor.loda",
+		Type: "machine",
+		ResourceList: model.ResourceList{
+			model.Resource{
+				"hostname": "influxdb-srv",
+				"ip":       "influxdb",
+			},
+		},
+	},
+}
+
 // NodeProperty is node should has.
 type NodeProperty struct {
 	ID      string `json:"id"`
