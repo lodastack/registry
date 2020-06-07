@@ -107,6 +107,15 @@ func (t *Tree) initNodeData(key string) error {
 			panic("create node " + meta.Name + " failed: " + err.Error())
 		}
 	}
+
+	if common.IsDocker() {
+		for _, meta := range node.InitMachines {
+			if err := t.SetResource(meta.NS, meta.Type, meta.ResourceList); err != nil {
+				panic("create machine in " + meta.NS + " failed: " + err.Error())
+			}
+		}
+	}
+
 	return nil
 }
 
