@@ -1,15 +1,14 @@
 package model
 
 var (
-	Machine   = "machine"
-	Collect   = "collect"
-	Alarm     = "alarm"
-	Deploy    = "deploy"
-	Namespace = "ns"
-	User      = "user"
+	Machine = "machine"
+	Collect = "collect"
+	Alarm   = "alarm"
+	Deploy  = "deploy"
+	Group   = "group"
 
 	Templates []string = []string{
-		Machine, Alarm, Collect, Deploy, Namespace, User,
+		Machine, Alarm, Collect, Deploy, Group,
 	}
 
 	PkProperty = map[string]string{
