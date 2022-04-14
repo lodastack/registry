@@ -14,6 +14,7 @@ const (
 	PoolNode = "pool"
 	// NodeDeli join node to ns.
 	// e.g The global pool node is the the leaf child of root node, its ns is pool.loda.
+	// we should not change this.
 	NodeDeli = "."
 
 	// NodeDataBucketID is the bucketID to save node data.
@@ -47,20 +48,20 @@ type nodeMeta struct {
 
 // InitNodes auto creates nodes when registry init.
 var InitNodes = []nodeMeta{
-	{Name: "pool.loda", Tp: Leaf, Comment: "pool"},
-	{Name: "monitor.loda", Tp: NonLeaf, Comment: "monitor system"},
-	{Name: "db.monitor.loda", Tp: NonLeaf, Comment: "monitor system"},
-	{Name: "common.db.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "alarm.monitor.loda", Tp: NonLeaf, Comment: "monitor system"},
-	{Name: "kapacitor.alarm.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "adapter.alarm.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "nodata.alarm.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "event.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "router.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "registry.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "mq.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "etcd.monitor.loda", Tp: Leaf, Comment: "monitor system"},
-	{Name: "ui.monitor.loda", Tp: Leaf, Comment: "monitor system"},
+	{Name: PoolNode + NodeDeli + RootNode, Tp: Leaf, Comment: "pool"},
+	{Name: "monitor" + NodeDeli + RootNode, Tp: NonLeaf, Comment: "monitor system"},
+	{Name: "db.monitor" + NodeDeli + RootNode, Tp: NonLeaf, Comment: "monitor system"},
+	{Name: "common.db.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "alarm.monitor" + NodeDeli + RootNode, Tp: NonLeaf, Comment: "monitor system"},
+	{Name: "kapacitor.alarm.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "adapter.alarm.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "nodata.alarm.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "event.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "router.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "registry.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "mq.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "etcd.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: "ui.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
 }
 
 type machineMeta struct {
@@ -72,7 +73,7 @@ type machineMeta struct {
 // InitMachines auto creates machines when registry init.
 var InitMachines = []machineMeta{
 	{
-		NS:   "kapacitor.alarm.monitor.loda",
+		NS:   "kapacitor.alarm.monitor." + RootNode,
 		Type: "machine",
 		ResourceList: model.ResourceList{
 			model.Resource{
@@ -82,7 +83,7 @@ var InitMachines = []machineMeta{
 		},
 	},
 	{
-		NS:   "common.db.monitor.loda",
+		NS:   "common.db.monitor." + RootNode,
 		Type: "machine",
 		ResourceList: model.ResourceList{
 			model.Resource{

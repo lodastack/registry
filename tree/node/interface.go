@@ -8,7 +8,7 @@ import (
 // Inf is the interface node have.
 type Inf interface {
 	// GetNodeByNS return the node by ns.
-	// e.g return root node if get ns "loda".
+	// e.g return root node if get ns $RootNode, default is "loda".
 	GetNodeByNS(ns string) (*Node, error)
 
 	// LeafChildIDs return leaf child node ID list of the ns.

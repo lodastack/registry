@@ -22,6 +22,7 @@ var (
 
 	TemplatePrefix     string = "_template_"
 	TemplateCollectNum int    = len(collectTemplate)
+	TemplateAlarmNum   int    = len(alarmTemplate)
 )
 
 var (

@@ -1,19 +1,16 @@
 all: build
 
-fmt: dep
+fmt:
 	gofmt -l -w -s */
 
-build: fmt
+build:
 	cd cmd/registry && go build -v
 
-install: fmt
+install:
 	cd cmd/registry && go install
 
 clean:
 	cd cmd/registry && go clean
-
-dep:
-	go mod download
 
 tidy:
 	go mod tidy

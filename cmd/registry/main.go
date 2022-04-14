@@ -1,4 +1,4 @@
-package main // "import github.com/lodastack/registry"
+package main
 
 import (
 	"flag"

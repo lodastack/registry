@@ -5,10 +5,9 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.17
       
     working_directory: /go/src/github.com/lodastack/registry/
     steps:
       - checkout
-      - run: sudo apt-get install -y bzr 
       - run: bash circle-test.sh

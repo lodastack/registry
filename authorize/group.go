@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lodastack/registry/common"
+	"github.com/lodastack/registry/tree/node"
 	m "github.com/lodastack/store/model"
 )
 
@@ -14,7 +15,7 @@ var (
 	// DEV group name
 	DEV = "dev"
 
-	nsSep             = "."
+	nsSep             = node.NodeDeli
 	groupNameSep byte = '-'
 )
 

@@ -24,6 +24,9 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
 	tree, err := NewTree(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var leafID, nonLeafID, childNonID, childLeafID string
 	// Test reate Leaf node and create bucket.
@@ -57,17 +60,25 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 	if err := tree.setByteToStore(childNonID, "test", []byte("test")); err != nil {
 		t.Fatalf("set k-v to childID fail: %s", err.Error())
 	}
-	poolnode, err := tree.GetNodeByNS("pool.loda")
+	expectedIDs := []string{leafID, childLeafID}
 
-	if err != nil {
-		t.Fatalf("get pool node fail: %s", err.Error())
+	// we add more leaf nodes in init process for monitor itself,
+	// see node.InitNodes struct.
+	for _, mn := range node.InitNodes {
+		if mn.Tp == node.Leaf {
+			nodeMeta, err := tree.GetNodeByNS(mn.Name)
+			if err != nil {
+				t.Fatalf("get node meta info fail: %s", err.Error())
+			}
+			expectedIDs = append(expectedIDs, nodeMeta.ID)
+		}
 	}
+
 	leafIDs, err := tree.LeafChildIDs(node.RootNode)
-	if err != nil || len(leafIDs) != 3 {
+	if err != nil || len(leafIDs) != len(expectedIDs) {
 		t.Fatalf("get leaf of root fail not match with expect:%s,%s %v", leafID, childLeafID, leafIDs)
 	}
 	sort.Strings(leafIDs)
-	expectedIDs := []string{leafID, childLeafID, poolnode.ID}
 	sort.Strings(expectedIDs)
 	for i := 0; i < len(leafIDs); i++ {
 		if leafIDs[i] != expectedIDs[i] {
@@ -97,12 +108,12 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 	}
 
 	if res, err := tree.GetResourceList(node.RootNode, template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
-		t.Fatalf("get root collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
+		t.Fatalf("get root collect_template not match with expect, len: %d != %d, err: %v\n", len(*res), model.TemplateCollectNum, err)
 	}
 	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
-	if alarms, err := tree.GetResourceList("testnl.loda", template+model.Alarm); err != nil || len(*alarms) != 1 {
+	if alarms, err := tree.GetResourceList("testnl.loda", template+model.Alarm); err != nil || len(*alarms) != model.TemplateAlarmNum {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*alarms), err)
 	} else {
 		for _, alarm := range *alarms {
@@ -115,7 +126,7 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 	if res, err := tree.GetResourceList("testl.loda", "collect"); err != nil || len(*res) != model.TemplateCollectNum {
 		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
-	if alarms, err := tree.GetResourceList("testl.loda", model.Alarm); err != nil || len(*alarms) != 1 {
+	if alarms, err := tree.GetResourceList("testl.loda", model.Alarm); err != nil || len(*alarms) != model.TemplateAlarmNum {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*alarms), err)
 	} else {
 		for _, alarm := range *alarms {

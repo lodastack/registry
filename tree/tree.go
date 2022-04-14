@@ -20,7 +20,6 @@ var (
 )
 
 const (
-	nodeBucket   = "loda"
 	reportBucket = "report"
 
 	rootNodeID = "0"
@@ -68,9 +67,9 @@ func (t *Tree) init() error {
 }
 
 func (t *Tree) initNodeBucket() error {
-	err := t.cluster.CreateBucketIfNotExist([]byte(nodeBucket))
+	err := t.cluster.CreateBucketIfNotExist([]byte(node.NodeDataBucketID))
 	if err != nil {
-		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", nodeBucket, err.Error())
+		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", node.NodeDataBucketID, err.Error())
 		return err
 	}
 	if err := t.initNodeData(node.NodeDataKey); err != nil {
@@ -94,7 +93,7 @@ func (t *Tree) initNodeData(key string) error {
 	t.logger.Info(key, "is not inited, begin to init")
 
 	// Create rootNode map/bucket and init template.
-	if _, err := t.NewNode("", "", "", node.Root); err != nil {
+	if _, err := t.NewNode(node.RootNode, "", "-", node.Root); err != nil {
 		panic("create root node fail: " + err.Error())
 	}
 
