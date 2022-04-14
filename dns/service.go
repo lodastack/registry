@@ -12,6 +12,7 @@ import (
 	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/tree"
+	"github.com/lodastack/registry/tree/node"
 
 	dnslib "github.com/miekg/dns"
 )
@@ -131,7 +132,7 @@ func (s *Service) Start() error {
 		return nil
 	}
 	// attach request handler func
-	dnslib.HandleFunc("loda.", s.handleDNSRequest)
+	dnslib.HandleFunc(node.RootNode+node.NodeDeli, s.handleDNSRequest)
 
 	// start server
 	s.logger.Infof("Starting DNS module at %d", s.port)

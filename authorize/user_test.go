@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/lodastack/registry/tree/node"
 )
 
 func TestSetUser(t *testing.T) {
@@ -21,13 +23,13 @@ func TestSetUser(t *testing.T) {
 	}
 
 	// new User
-	err = perm.SetUser("loda-manager", "", "enable")
+	err = perm.SetUser("loda-manager", "", "enable", "")
 	if err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	// get User
 	user, err := perm.GetUser("loda-manager")
-	if err != nil || len(user.Groups) != 1 || user.Groups[0] != "loda-defaultgroup" || user.Alert != "enable" {
+	if err != nil || len(user.Groups) != 1 || user.Groups[0] != node.RootNode+"-defaultgroup" || user.Alert != "enable" {
 		t.Fatal("GetUser fail:", err.Error())
 	}
 
@@ -37,8 +39,8 @@ func TestGetUserList(t *testing.T) {
 	perm, s := openPerm(*t)
 	defer closePerm(s)
 
-	err1 := perm.SetUser("user1", "user1 mobile", "enable")
-	err2 := perm.SetUser("user2", "user2 mobile", "enable")
+	err1 := perm.SetUser("user1", "user1 mobile", "enable", "")
+	err2 := perm.SetUser("user2", "user2 mobile", "enable", "")
 	if err1 != nil || err2 != nil {
 		t.Fatal("SetUser fail:", err1, err2)
 	}

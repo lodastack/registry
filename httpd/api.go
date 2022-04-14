@@ -843,7 +843,7 @@ func (s *Service) handleCollectDel(w http.ResponseWriter, r *http.Request, _ htt
 	// search collect resource and get the ID.
 	for _, resName := range resNames {
 		if strings.HasPrefix(resName, model.RunPrefix) {
-			resName = strings.TrimLeft(resName, model.RunPrefix+".")
+			resName = strings.TrimLeft(resName, model.RunPrefix+model.MeasurementDeli)
 		}
 		search, _ := model.NewSearch(false, model.PkProperty[model.Collect], resName)
 		res, err := s.tree.SearchResource(ns, model.Collect, search)
@@ -936,22 +936,22 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			_gNs, gName := s.perm.ReadGName(gName)
 			switch gName {
 			case authorize.AdminGName:
-				if _gNs == "loda" {
+				if _gNs == node.RootNode {
 					nodeHasPermission = nodes
 					break
 				}
 			case authorize.DefaultGName:
 				continue
 			default:
-				_gNsSplit := strings.Split(_gNs, ".")
+				_gNsSplit := strings.Split(_gNs, node.NodeDeli)
 				_gNsLength, lenNsRoot := len(_gNsSplit), 1
-				if _gNsLength == 1 && _gNsSplit[_gNsLength-1] == "loda" {
+				if _gNsLength == 1 && _gNsSplit[_gNsLength-1] == node.RootNode {
 					nodeHasPermission = nodes
 					break
 				}
 				nodePointer := nodeHasPermission
 				for i := 1 + lenNsRoot; i <= _gNsLength; i++ {
-					nsToCheck := strings.Join(_gNsSplit[_gNsLength-i:_gNsLength], ".")
+					nsToCheck := strings.Join(_gNsSplit[_gNsLength-i:_gNsLength], node.NodeDeli)
 					nodeOnTree, err := nodes.GetByNS(nsToCheck)
 					if err != nil {
 						break
@@ -988,10 +988,10 @@ func (s *Service) handlerNsGet(w http.ResponseWriter, r *http.Request, _ httprou
 			ReturnServerError(w, err)
 			return
 		}
-		if nsSplit := strings.Split(ns, "."); len(nsSplit) > 1 {
-			nsSurfix := strings.Join(nsSplit[1:], ".")
+		if nsSplit := strings.Split(ns, node.NodeDeli); len(nsSplit) > 1 {
+			nsSurfix := strings.Join(nsSplit[1:], node.NodeDeli)
 			for i := range list {
-				list[i] = list[i] + "." + nsSurfix
+				list[i] = list[i] + node.NodeDeli + nsSurfix
 			}
 		}
 		ReturnJson(w, 200, list)
@@ -1019,7 +1019,7 @@ func (s *Service) handlerNsNew(w http.ResponseWriter, r *http.Request, _ httprou
 
 	var ns, gOpName, gDevName string
 	var ops, devs []string
-	ns = name + "." + parentNs
+	ns = name + node.NodeDeli + parentNs
 	if len(ns) > 64-len("collect.") {
 		ReturnBadRequest(w, errors.New("The ns name is to long, please check and re-operate."))
 		return

@@ -101,8 +101,7 @@ type tokenResp struct {
 }
 
 func token(cid string, csec string, refresh bool) error {
-	var diff int64
-	diff = 7000
+	var diff int64 = 7000
 	now := time.Now().Unix()
 	if now-WCTOKEN_CREATETIME < diff && WCTOKEN != "" && !refresh {
 		return nil
@@ -116,7 +115,7 @@ func token(cid string, csec string, refresh bool) error {
 
 	WCTOKEN_CREATETIME = time.Now().Unix()
 	if res.StatusCode != 200 {
-		return fmt.Errorf("remote server not 200", res.StatusCode)
+		return fmt.Errorf("remote server not 200: %d", res.StatusCode)
 	}
 	var response tokenResp
 	decoder := json.NewDecoder(res.Body)
@@ -127,7 +126,7 @@ func token(cid string, csec string, refresh bool) error {
 		WCTOKEN = response.Token
 		return nil
 	} else {
-		return fmt.Errorf("empty token", response.Token)
+		return fmt.Errorf("empty token: %s", response.Token)
 	}
 }
 
@@ -137,7 +136,7 @@ func (s *Service) HandlerWeworkSignin(w http.ResponseWriter, r *http.Request, _ 
 	code := r.FormValue("code")
 	// state := r.FormValue("state")
 	if code == "" {
-		http.Redirect(w, r, "/", 302)
+		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
 
@@ -172,7 +171,7 @@ func (s *Service) HandlerWeworkSignin(w http.ResponseWriter, r *http.Request, _ 
 	}
 
 	if wwr.ErrCode != 0 {
-		ReturnServerError(w, fmt.Errorf("error code not 0, got "+string(wwr.ErrCode)))
+		ReturnServerError(w, fmt.Errorf("error code not 0, got %d", wwr.ErrCode))
 		return
 	}
 
@@ -183,7 +182,7 @@ func (s *Service) HandlerWeworkSignin(w http.ResponseWriter, r *http.Request, _ 
 	}
 
 	ur := fmt.Sprintf(config.C.WeworkConf.Redirect, key, wwr.UserID)
-	http.Redirect(w, r, ur, 302)
+	http.Redirect(w, r, ur, http.StatusFound)
 }
 
 //SignoutHandler handler signout request

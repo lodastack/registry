@@ -3,10 +3,10 @@ package authorize
 import (
 	"sync"
 
+	"github.com/lodastack/registry/tree/node"
+
 	m "github.com/lodastack/store/model"
 )
-
-var rootNode = "loda"
 
 // GroupInf is interface to manager group.
 type GroupInf interface {
@@ -105,5 +105,5 @@ func NewPerm(cluster Cluster) (Perm, error) {
 		cluster,
 	}
 	// TODO: get rootNode by param.
-	return &p, p.InitGroup(rootNode)
+	return &p, p.InitGroup(node.RootNode)
 }

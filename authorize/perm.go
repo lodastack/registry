@@ -18,15 +18,15 @@ var (
 	AuthBuck = "authorize"
 
 	// DefaultUser is a user. no use
-	DefaultUser = "loda-defaultuser"
+	DefaultUser = node.RootNode + "-defaultuser"
 
 	// DefaultGName is the group name has all read permission of all node..
 	DefaultGName = "defaultgroup"
 
 	// AdminGName is the group name has all permission of all node.
 	AdminGName       = "admingroup"
-	lodaDefaultGName = "loda-" + DefaultGName
-	lodaAdminGName   = "loda-" + AdminGName
+	lodaDefaultGName = node.RootNode + "-" + DefaultGName
+	lodaAdminGName   = node.RootNode + "-" + AdminGName
 )
 
 type perm struct {
@@ -121,8 +121,8 @@ func (p *perm) checkDefaultGroup() error {
 		GName:    lodaDefaultGName,
 		Managers: config.C.CommonConf.Admins,
 		Members:  config.C.CommonConf.Admins,
-		Items:    p.DefaultGroupItems(rootNode)}
-	g.Items = append(g.Items, fmt.Sprintf("%s-%s-%s", rootNode, "user", "PUT"))
+		Items:    p.DefaultGroupItems(node.RootNode)}
+	g.Items = append(g.Items, fmt.Sprintf("%s-%s-%s", node.RootNode, "user", "PUT"))
 	if err := p.createGroupIfNotExist(g); err != nil {
 		fmt.Printf("init default group error: %s\n", err.Error())
 		return err
@@ -132,7 +132,7 @@ func (p *perm) checkDefaultGroup() error {
 		GName:    lodaAdminGName,
 		Managers: config.C.CommonConf.Admins,
 		Members:  config.C.CommonConf.Admins,
-		Items:    p.AdminGroupItems(rootNode)}
+		Items:    p.AdminGroupItems(node.RootNode)}
 	if err := p.createGroupIfNotExist(g); err != nil {
 		fmt.Printf("init admin group error: %s\n", err.Error())
 		return err

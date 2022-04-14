@@ -27,13 +27,13 @@ func TestUpdateGroupMember(t *testing.T) {
 		t.Fatal("NewPerm fail:", err.Error())
 	}
 
-	if err = perm.SetUser("user1", "", "enable"); err != nil {
+	if err = perm.SetUser("user1", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if _, err = perm.GetUser("user1"); err != nil {
 		t.Fatal("GetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user2", "", "enable"); err != nil {
+	if err = perm.SetUser("user2", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if _, err = perm.GetUser("user2"); err != nil {
@@ -110,13 +110,13 @@ func TestRemoveUser(t *testing.T) {
 	}
 
 	// case 1
-	if err = perm.SetUser("user1", "", "enable"); err != nil {
+	if err = perm.SetUser("user1", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user2", "", "enable"); err != nil {
+	if err = perm.SetUser("user2", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user3", "", "enable"); err != nil {
+	if err = perm.SetUser("user3", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{""}); err != nil {
@@ -182,13 +182,13 @@ func TestRemoveGroup(t *testing.T) {
 		t.Fatal("NewPerm fail:", err.Error())
 	}
 
-	if err = perm.SetUser("user1", "", "enable"); err != nil {
+	if err = perm.SetUser("user1", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user2", "", "enable"); err != nil {
+	if err = perm.SetUser("user2", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
-	if err = perm.SetUser("user3", "", "enable"); err != nil {
+	if err = perm.SetUser("user3", "", "enable", ""); err != nil {
 		t.Fatal("SetUser fail:", err.Error())
 	}
 	if err = perm.CreateGroup("group1", []string{}, []string{}, []string{}); err != nil {

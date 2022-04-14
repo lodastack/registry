@@ -21,6 +21,8 @@ var (
 	RunType   = []string{ApiCollect}
 )
 
+const MeasurementDeli = "."
+
 // GetNameFromMeasurements get the resource names of the measurements.
 // PROC.bin.cpu.idle -> PROC.bin
 // PLUGIN.name.cpu.idle -> PLUGIN.name
@@ -30,7 +32,7 @@ func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 	resNames := make([]string, len(measurements))
 	cnt := 0
 	for _, measurement := range measurements {
-		nameSplit := strings.Split(measurement, ".")
+		nameSplit := strings.Split(measurement, MeasurementDeli)
 		if len(nameSplit) < 2 {
 			continue
 		}
@@ -39,7 +41,7 @@ func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 			fallthrough
 		case PluginCollect:
 			if len(nameSplit) > 2 {
-				resNames[cnt] = strings.Join(nameSplit[:2], ".")
+				resNames[cnt] = strings.Join(nameSplit[:2], MeasurementDeli)
 			} else if len(nameSplit) == 2 {
 				resNames[cnt] = measurement
 			}
@@ -61,10 +63,10 @@ func GetResNameFromMeasurements(measurements []string) ([]string, bool) {
 
 func GenCollectName(res Resource) string {
 	if res["measurement_type"] == PortCollect {
-		return res["measurement_type"] + "." + res["name"] + "." + res["port"]
+		return res["measurement_type"] + MeasurementDeli + res["name"] + MeasurementDeli + res["port"]
 	}
 
-	return res["measurement_type"] + "." + res["name"]
+	return res["measurement_type"] + MeasurementDeli + res["name"]
 }
 
 // collectTypeIllegle return true if collect type is illegal.
@@ -98,9 +100,9 @@ func UpdateCollectName(collects ...Resource) error {
 		}
 
 		// proc monitor: /sbin/python2.7, the collect name will be pythone2.7
-		// we replace "." with "-".
+		// we replace MeasurementDeli with "-".
 		if collectType == ProcCollect {
-			collects[index]["name"] = strings.Replace(collects[index]["name"], ".", "-", -1)
+			collects[index]["name"] = strings.Replace(collects[index]["name"], MeasurementDeli, "-", -1)
 		}
 
 		for _, nameLetter := range collects[index]["name"] {
@@ -123,7 +125,7 @@ func getAlarmOfCollect(ns, collectType, collectName, groups string) ([]AlarmReso
 	var err error
 	switch collectType {
 	case PluginCollect:
-		projectName := strings.Split(collectName, ".")[1]
+		projectName := strings.Split(collectName, MeasurementDeli)[1]
 		content, err := gitlab.GetFileContent(projectName)
 		if err != nil {
 			log.Warningf("read plugin %s alarm file error: %s", projectName, err.Error())
