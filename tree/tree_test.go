@@ -187,7 +187,7 @@ func TestInitPoolNode(t *testing.T) {
 	}
 
 	// Test root pool node.
-	if node, err := tree.GetNodeByNS(node.PoolNode + node.NodeDeli + node.RootNode); err != nil || node.MachineReg != "^$" {
+	if node, err := tree.GetNodeByNS(node.JoinWithRoot([]string{node.PoolNode})); err != nil || node.MachineReg != "^$" {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 }

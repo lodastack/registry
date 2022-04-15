@@ -74,7 +74,7 @@ func TestMatchNs(t *testing.T) {
 	}
 
 	// case 4: hostname not machine any ns, so get ns pool.
-	if nsList, err := tree.machine.MatchNs("0-5-host"); err != nil || len(nsList) != 1 || nsList[0] != node.PoolNode+node.NodeDeli+node.RootNode {
+	if nsList, err := tree.machine.MatchNs("0-5-host"); err != nil || len(nsList) != 1 || nsList[0] != node.JoinWithRoot([]string{node.PoolNode}) {
 		t.Fatalf("match ns 0-5-host match with expect, error, %v, result %+v ", err, nsList)
 	}
 }
@@ -261,7 +261,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("register machine case 1 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != "test1"+node.NodeDeli+node.RootNode {
+		if regNs != node.JoinWithRoot([]string{"test1"}) {
 			t.Fatal("resgier ns not match with expect")
 		}
 		searchIP := model.ResourceSearch{
@@ -285,7 +285,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("register machine case 2 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != "test2"+node.NodeDeli+node.RootNode {
+		if regNs != node.JoinWithRoot([]string{"test2"}) {
 			t.Fatal("resgier ns not match with expect")
 		}
 		searchIP := model.ResourceSearch{
@@ -309,7 +309,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("regist machine case 3 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != "test3"+node.NodeDeli+node.RootNode && regNs != "test4"+node.NodeDeli+node.RootNode {
+		if regNs != node.JoinWithRoot([]string{"test3"}) && regNs != node.JoinWithRoot([]string{"test4"}) {
 			t.Fatal("resgier ns not match with expect:", regNs)
 		}
 		searchIP := model.ResourceSearch{
@@ -333,7 +333,7 @@ func TestRegisterMachine(t *testing.T) {
 		t.Fatalf("regist machine case 4 not match with expect, regMap: %+v, error: %v", regMap, err)
 	}
 	for regNs, resID := range regMap {
-		if regNs != node.PoolNode+node.NodeDeli+node.RootNode {
+		if regNs != node.JoinWithRoot([]string{node.PoolNode}) {
 			t.Fatal("resgier ns not match with expect")
 		}
 		searchIP := model.ResourceSearch{

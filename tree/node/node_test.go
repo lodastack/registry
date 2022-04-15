@@ -345,3 +345,70 @@ func BenchmarkCopyByNode(b *testing.B) {
 		}
 	}
 }
+
+func TestJoinWithRoot(t *testing.T) {
+	cases := []struct {
+		elements []string
+		expected string
+	}{
+		{[]string{""}, RootNode},
+		{[]string{}, RootNode},
+		{[]string{"bar"}, "bar." + RootNode},
+		{[]string{"bar.foo"}, "bar.foo." + RootNode},
+		{[]string{"bar", "foo"}, "bar.foo." + RootNode},
+		{[]string{"bar.x", "foo"}, "bar.x.foo." + RootNode},
+		{[]string{"bar", "foo", "xxx"}, "bar.foo.xxx." + RootNode},
+	}
+	for _, c := range cases {
+		res := JoinWithRoot(c.elements)
+		if res != c.expected {
+			t.Fatalf("unexpected: %s, should be %s", res, c.expected)
+		}
+	}
+}
+
+func TestJoin(t *testing.T) {
+	cases := []struct {
+		elements []string
+		expected string
+	}{
+		{[]string{""}, ""},
+		{[]string{}, ""},
+		{[]string{"bar"}, "bar"},
+		{[]string{"bar.foo"}, "bar.foo"},
+		{[]string{"bar", "foo"}, "bar.foo"},
+		{[]string{"bar", "foo.x"}, "bar.foo.x"},
+		{[]string{"bar.x", "foo"}, "bar.x.foo"},
+		{[]string{"bar", "foo", "xxx"}, "bar.foo.xxx"},
+	}
+	for _, c := range cases {
+		res := Join(c.elements)
+		if res != c.expected {
+			t.Fatalf("unexpected: %s, should be %s", res, c.expected)
+		}
+	}
+}
+
+func TestSplit(t *testing.T) {
+	cases := []struct {
+		expected []string
+		ns       string
+	}{
+		{[]string{""}, ""},
+		{[]string{"bar"}, "bar"},
+		{[]string{"bar", "foo"}, "bar.foo"},
+		{[]string{"bar", "foo", "xxx"}, "bar.foo.xxx"},
+	}
+	for _, c := range cases {
+		res := Split(c.ns)
+		if len(res) != len(c.expected) {
+			t.Fatalf("unexpected len: %d, should be %d", len(res), len(c.expected))
+		}
+
+		for i := range res {
+			if res[i] != c.expected[i] {
+				t.Fatalf("unexpected: %s, should be %s", res[i], c.expected[i])
+			}
+		}
+	}
+}

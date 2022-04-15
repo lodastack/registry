@@ -136,7 +136,7 @@ func (m *machine) MatchNs(hostname string) ([]string, error) {
 		nsList = append(nsList, ns)
 	}
 	if len(nsList) == 0 {
-		nsList = append(nsList, node.PoolNode+node.NodeDeli+node.RootNode)
+		nsList = append(nsList, node.JoinWithRoot([]string{node.PoolNode}))
 	}
 	return nsList, nil
 }

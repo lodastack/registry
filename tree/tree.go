@@ -207,8 +207,8 @@ func (t *Tree) UpdateNode(ns, name, comment, machineMatchStrategy string) error 
 	}
 
 	// check the new ns exist or not if update the node name.
-	if oldNsSplit := strings.Split(ns, node.NodeDeli); name != oldNsSplit[0] {
-		newNs := strings.Join(append([]string{name}, oldNsSplit[1:]...), node.NodeDeli)
+	if oldNsSplit := node.Split(ns); name != oldNsSplit[0] {
+		newNs := node.Join(append([]string{name}, oldNsSplit[1:]...))
 		if exist := allNodes.Exist(newNs); exist {
 			return common.ErrNodeAlreadyExist
 		}
@@ -230,11 +230,11 @@ func (t *Tree) UpdateNode(ns, name, comment, machineMatchStrategy string) error 
 }
 
 func getParentNS(ns string) (string, error) {
-	nsSplit := strings.Split(ns, node.NodeDeli)
+	nsSplit := node.Split(ns)
 	if len(nsSplit) < 2 {
 		return "", common.ErrInvalidParam
 	}
-	return strings.Join(nsSplit[1:], node.NodeDeli), nil
+	return node.Join(nsSplit[1:]), nil
 }
 
 func (t *Tree) allowRemoveNS(ns string) error {
@@ -380,7 +380,7 @@ func (t *Tree) addNewNodeToTree(newNode node.Node, parentNs string, nodeType int
 		return "", common.ErrGetParent
 	}
 
-	newNS := newNode.Name + node.NodeDeli + parentNs
+	newNS := node.Join([]string{newNode.Name, parentNs})
 	if exist := nodes.Exist(newNS); exist {
 		return "", common.ErrNodeAlreadyExist
 	}
@@ -430,7 +430,7 @@ func (t *Tree) initResourceOrTemplate(newNode node.Node, nodeType int, parentNs,
 				return err
 			}
 			for index := range *rl {
-				if (*rl)[index], err = GenAlarmFromTemplate(newNode.Name+node.NodeDeli+parentNs, (*rl)[index], ""); err != nil {
+				if (*rl)[index], err = GenAlarmFromTemplate(node.Join([]string{newNode.Name, parentNs}), (*rl)[index], ""); err != nil {
 					t.logger.Errorf("make alarm template fail, parent ns: %s, error: %s",
 						parentNs, err.Error())
 					return err

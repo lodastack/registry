@@ -132,7 +132,7 @@ func (s *Service) Start() error {
 		return nil
 	}
 	// attach request handler func
-	dnslib.HandleFunc(node.RootNode+node.NodeDeli, s.handleDNSRequest)
+	dnslib.HandleFunc(node.RootNode+".", s.handleDNSRequest)
 
 	// start server
 	s.logger.Infof("Starting DNS module at %d", s.port)
