@@ -15,7 +15,6 @@ var (
 	// DEV group name
 	DEV = "dev"
 
-	nsSep             = node.NodeDeli
 	groupNameSep byte = '-'
 )
 
@@ -40,8 +39,8 @@ func GetGNameByNs(ns, name string) string {
 }
 
 func reverceNs(ns string) string {
-	nsSplit := strings.Split(ns, nsSep)
-	return strings.Join(common.Reverse(nsSplit), nsSep)
+	nsSplit := node.Split(ns)
+	return node.Join(common.Reverse(nsSplit))
 }
 
 func joinGroupName(ns, name string) string {

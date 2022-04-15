@@ -48,20 +48,20 @@ type nodeMeta struct {
 
 // InitNodes auto creates nodes when registry init.
 var InitNodes = []nodeMeta{
-	{Name: PoolNode + NodeDeli + RootNode, Tp: Leaf, Comment: "pool"},
-	{Name: "monitor" + NodeDeli + RootNode, Tp: NonLeaf, Comment: "monitor system"},
-	{Name: "db.monitor" + NodeDeli + RootNode, Tp: NonLeaf, Comment: "monitor system"},
-	{Name: "common.db.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "alarm.monitor" + NodeDeli + RootNode, Tp: NonLeaf, Comment: "monitor system"},
-	{Name: "kapacitor.alarm.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "adapter.alarm.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "nodata.alarm.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "event.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "router.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "registry.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "mq.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "etcd.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
-	{Name: "ui.monitor" + NodeDeli + RootNode, Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{PoolNode}), Tp: Leaf, Comment: "pool"},
+	{Name: JoinWithRoot([]string{"monitor"}), Tp: NonLeaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"db.monitor"}), Tp: NonLeaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"common.db.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"alarm.monitor"}), Tp: NonLeaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"kapacitor.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"adapter.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"nodata.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"event.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"router.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"registry.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"mq.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"etcd.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	{Name: JoinWithRoot([]string{"ui.monitor"}), Tp: Leaf, Comment: "monitor system"},
 }
 
 type machineMeta struct {
@@ -246,7 +246,7 @@ func (n *Node) LeafNs() ([]string, error) {
 			result[node.Name] = ""
 		} else {
 			for chindNs := range childReturn {
-				result[chindNs+NodeDeli+node.Name] = ""
+				result[Join([]string{chindNs, node.Name})] = ""
 			}
 		}
 		return result, nil
@@ -286,7 +286,7 @@ func (n *Node) LeafMachineReg() (map[string]string, error) {
 			result[node.Name] = node.MachineReg
 		} else {
 			for relativeNs, reg := range childReturn {
-				result[relativeNs+NodeDeli+node.Name] = reg
+				result[Join([]string{relativeNs, node.Name})] = reg
 			}
 		}
 		return result, nil
@@ -300,7 +300,7 @@ func (n *Node) GetByID(nodeID string) (*Node, string, error) {
 	}
 	for index := range n.Children {
 		if detNode, ns, err := n.Children[index].GetByID(nodeID); err == nil {
-			return detNode, ns + NodeDeli + n.Name, nil
+			return detNode, Join([]string{ns, n.Name}), nil
 		}
 	}
 	return nil, "", common.ErrNodeNotFound
@@ -308,7 +308,7 @@ func (n *Node) GetByID(nodeID string) (*Node, string, error) {
 
 // GetByNS return exact node by nodename.
 func (n *Node) GetByNS(ns string) (*Node, error) {
-	nsSplit := strings.Split(ns, NodeDeli)
+	nsSplit := Split(ns)
 	if len(nsSplit) == 1 && ns == RootNode {
 		// return tree if get root.
 		return n, nil
@@ -369,4 +369,30 @@ func (n *Node) getChildMap() (map[string]string, error) {
 		return nil, err
 	}
 	return leafCache, nil
+}
+
+// Join concatenates the elements of its first argument to create a single string.
+// The separator string sep is NodeDeli.
+func Join(elems []string) string {
+	if len(elems) == 1 && strings.TrimSpace(elems[0]) == "" {
+		return ""
+	}
+	return strings.Join(elems, NodeDeli)
+}
+
+// Join joins ns elements with NodeDeli and root node.
+func JoinWithRoot(elems []string) string {
+	if len(elems) == 0 {
+		return RootNode
+	}
+	if len(elems) == 1 && strings.TrimSpace(elems[0]) == "" {
+		return RootNode
+	}
+	elems = append(elems, RootNode)
+	return Join(elems)
+}
+
+//Split slices ns into all substrings separated by NodeDeli
+func Split(ns string) []string {
+	return strings.Split(ns, NodeDeli)
 }
