@@ -52,6 +52,7 @@ type EventConfig struct {
 
 type CommonConfig struct {
 	Admins          []string `toml:"admins"`
+	RootName        string   `toml:"root"`
 	RouterAddr      string   `toml:"routeraddr"`
 	PersistReport   int      `toml:"persistreport"`
 	PID             string   `toml:"pid"`

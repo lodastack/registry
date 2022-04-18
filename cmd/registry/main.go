@@ -143,7 +143,7 @@ func (m *Main) Start() error {
 	}
 
 	// Create and configure HTTP service.
-	h, err := httpd.New(config.C.HTTPConf, cs)
+	h, err := httpd.New(config.C.CommonConf.RootName, config.C.HTTPConf, cs)
 	if err != nil {
 		return fmt.Errorf("failed to new HTTP service: %v", err)
 	}
@@ -152,7 +152,7 @@ func (m *Main) Start() error {
 	}
 
 	// DNS service
-	dns, err := dns.New(config.C.DNSConf, cs)
+	dns, err := dns.New(config.C.CommonConf.RootName, config.C.DNSConf, cs)
 	if err := dns.Start(); err != nil {
 		return fmt.Errorf("failed to start DNS service: %v", err)
 	}

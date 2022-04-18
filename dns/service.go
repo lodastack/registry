@@ -12,7 +12,6 @@ import (
 	"github.com/lodastack/registry/httpd"
 	"github.com/lodastack/registry/model"
 	"github.com/lodastack/registry/tree"
-	"github.com/lodastack/registry/tree/node"
 
 	dnslib "github.com/miekg/dns"
 )
@@ -94,6 +93,7 @@ func (s *Service) handleDNSRequest(w dnslib.ResponseWriter, r *dnslib.Msg) {
 // Service provides DNS service.
 type Service struct {
 	enable bool
+	root   string
 	port   int
 	conf   config.DNSConfig
 	server *dnslib.Server
@@ -107,14 +107,15 @@ type Service struct {
 }
 
 // New DNS service
-func New(c config.DNSConfig, cluster httpd.Cluster) (*Service, error) {
-	tree, err := tree.NewTree(cluster)
+func New(rootName string, c config.DNSConfig, cluster httpd.Cluster) (*Service, error) {
+	tree, err := tree.NewTree(rootName, cluster)
 	if err != nil {
 		log.Errorf("init tree fail: %s", err.Error())
 		return nil, err
 	}
 	return &Service{
 		enable: c.Enable,
+		root:   rootName,
 		port:   c.Port,
 		conf:   c,
 		server: &dnslib.Server{Addr: ":" + strconv.Itoa(c.Port), Net: "udp"},
@@ -132,7 +133,7 @@ func (s *Service) Start() error {
 		return nil
 	}
 	// attach request handler func
-	dnslib.HandleFunc(node.RootNode+".", s.handleDNSRequest)
+	dnslib.HandleFunc(s.root+".", s.handleDNSRequest)
 
 	// start server
 	s.logger.Infof("Starting DNS module at %d", s.port)

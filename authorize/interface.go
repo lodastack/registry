@@ -94,6 +94,7 @@ type Cluster interface {
 }
 
 // NewPerm return interface Perm to manager authorize.
+// Perm init after tree init, the root name is choosen already, so it's safe.
 func NewPerm(cluster Cluster) (Perm, error) {
 	if err := cluster.CreateBucketIfNotExist([]byte(AuthBuck)); err != nil {
 		return nil, err

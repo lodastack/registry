@@ -23,7 +23,7 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestCreateNodeAndLeafCache(t *testing.T) {
 
 	// we add more leaf nodes in init process for monitor itself,
 	// see node.InitNodes struct.
-	for _, mn := range node.InitNodes {
+	for _, mn := range node.InitNodes() {
 		if mn.Tp == node.Leaf {
 			nodeMeta, err := tree.GetNodeByNS(mn.Name)
 			if err != nil {
@@ -95,7 +95,7 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatalf("NewTree fail: %s\n", err.Error())
 	}
@@ -110,10 +110,10 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 	if res, err := tree.GetResourceList(node.RootNode, template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
 		t.Fatalf("get root collect_template not match with expect, len: %d != %d, err: %v\n", len(*res), model.TemplateCollectNum, err)
 	}
-	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
+	if res, err := tree.GetResourceList("testnl."+node.RootNode, template+"collect"); err != nil || len(*res) != model.TemplateCollectNum {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
-	if alarms, err := tree.GetResourceList("testnl.loda", template+model.Alarm); err != nil || len(*alarms) != model.TemplateAlarmNum {
+	if alarms, err := tree.GetResourceList("testnl."+node.RootNode, template+model.Alarm); err != nil || len(*alarms) != model.TemplateAlarmNum {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*alarms), err)
 	} else {
 		for _, alarm := range *alarms {
@@ -123,14 +123,14 @@ func TestCopyTemplateDuringCreateNode(t *testing.T) {
 		}
 	}
 
-	if res, err := tree.GetResourceList("testl.loda", "collect"); err != nil || len(*res) != model.TemplateCollectNum {
+	if res, err := tree.GetResourceList("testl."+node.RootNode, "collect"); err != nil || len(*res) != model.TemplateCollectNum {
 		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
-	if alarms, err := tree.GetResourceList("testl.loda", model.Alarm); err != nil || len(*alarms) != model.TemplateAlarmNum {
+	if alarms, err := tree.GetResourceList("testl."+node.RootNode, model.Alarm); err != nil || len(*alarms) != model.TemplateAlarmNum {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*alarms), err)
 	} else {
 		for _, alarm := range *alarms {
-			if alarm["db"] != models.DBPrefix+"testl.loda" {
+			if alarm["db"] != models.DBPrefix+"testl."+node.RootNode {
 				t.Fatalf("get nonLeafNode alarm_template not match with expect, db: %s \n", alarm["db"])
 			}
 			if alarm["groups"] != "loda.testl-op" {
@@ -148,7 +148,7 @@ func TestUpdateTemplate(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatalf("NewTree fail: %s\n", err.Error())
 	}
@@ -165,10 +165,10 @@ func TestUpdateTemplate(t *testing.T) {
 	if _, err = tree.NewNode("testnl", "comment1", node.RootNode, node.NonLeaf); err != nil {
 		t.Fatalf("create nonleaf behind root fail: %s", err.Error())
 	}
-	if res, err := tree.GetResourceList("testnl.loda", template+"collect"); err != nil || len(*res) != 2 {
+	if res, err := tree.GetResourceList("testnl."+node.RootNode, template+"collect"); err != nil || len(*res) != 2 {
 		t.Fatalf("get nonLeafNode collect_template not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
-	if res, err := tree.GetResourceList("testl.loda", "collect"); err != nil || len(*res) != 2 {
+	if res, err := tree.GetResourceList("testl."+node.RootNode, "collect"); err != nil || len(*res) != 2 {
 		t.Fatalf("get LeafNode collect not match with expect, len: %d, err: %v\n", len(*res), err)
 	}
 }
@@ -181,7 +181,7 @@ func TestInitPoolNode(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal("newtree fail")
 	}
@@ -189,6 +189,40 @@ func TestInitPoolNode(t *testing.T) {
 	// Test root pool node.
 	if node, err := tree.GetNodeByNS(node.JoinWithRoot([]string{node.PoolNode})); err != nil || node.MachineReg != "^$" {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
+	}
+}
+
+func TestInitNewRootNode(t *testing.T) {
+	s := test_sample.MustNewStore(t)
+	defer os.RemoveAll(s.Path())
+	if err := s.Open(true); err != nil {
+		t.Fatalf("failed to open single-node store: %s", err.Error())
+	}
+	defer s.Close(true)
+	s.WaitForLeader(10 * time.Second)
+	tree, err := NewTree("newroot", s)
+	if err != nil {
+		t.Fatal("newtree fail")
+	}
+
+	// Test root node.
+	n, err := tree.GetNodeByNS("newroot")
+	if err != nil || n.MachineReg != "^$" {
+		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", n, err)
+	}
+
+	if n.Name != "newroot" {
+		t.Fatalf("unexpect root name: %s", n.Name)
+	}
+
+	// Test root pool node.
+	n, err = tree.GetNodeByNS("pool.newroot")
+	if err != nil || n.MachineReg != "^$" {
+		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", n, err)
+	}
+
+	if n.Name != "pool" {
+		t.Fatalf("unexpect root name: %s", n.Name)
 	}
 }
 
@@ -201,7 +235,7 @@ func TestTreeGetLeaf(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
@@ -233,7 +267,7 @@ func TestTreeUpdateNode(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
@@ -243,34 +277,34 @@ func TestTreeUpdateNode(t *testing.T) {
 	}
 
 	// case 1 : update leaf node name and machineReg.
-	if err := tree.UpdateNode("0-4.loda", "0-5", "comment", "test update"); err != nil {
+	if err := tree.UpdateNode("0-4."+node.RootNode, "0-5", "comment", "test update"); err != nil {
 		t.Fatalf("tree UpdateNode error: %s", err.Error())
 	}
-	if node, err := tree.GetNodeByNS("0-5.loda"); err != nil || node.MachineReg != "test update" {
+	if node, err := tree.GetNodeByNS("0-5." + node.RootNode); err != nil || node.MachineReg != "test update" {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 
 	// case 2 : update leaf machineReg.
-	if err := tree.UpdateNode("0-5.loda", "0-5", "comment", "test update-2"); err != nil {
+	if err := tree.UpdateNode("0-5."+node.RootNode, "0-5", "comment", "test update-2"); err != nil {
 		t.Fatalf("tree UpdateNode error: %s", err.Error())
 	}
-	if node, err := tree.GetNodeByNS("0-5.loda"); err != nil || node.MachineReg != "test update-2" {
+	if node, err := tree.GetNodeByNS("0-5." + node.RootNode); err != nil || node.MachineReg != "test update-2" {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 
 	// case 3: update nonleaf node name.
-	if err := tree.UpdateNode("0-3.loda", "0-6", "comment", "test update"); err != nil {
+	if err := tree.UpdateNode("0-3."+node.RootNode, "0-6", "comment", "test update"); err != nil {
 		t.Fatalf("tree UpdateNode error: %s", err.Error())
 	}
-	if node, err := tree.GetNodeByNS("0-6.loda"); err != nil || node.MachineReg != "test update" {
+	if node, err := tree.GetNodeByNS("0-6." + node.RootNode); err != nil || node.MachineReg != "test update" {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
-	if node, err := tree.GetNodeByNS("0-3-1.0-6.loda"); err != nil {
+	if node, err := tree.GetNodeByNS("0-3-1.0-6." + node.RootNode); err != nil {
 		t.Fatalf("root pool node not match with expect, node: %+v, error: %v", node, err)
 	}
 
 	// case 4: update node name to a already exist node.
-	if err := tree.UpdateNode("0-2-1.0-2.loda", "0-2-2", "comment", "test update"); err == nil {
+	if err := tree.UpdateNode("0-2-1.0-2."+node.RootNode, "0-2-2", "comment", "test update"); err == nil {
 		t.Fatal("tree UpdateNode 0-2-1.0-2.loda success, not match with expect")
 	}
 }
@@ -284,7 +318,7 @@ func TestRomoveNode(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
@@ -307,10 +341,10 @@ func TestRomoveNode(t *testing.T) {
 		t.Fatalf("set resource fail: %s, not match with expect\n", err.Error())
 	}
 
-	if err := tree.RemoveNode("test1.loda"); err == nil {
+	if err := tree.RemoveNode("test1." + node.RootNode); err == nil {
 		t.Fatal("delete ns still have machine success, not match wich expect")
 	}
-	if err := tree.RemoveNode("test2.loda"); err != nil {
+	if err := tree.RemoveNode("test2." + node.RootNode); err != nil {
 		t.Fatalf("delete ns have no machine fail, not match wich expect, error: %s", err.Error())
 	}
 }

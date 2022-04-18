@@ -7,9 +7,10 @@ import (
 	"github.com/lodastack/registry/model"
 )
 
+// RootNode is the root node name.
+var RootNode = "loda"
+
 const (
-	// RootNode is the root node name.
-	RootNode = "loda"
 	// PoolNode is the global pool node.
 	PoolNode = "pool"
 	// NodeDeli join node to ns.
@@ -47,21 +48,23 @@ type nodeMeta struct {
 }
 
 // InitNodes auto creates nodes when registry init.
-var InitNodes = []nodeMeta{
-	{Name: JoinWithRoot([]string{PoolNode}), Tp: Leaf, Comment: "pool"},
-	{Name: JoinWithRoot([]string{"monitor"}), Tp: NonLeaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"db.monitor"}), Tp: NonLeaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"common.db.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"alarm.monitor"}), Tp: NonLeaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"kapacitor.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"adapter.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"nodata.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"event.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"router.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"registry.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"mq.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"etcd.monitor"}), Tp: Leaf, Comment: "monitor system"},
-	{Name: JoinWithRoot([]string{"ui.monitor"}), Tp: Leaf, Comment: "monitor system"},
+func InitNodes() []nodeMeta {
+	return []nodeMeta{
+		{Name: JoinWithRoot([]string{PoolNode}), Tp: Leaf, Comment: "pool"},
+		{Name: JoinWithRoot([]string{"monitor"}), Tp: NonLeaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"db.monitor"}), Tp: NonLeaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"common.db.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"alarm.monitor"}), Tp: NonLeaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"kapacitor.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"adapter.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"nodata.alarm.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"event.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"router.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"registry.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"mq.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"etcd.monitor"}), Tp: Leaf, Comment: "monitor system"},
+		{Name: JoinWithRoot([]string{"ui.monitor"}), Tp: Leaf, Comment: "monitor system"},
+	}
 }
 
 type machineMeta struct {

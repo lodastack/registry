@@ -17,16 +17,11 @@ var (
 	// AuthBuck is the bucket id to save group and authorize data.
 	AuthBuck = "authorize"
 
-	// DefaultUser is a user. no use
-	DefaultUser = node.RootNode + "-defaultuser"
-
 	// DefaultGName is the group name has all read permission of all node..
 	DefaultGName = "defaultgroup"
 
 	// AdminGName is the group name has all permission of all node.
-	AdminGName       = "admingroup"
-	lodaDefaultGName = node.RootNode + "-" + DefaultGName
-	lodaAdminGName   = node.RootNode + "-" + AdminGName
+	AdminGName = "admingroup"
 )
 
 type perm struct {
@@ -102,7 +97,7 @@ func (p *perm) AdminGroupItems(ns string) []string {
 
 // InitGroup createIfNotExist the default user and admin/default group.
 func (p *perm) InitGroup(rootNode string) error {
-	if err := p.SetUser(DefaultUser, "", "enable", ""); err != nil {
+	if err := p.SetUser(DefaultUser(), "", "enable", ""); err != nil {
 		return err
 	}
 	// create admin user if not exist.
@@ -118,7 +113,7 @@ func (p *perm) InitGroup(rootNode string) error {
 // checkDefaultGroup set default/admin group and set to default user.
 func (p *perm) checkDefaultGroup() error {
 	g := Group{
-		GName:    lodaDefaultGName,
+		GName:    lodaDefaultGName(),
 		Managers: config.C.CommonConf.Admins,
 		Members:  config.C.CommonConf.Admins,
 		Items:    p.DefaultGroupItems(node.RootNode)}
@@ -129,7 +124,7 @@ func (p *perm) checkDefaultGroup() error {
 	}
 
 	g = Group{
-		GName:    lodaAdminGName,
+		GName:    lodaAdminGName(),
 		Managers: config.C.CommonConf.Admins,
 		Members:  config.C.CommonConf.Admins,
 		Items:    p.AdminGroupItems(node.RootNode)}
@@ -138,7 +133,7 @@ func (p *perm) checkDefaultGroup() error {
 		return err
 	}
 
-	for _, meta := range node.InitNodes {
+	for _, meta := range node.InitNodes() {
 		g = Group{
 			GName:    GetNsOpGName(meta.Name),
 			Managers: config.C.CommonConf.Admins,
@@ -327,4 +322,17 @@ func genRemoveUsers(oldUsers, newUsers []string) []string {
 	}
 
 	return removeUsers[:removeCnt]
+}
+
+func lodaDefaultGName() string {
+	return node.RootNode + "-" + DefaultGName
+}
+
+func lodaAdminGName() string {
+	return node.RootNode + "-" + AdminGName
+}
+
+// DefaultUser is a user. no use now.
+func DefaultUser() string {
+	return node.RootNode + "-defaultuser"
 }
