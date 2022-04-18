@@ -111,9 +111,9 @@ type bodyParam struct {
 var ErrInvalidParam = errors.New("invalid infomation")
 
 // New returns an uninitialized HTTP service.
-func New(c config.HTTPConfig, cluster Cluster) (*Service, error) {
+func New(rootName string, c config.HTTPConfig, cluster Cluster) (*Service, error) {
 	// init Tree
-	tree, err := tree.NewTree(cluster)
+	tree, err := tree.NewTree(rootName, cluster)
 	if err != nil {
 		fmt.Printf("init tree fail: %s\n", err.Error())
 		return nil, err

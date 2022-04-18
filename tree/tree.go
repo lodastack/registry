@@ -39,7 +39,7 @@ type Tree struct {
 }
 
 // NewTree return Tree obj.
-func NewTree(cluster cluster.Inf) (*Tree, error) {
+func NewTree(rootName string, cluster cluster.Inf) (*Tree, error) {
 	nodeInf := node.NewNode(cluster)
 	logger := log.New(config.C.LogConf.Level, "tree", model.LogBackend)
 	r := resource.NewResource(cluster, nodeInf, logger)
@@ -55,24 +55,24 @@ func NewTree(cluster cluster.Inf) (*Tree, error) {
 		logger:   logger,
 		reports:  ReportInfo{sync.RWMutex{}, make(map[string]model.Report)},
 	}
-	err := t.init()
+	err := t.init(rootName)
 	return &t, err
 }
 
-func (t *Tree) init() error {
-	if err := t.initNodeBucket(); err != nil {
+func (t *Tree) init(rootName string) error {
+	if err := t.initNodeBucket(rootName); err != nil {
 		return err
 	}
 	return t.initReportBucket()
 }
 
-func (t *Tree) initNodeBucket() error {
+func (t *Tree) initNodeBucket(rootName string) error {
 	err := t.cluster.CreateBucketIfNotExist([]byte(node.NodeDataBucketID))
 	if err != nil {
 		t.logger.Errorf("tree %s CreateBucketIfNotExist fail: %s", node.NodeDataBucketID, err.Error())
 		return err
 	}
-	if err := t.initNodeData(node.NodeDataKey); err != nil {
+	if err := t.initNodeData(node.NodeDataKey, rootName); err != nil {
 		t.logger.Error("init nodeDataKey fail:", err.Error())
 		return err
 	}
@@ -81,7 +81,9 @@ func (t *Tree) initNodeBucket() error {
 }
 
 // initialization tree node data and if empty.
-func (t *Tree) initNodeData(key string) error {
+// if "node" data exists in "loda" bucket, do not init,
+// even the root name not equal old root name, just use the exists old data.
+func (t *Tree) initNodeData(key string, rootName string) error {
 	v, err := t.cluster.View([]byte(node.NodeDataBucketID), []byte(key))
 	if err != nil {
 		return err
@@ -93,11 +95,16 @@ func (t *Tree) initNodeData(key string) error {
 	t.logger.Info(key, "is not inited, begin to init")
 
 	// Create rootNode map/bucket and init template.
+	// TODO: checks rootName
+	if strings.TrimSpace(rootName) != "" && !strings.ContainsAny(rootName, ".") {
+		node.RootNode = rootName
+	}
+
 	if _, err := t.NewNode(node.RootNode, "", "-", node.Root); err != nil {
 		panic("create root node fail: " + err.Error())
 	}
 
-	for _, meta := range node.InitNodes {
+	for _, meta := range node.InitNodes() {
 		l := strings.SplitAfterN(meta.Name, node.NodeDeli, 2)
 		if len(l) != 2 {
 			continue

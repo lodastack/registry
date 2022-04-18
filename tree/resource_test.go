@@ -35,7 +35,7 @@ func TestSetResourceByID(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 
 	resource, _ := model.NewResourceList(resMap1)
 	// Set resource to leaf.
@@ -76,7 +76,7 @@ func TestSetResourceByNs(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 
 	// Set resource to leaf.
 	if _, err := tree.NewNode("test", "comment", node.RootNode, node.Leaf); err != nil {
@@ -115,7 +115,7 @@ func TestSearchResource(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 
 	// Set resource to leaf.
 	if _, err := tree.NewNode("test1", "comment1", node.RootNode, node.Leaf); err != nil {
@@ -218,7 +218,7 @@ func TestGetResAfterSetOtherNs(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 
 	// Set resource to leaf.
 	if _, err := tree.NewNode("leaf1", "comment1", node.RootNode, node.Leaf); err != nil {
@@ -277,7 +277,7 @@ func TestMoveResource(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, _ := NewTree(s)
+	tree, _ := NewTree(node.RootNode, s)
 
 	machine1 := model.NewResource(map[string]string{"hostname": "host1"})
 	machine2 := model.NewResource(map[string]string{"hostname": "host2"})
@@ -382,7 +382,7 @@ func TestCopyResource(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, _ := NewTree(s)
+	tree, _ := NewTree(node.RootNode, s)
 
 	machine1 := model.NewResource(map[string]string{"hostname": "host1"})
 	machine2 := model.NewResource(map[string]string{"hostname": "host2"})

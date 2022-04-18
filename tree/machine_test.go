@@ -37,7 +37,7 @@ func TestMatchNs(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
@@ -88,7 +88,7 @@ func TestSearchMachine(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
@@ -154,7 +154,7 @@ func TestUpdateStatusByHostname(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatalf("create leaf fail: %s", err.Error())
 	}
@@ -234,7 +234,7 @@ func TestRegisterMachine(t *testing.T) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		t.Fatal("NewTree error")
 	}
@@ -362,7 +362,7 @@ func BenchmarkRegisterNewMachine(b *testing.B) {
 	}
 	defer s.Close(true)
 	s.WaitForLeader(10 * time.Second)
-	tree, err := NewTree(s)
+	tree, err := NewTree(node.RootNode, s)
 	if err != nil {
 		b.Fatal("NewTree error")
 	}
